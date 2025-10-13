@@ -96,19 +96,34 @@ export class Lobby extends Scene {
 
     create(): void {
         super.create()
+        this.setCameraResolution()
+        this.welcomeText()
+        this.defineSceneTransitions()
+    }
+
+    private setCameraResolution(): void {
+        const lobbyWidth = 1920
+        const lobbyHeight = 1080
+
+        this.scale.resize(lobbyWidth, lobbyHeight)
+        this.scale.displaySize.setAspectRatio(lobbyWidth / lobbyHeight)
+        this.scale.refresh()
+
+        const cam = this.cameras.main
+        cam.setViewport(0, 0, lobbyWidth, lobbyHeight)
+    }
+
+    private welcomeText(): void {
         // Example: Add custom text or interactions
         const text = this.add.text(600, 100, 'Welcome to the Lobby!', {
             fontSize: '50px',
             color: '#fff',
         })
         text.setScrollFactor(0)
-
-        // Define transitions to other scenes
-        this.defineSceneTransitions()
     }
 
+    // Define transitions to other scenes
     private defineSceneTransitions(): void {
-        // Example of transition triggers
         const portals = [
             {x: 400, y: 200, width: 64, height: 64, target: 'ClassroomScene'},
         ]
