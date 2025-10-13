@@ -7,11 +7,14 @@ interface SmallQuest {
     submissionStatus?: string | null
 }
 
+import type {Scene} from '@/scenes/Scene'
+import type {MenuNavigationControls} from '@/utils/menuNavigation'
+
 interface StylesLike {
     colors: {
         titleText?: string
         doneLabel?: string
-        [k: string]: string | undefined
+        [k: string]: string | number | undefined
     }
     typography: {
         fontFamily?: string
@@ -33,12 +36,10 @@ interface QuestUI {
     elements: Phaser.GameObjects.GameObject[]
     updateVisuals: (i: number) => void
     toggleDone: (i: number) => void
-    navigationSetter?: (nav: {cleanup?: () => void}) => void
+    navigationSetter?: (nav: MenuNavigationControls) => void
 }
 
-interface MenuNav {
-    cleanup?: () => void
-}
+type MenuNav = MenuNavigationControls
 
 type MappedQuest = {
     id?: number
@@ -50,7 +51,7 @@ type MappedQuest = {
 }
 
 type CreateQuestUIFn = (
-    scene: Phaser.Scene,
+    scene: Scene,
     quests: MappedQuest[],
     localDoneStates: boolean[],
     listStartX: number,
@@ -60,7 +61,7 @@ type CreateQuestUIFn = (
 ) => QuestUI
 
 type CreateMenuNavArgs = {
-    scene: Phaser.Scene
+    scene: Scene
     itemCount: number
     onSelectionChange?: (i: number) => void
     onSelect?: (i: number) => void
@@ -70,7 +71,7 @@ type CreateMenuNavArgs = {
 type CreateMenuNavFn = (args: CreateMenuNavArgs) => MenuNav
 
 export function createShowBoard(context: {
-    scene: Phaser.Scene
+    scene: Scene
     elements: Phaser.GameObjects.GameObject[]
     boards: Array<{name: string; quests: Array<SmallQuest>}>
     listStartX: number
@@ -275,7 +276,6 @@ export function createShowBoard(context: {
                 } catch {}
             }
         } catch {}
-
         if (state.boardQuestUI) state.boardQuestUI.updateVisuals(0)
         if (fadeIn && state.boardElements.length > 0) {
             try {

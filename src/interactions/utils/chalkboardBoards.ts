@@ -1,5 +1,6 @@
 /* eslint-disable max-lines */
 import {chalkboardStyles as styles} from '../styles/chalkboardStyles'
+import type {Scene} from '@/scenes/Scene'
 import {createMenuNavigation} from '@/utils/menuNavigation'
 import {createQuestUI} from './chalkboardQuestList'
 import {createArrows} from './chalkboardBoardsHelpers'
@@ -8,7 +9,7 @@ import {createShowBoard} from './chalkboardBoardsShow'
 // minimal raw quest shape used when mapping server data to the internal Quest type
 // (moved into the show helper)
 
-type SceneLike = Phaser.Scene
+type SceneLike = Scene
 type GameObjectWithBounds = Phaser.GameObjects.GameObject & {
     getBounds?: () => Phaser.Geom.Rectangle
 }
@@ -254,4 +255,13 @@ export function mountBoards(options: MountBoardsOptions) {
     dKey.on('down', nextBoard)
     // show initial
     showBoard(0, true)
+
+    // return a small cleanup interface so callers (eg. chalkboard.ts) can call boardsMount.cleanup()
+    return {
+        cleanup: () => {
+            try {
+                extendedCleanup()
+            } catch {}
+        },
+    }
 }
