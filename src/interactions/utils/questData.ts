@@ -13,12 +13,16 @@ interface QuestResponse {
     done?: boolean
     submissionId?: number | null
     submissionStatus?: string | null
+    id?: number
 }
 
 export interface Course {
     id?: number
     title?: string
 }
+
+// module-level inflight map to avoid using function property with any
+let persistToggleInflight: Map<string, Promise<boolean>> | null = null
 
 /**
  * Load quests and course metadata. `courseId` defaults to 3 (classroom scene)
@@ -36,18 +40,18 @@ export async function loadQuests(
         const data = await res.json()
 
         const rawQuests =
-            Array.isArray(data?.quests) ? data.quests
-            : Array.isArray(data) ? data
+            Array.isArray(data?.quests) ? (data.quests as QuestResponse[])
+            : Array.isArray(data) ? (data as QuestResponse[])
             : []
 
         const mapped: Quest[] = rawQuests.map(
             (q: QuestResponse, i: number) => ({
-                id: (q as any).id,
+                id: q.id,
                 title: q.title ?? `Quest ${i + 1}`,
                 points: typeof q.points === 'number' ? q.points : 0,
                 done: Boolean(q.done),
-                submissionId: (q as any).submissionId ?? null,
-                submissionStatus: (q as any).submissionStatus ?? null,
+                submissionId: q.submissionId ?? null,
+                submissionStatus: q.submissionStatus ?? null,
             })
         )
 
@@ -66,13 +70,8 @@ export async function persistToggle(
     try {
         // prevent concurrent requests for the same quest/index
         const key = typeof questId === 'number' ? `q:${questId}` : `i:${index}`
-        if (!(persistToggle as any)._inflight)
-            (persistToggle as any)._inflight = new Map<
-                string,
-                Promise<boolean>
-            >()
-        const inflight: Map<string, Promise<boolean>> = (persistToggle as any)
-            ._inflight
+        if (!persistToggleInflight) persistToggleInflight = new Map()
+        const inflight = persistToggleInflight
         if (inflight.has(key)) {
             // wait for existing request to complete, then return its result
             return inflight.get(key) as Promise<boolean>

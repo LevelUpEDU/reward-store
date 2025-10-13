@@ -1,0 +1,277 @@
+import {chalkboardStyles as styles} from '@/interactions/styles/chalkboardStyles'
+import type {Scene} from '@/scenes/Scene'
+import {type Quest, persistToggle} from './questData'
+import {createConfirmDialog} from './chalkboardDialog'
+import type {MenuNavigationControls} from '@/utils/menuNavigation'
+import {ellipsizeToFit} from './chalkboardUIHelpers'
+
+export function createQuestUI(
+    scene: Scene,
+    quests: Quest[],
+    doneStates: boolean[],
+    startX: number,
+    startY: number,
+    doneX: number,
+    showDoneColumn: boolean = true,
+    _navigationSetter?: (controls: MenuNavigationControls) => void
+) {
+    const questTexts: Phaser.GameObjects.Text[] = []
+    const doneMarks: Phaser.GameObjects.Text[] = []
+    const elements: Phaser.GameObjects.GameObject[] = []
+
+    let selector: Phaser.GameObjects.Rectangle | undefined = undefined
+    if (showDoneColumn) {
+        selector = scene.add.rectangle(
+            doneX,
+            startY,
+            styles.selector.size,
+            styles.selector.size,
+            styles.colors.selector
+        )
+        selector.setFillStyle(styles.colors.selector, styles.selector.fillAlpha)
+        selector.setStrokeStyle(
+            styles.selector.strokeWidth,
+            styles.colors.selectorStroke
+        )
+        selector.setDepth(styles.depths.selector)
+        elements.push(selector)
+    }
+
+    const updateVisuals = (selectedIndex: number) => {
+        questTexts.forEach((qt, idx) => {
+            qt.setColor(
+                idx === selectedIndex ?
+                    styles.colors.questTextSelected
+                :   styles.colors.questText
+            )
+            try {
+                const qtWithScale = qt as unknown as {
+                    setScale?: (s: number) => void
+                    scaleX?: number
+                }
+                if (typeof qtWithScale.setScale === 'function') {
+                    qtWithScale.setScale(qtWithScale.scaleX ?? 1)
+                }
+                scene.tweens.killTweensOf(qt)
+                const targetScale = idx === selectedIndex ? 1.06 : 1
+                scene.tweens.add({
+                    targets: qt,
+                    scale: targetScale,
+                    duration: 120,
+                    ease: 'Quad.Out',
+                })
+            } catch {
+                /* ignore */
+            }
+        })
+        if (selector)
+            selector.setY(startY + selectedIndex * styles.layout.rowSpacing)
+    }
+
+    let navControls: MenuNavigationControls | undefined
+    let dialogActive = false
+
+    const setNavigationControls = (c: MenuNavigationControls) => {
+        navControls = c
+    }
+
+    const toggleDone = (index: number) => {
+        if (!showDoneColumn) return
+        const newVal = !doneStates[index]
+        const mark = doneMarks[index]
+        if (newVal) {
+            if (dialogActive) return
+            dialogActive = true
+            try {
+                try {
+                    console.warn(
+                        '[chalkboardQuestList] pausing nav for dialog',
+                        {index}
+                    )
+                } catch {}
+                navControls?.pause?.()
+            } catch {
+                /* ignore */
+            }
+            const cy = startY + index * styles.layout.rowSpacing
+            const dlg = createConfirmDialog(scene, {
+                title: 'Quest marked as done?',
+                x: startX + (doneX - startX) / 2,
+                y: cy,
+                onConfirm: async () => {
+                    doneStates[index] = true
+                    mark.setVisible(true)
+                    try {
+                        scene.tweens.add({
+                            targets: mark,
+                            scale: {
+                                from: styles.animations.tickScale.from,
+                                to: styles.animations.tickScale.to,
+                            },
+                            ease: styles.animations.tickEase,
+                            duration: styles.animations.tickDuration,
+                        })
+                    } catch {
+                        /* ignore */
+                    }
+                    const q = quests[index]
+                    const questId = q?.id
+                    try {
+                        const ok = await persistToggle(index, true, questId)
+                        if (!ok) {
+                            doneStates[index] = false
+                            mark.setVisible(false)
+                        }
+                    } catch (err) {
+                        console.error('[chalkboard] persistToggle error', err)
+                        doneStates[index] = false
+                        mark.setVisible(false)
+                    } finally {
+                        dialogActive = false
+                        try {
+                            console.warn(
+                                '[chalkboardQuestList] dialog confirmed; resuming nav',
+                                {index}
+                            )
+                        } catch {}
+                        try {
+                            navControls?.resume?.()
+                        } catch {
+                            /* ignore */
+                        }
+                        try {
+                            const idx = navControls?.getSelectedIndex?.()
+                            if (typeof idx === 'number') updateVisuals(idx)
+                        } catch {
+                            /* ignore */
+                        }
+                    }
+                },
+                onCancel: () => {
+                    doneStates[index] = false
+                    mark.setVisible(false)
+                    dialogActive = false
+                    try {
+                        console.warn(
+                            '[chalkboardQuestList] dialog canceled; resuming nav',
+                            {index}
+                        )
+                    } catch {}
+                    try {
+                        navControls?.resume?.()
+                    } catch {
+                        /* ignore */
+                    }
+                },
+            })
+            dlg.open()
+            return
+        }
+
+        doneStates[index] = false
+        mark.setVisible(false)
+        const q = quests[index]
+        const questId = q?.id
+        persistToggle(index, false, questId).then((ok) => {
+            if (!ok) {
+                doneStates[index] = true
+                mark.setVisible(true)
+            }
+        })
+    }
+
+    quests.forEach((q, i) => {
+        const y = startY + i * styles.layout.rowSpacing
+        const combined = `${i + 1}. ${q.title}   (${q.points}pts)`
+        const qt = scene.add
+            .text(startX, y, combined, {
+                fontSize: styles.typography.questSize,
+                color: styles.colors.questText,
+                fontFamily: styles.typography.fontFamily,
+            })
+            .setOrigin(0, 0.5)
+            .setDepth(styles.depths.text)
+        ellipsizeToFit(
+            qt,
+            combined,
+            doneX - styles.layout.maxTextMargin - startX
+        )
+        questTexts.push(qt)
+
+        const hitWidth = Math.max(doneX + 24 - startX, 120)
+        const hit = scene.add.rectangle(
+            startX + hitWidth / 2,
+            y,
+            hitWidth,
+            styles.layout.rowSpacing * 0.9,
+            0,
+            0
+        )
+        hit.setInteractive({cursor: 'pointer'}).setDepth(
+            styles.depths.background
+        )
+
+        if (showDoneColumn) {
+            const tick = scene.add
+                .text(doneX, y, '✓', {
+                    fontSize: `${Math.round(styles.selector.size * 1.6)}px`,
+                    color: styles.colors.tickMark,
+                    fontFamily: styles.typography.fontFamily,
+                })
+                .setOrigin(0.5)
+                .setDepth(styles.depths.tickMark)
+                .setVisible(doneStates[i])
+
+            doneMarks.push(tick)
+            elements.push(qt, hit, tick)
+
+            const handleToggleClick = (
+                _pointer: Phaser.Input.Pointer,
+                _localX: number,
+                _localY: number,
+                event: Phaser.Types.Input.EventData
+            ) => {
+                event.stopPropagation()
+                updateVisuals(i)
+                toggleDone(i)
+            }
+            qt.setInteractive({cursor: 'pointer'})
+            qt.on('pointerover', () => {
+                if (!dialogActive) updateVisuals(i)
+            })
+            qt.on('pointerdown', handleToggleClick)
+            hit.on('pointerover', () => {
+                if (!dialogActive) updateVisuals(i)
+            })
+            hit.on('pointerdown', handleToggleClick)
+        } else {
+            elements.push(qt, hit)
+            qt.setInteractive({cursor: 'pointer'})
+            qt.on('pointerover', () => {
+                if (!dialogActive) updateVisuals(i)
+            })
+            const handleSelectClick = (
+                _p: Phaser.Input.Pointer,
+                _lx: number,
+                _ly: number,
+                event: Phaser.Types.Input.EventData
+            ) => {
+                event.stopPropagation()
+                updateVisuals(i)
+            }
+            qt.on('pointerdown', handleSelectClick)
+            hit.on('pointerover', () => {
+                if (!dialogActive) updateVisuals(i)
+            })
+            hit.on('pointerdown', handleSelectClick)
+        }
+    })
+
+    return {
+        elements,
+        updateVisuals,
+        toggleDone,
+        navigationSetter: setNavigationControls,
+        isDialogActive: () => dialogActive,
+    }
+}
