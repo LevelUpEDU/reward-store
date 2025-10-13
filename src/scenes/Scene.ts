@@ -40,6 +40,9 @@ export class Scene extends Phaser.Scene implements GameScene {
     }
 
     preload(): void {
+        this.cache.tilemap.remove(this.sceneName)
+        this.cache.json.remove(this.sceneName)
+
         // get the list of sprite objects for this scene
         const manifestKey = `${this.sceneName}-sprites`
 
@@ -76,7 +79,8 @@ export class Scene extends Phaser.Scene implements GameScene {
         })
 
         // tilemap
-        this.load.tilemapTiledJSON('map', this.mapConfig.tilemapPath)
+        // this.load.tilemapTiledJSON('map', this.mapConfig.tilemapPath)
+        this.load.tilemapTiledJSON(this.sceneName, this.mapConfig.tilemapPath)
 
         // player
         this.load.aseprite(
@@ -97,6 +101,7 @@ export class Scene extends Phaser.Scene implements GameScene {
     create(): void {
         this.createMap()
         this.createPlayer()
+        this.setCamera()
         this.createCollisions()
         this.inputHandler = new InputHandler(this, 100)
         this.interactionHandler = new InteractionHandler(this)
@@ -142,25 +147,29 @@ export class Scene extends Phaser.Scene implements GameScene {
     }
 
     protected createMap(): void {
-        this.map = this.add.tilemap('map')
+        // this.map = this.add.tilemap('map')
+        this.map = this.add.tilemap(this.sceneName)
 
-        // populate tilesets
-        const tilesets: Record<string, Phaser.Tilemaps.Tileset> = {}
+        // Populate all tilesets into an array
+        const allTilesets: Phaser.Tilemaps.Tileset[] = []
         this.mapConfig.tilesets.forEach((tilesetConfig) => {
             const tileset = this.map.addTilesetImage(
                 tilesetConfig.name,
                 tilesetConfig.key
             )
             if (tileset) {
-                tilesets[tilesetConfig.key] = tileset
+                allTilesets.push(tileset)
             }
         })
 
-        // add each layer
+        // Add each layer, passing ALL tilesets (Phaser will use only the relevant ones)
         this.mapConfig.layers.forEach((layerConfig) => {
-            const tileset = tilesets[layerConfig.tilesetKey]
-            if (tileset) {
-                this.map.createLayer(layerConfig.name, tileset)
+            if (allTilesets.length > 0) {
+                const layer = this.map.createLayer(
+                    layerConfig.name,
+                    allTilesets
+                )
+                // layer?.setScale(0.5)
             }
         })
     }
@@ -278,6 +287,14 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.input.on('pointerupoutside', () => {
             this.inputHandler.releaseTarget()
         })
+    }
+
+    protected setCamera(): void {
+        const camera = this.cameras.main
+        camera.startFollow(this.player, true, 0.1, 0.1) // smooth follow
+        camera.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
+        // camera.setZoom(1) // adjust zoom for how close/far you want it
+        camera.roundPixels = true // keeps pixel art crisp
     }
 
     update(): void {
