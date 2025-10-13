@@ -95,7 +95,7 @@ export default function GameComponent() {
                         debug: false,
                     },
                 },
-                scene: [Lobby, git],
+                scene: [Lobby, Classroom],
             }
 
             gameInstance = new Phaser.Game(config)
