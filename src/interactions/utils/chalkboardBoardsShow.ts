@@ -231,7 +231,6 @@ export function createShowBoard(context: {
                 }
             } catch {}
         }
-
         try {
             type MaybeOverlay = {
                 scene?: unknown
