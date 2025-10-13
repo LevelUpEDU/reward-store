@@ -1,17 +1,12 @@
+/* eslint-disable max-lines */
 import {chalkboardStyles as styles} from '../styles/chalkboardStyles'
 import {createMenuNavigation} from '@/utils/menuNavigation'
 import {createQuestUI} from './chalkboardQuestList'
-import type {Scene as ProjectScene} from '@/scenes/Scene'
+import {createArrows} from './chalkboardBoardsHelpers'
+import {createShowBoard} from './chalkboardBoardsShow'
 
 // minimal raw quest shape used when mapping server data to the internal Quest type
-type RawQuest = {
-    id?: number
-    title?: string
-    points?: number
-    done?: boolean
-    submissionId?: number | null
-    submissionStatus?: string | null
-}
+// (moved into the show helper)
 
 type SceneLike = Phaser.Scene
 type GameObjectWithBounds = Phaser.GameObjects.GameObject & {
@@ -44,7 +39,7 @@ export function mountBoards(options: MountBoardsOptions) {
         originalCleanup,
     } = options
 
-    let activeBoard = 0
+    const activeBoard = 0
     let boardElements: Phaser.GameObjects.GameObject[] = []
     let boardNav: ReturnType<typeof createMenuNavigation> | null = null
     let boardQuestUI: ReturnType<typeof createQuestUI> | null = null
@@ -171,230 +166,46 @@ export function mountBoards(options: MountBoardsOptions) {
         }
         boardQuestUI = null
         boardElements.forEach((el) => el.destroy())
-        boardElements = []
+        boardElements.length = 0
     }
 
-    const showBoard = (index: number, fadeIn = false) => {
-        const idx = ((index % boards.length) + boards.length) % boards.length
-        activeBoard = idx
-        cleanupBoard()
-        // if extended cleanup has already run, don't attempt to show a board
-        if (_cleanedUp) return
-        const b = boards[activeBoard]
-        try {
-            subtitle.setText(`${b.name} (${b.quests.length})`)
-        } catch {
-            // Defensive: in rare cases Phaser may throw when updating text (internal texture/context issue).
-            // Recreate the text object to avoid crashing the game.
-            try {
-                subtitle.destroy()
-            } catch {
-                /* ignore */
-            }
-            try {
-                subtitle = scene.add
-                    .text(
-                        centerX,
-                        subtitleY,
-                        `${b.name} (${b.quests.length})`,
-                        {
-                            fontSize: `${Math.round(titleSizeNum * 0.6)}px`,
-                            color: styles.colors.titleText,
-                            fontFamily: styles.typography.fontFamily,
-                        }
-                    )
-                    .setOrigin(0.5)
-                    .setDepth(styles.depths.text + 1)
-                elements.push(subtitle)
-            } catch {
-                /* fallback: can't create subtitle; ignore to avoid crash */
-            }
-        }
-        const localDoneStates = b.quests.map((q) => Boolean(q.done))
-        const showDone =
-            activeBoard === 0 && (boards[0]?.quests?.length ?? 0) > 0
-        if (activeBoard === 0 && b.quests.length === 0) {
-            const emptyText = scene.add
-                .text(centerX, listStartY + 60, 'No quests available', {
-                    fontSize: styles.typography.emptyMessageSize,
-                    color: styles.colors.titleText,
-                    fontFamily: styles.typography.fontFamily,
-                })
-                .setOrigin(0.5)
-                .setDepth(styles.depths.text + 1)
-            boardElements.push(emptyText)
-            elements.push(emptyText)
-        } else {
-            // If showing Done column for Available board, add a header label above the column
-            if (showDone) {
-                try {
-                    const doneLabel = scene.add
-                        .text(
-                            doneX,
-                            listStartY - styles.layout.doneLabelOffsetY,
-                            'Done',
-                            {
-                                fontSize: styles.typography.doneLabelSize,
-                                color: styles.colors.doneLabel,
-                                fontFamily: styles.typography.fontFamily,
-                            }
-                        )
-                        .setOrigin(0.5)
-                        .setDepth(styles.depths.text + 1)
-                    boardElements.push(doneLabel)
-                    elements.push(doneLabel)
-                } catch {
-                    /* ignore header creation failure */
-                }
-            }
-            // createQuestUI expects Quest[] with title/points; map minimally to avoid TS errors while keeping runtime data
-            const mappedQuests = (b.quests || []).map(
-                (q: RawQuest, idx: number) => ({
-                    id: q?.id,
-                    title: q?.title ?? `Quest ${idx + 1}`,
-                    points: typeof q?.points === 'number' ? q.points : 0,
-                    done: Boolean(q?.done),
-                    submissionId: q?.submissionId ?? null,
-                    submissionStatus: q?.submissionStatus ?? null,
-                })
-            )
-            // createQuestUI expects the project's Scene type; cast defensively to avoid type mismatch here
-            boardQuestUI = createQuestUI(
-                scene as unknown as ProjectScene,
-                mappedQuests,
-                localDoneStates,
-                listStartX,
-                listStartY,
-                doneX,
-                showDone
-            )
-            boardElements.push(...boardQuestUI.elements)
-            elements.push(...boardQuestUI.elements)
-            boardNav = createMenuNavigation({
-                scene,
-                itemCount: b.quests.length,
-                onSelectionChange: (i) => {
-                    if (boardQuestUI) boardQuestUI.updateVisuals(i)
-                },
-                onSelect: (i) => {
-                    if (boardQuestUI) boardQuestUI.toggleDone(i)
-                },
-                // ensure full cleanup (destroy keys, UI) when menu requests close
-                onClose: () => extendedCleanup(),
-            })
-            if (typeof boardQuestUI.navigationSetter === 'function') {
-                boardQuestUI.navigationSetter(boardNav!)
-            }
-        }
+    // Use external showBoard implementation to shrink this file size
+    const state = {
+        activeBoard,
+        boardElements,
+        boardNav,
+        boardQuestUI,
+        // call the current cleanupBoard dynamically so helper uses the live function
+        cleanupBoard: () => {
+            if (cleanupBoard) cleanupBoard()
+        },
+        subtitle,
+        setSubtitle: (t: Phaser.GameObjects.Text) => (subtitle = t),
+        setBoardElements: (els: Phaser.GameObjects.GameObject[]) =>
+            (boardElements = els),
+    }
+    const showBoard = createShowBoard({
+        scene,
+        elements,
+        boards,
+        listStartX,
+        listStartY,
+        doneX,
+        styles,
+        titleSizeNum,
+        centerX,
+        subtitleY,
+        originalCleanup,
+        createQuestUI,
+        createMenuNavigation,
+        state,
+        extendedCleanup,
+        isCleanedUp: () => _cleanedUp,
+        overlay,
+        border,
+    })
 
-        // overlay may have been destroyed; guard calls that rely on its internal `sys`.
-        try {
-            type MaybeOverlay = {
-                scene?: unknown
-                setInteractive?: (...args: unknown[]) => unknown
-                removeAllListeners?: (event?: string) => void
-                on?: (
-                    event: string,
-                    handler: (...args: unknown[]) => unknown
-                ) => unknown
-            }
-            const maybeOverlay = overlay as unknown as MaybeOverlay
-            if (
-                maybeOverlay &&
-                typeof maybeOverlay.setInteractive === 'function' &&
-                (maybeOverlay as MaybeOverlay).scene
-            ) {
-                maybeOverlay.setInteractive()
-                try {
-                    if (typeof maybeOverlay.removeAllListeners === 'function')
-                        maybeOverlay.removeAllListeners('pointerdown')
-                } catch {}
-                try {
-                    if (typeof maybeOverlay.on === 'function') {
-                        maybeOverlay.on('pointerdown', ((
-                            ...args: unknown[]
-                        ) => {
-                            const pointer = args[0] as Phaser.Input.Pointer
-                            try {
-                                const bounds =
-                                    border.getBounds && border.getBounds()
-                                if (
-                                    !bounds ||
-                                    !bounds.contains(pointer.x, pointer.y)
-                                ) {
-                                    extendedCleanup()
-                                }
-                            } catch {
-                                originalCleanup(boardNav || undefined)
-                            }
-                        }) as unknown as (...args: unknown[]) => unknown)
-                    }
-                } catch {}
-            }
-        } catch {}
-        if (boardQuestUI) boardQuestUI.updateVisuals(0)
-        if (fadeIn && boardElements.length > 0) {
-            try {
-                boardElements.forEach((el) => {
-                    try {
-                        const maybe = el as unknown as {
-                            setAlpha?: (a: number) => void
-                        }
-                        if (typeof maybe.setAlpha === 'function')
-                            maybe.setAlpha(0)
-                    } catch {
-                        /* ignore */
-                    }
-                })
-                scene.tweens.add({
-                    targets: boardElements,
-                    alpha: 1,
-                    duration: 240,
-                    ease: 'Quad.Out',
-                })
-            } catch {
-                /* ignore */
-            }
-        }
-    }
-
-    // arrows
-    const arrowSize = Math.max(32, Math.round(titleSizeNum * 0.8))
-    const arrowLeftX =
-        centerX -
-        (scene.scale.width * styles.interfaceWidthRatio) / 2 +
-        styles.layout.padding / 2
-    const arrowRightX =
-        centerX +
-        (scene.scale.width * styles.interfaceWidthRatio) / 2 -
-        styles.layout.padding / 2
-    const arrowY = centerY
-    leftArrow = scene.add
-        .text(arrowLeftX, arrowY, '◀', {
-            fontSize: `${arrowSize}px`,
-            color: styles.colors.questText,
-            fontFamily: styles.typography.fontFamily,
-        })
-        .setOrigin(0.5)
-        .setDepth(styles.depths.selector + 2)
-        .setInteractive({cursor: 'pointer'})
-    rightArrow = scene.add
-        .text(arrowRightX, arrowY, '▶', {
-            fontSize: `${arrowSize}px`,
-            color: styles.colors.questText,
-            fontFamily: styles.typography.fontFamily,
-        })
-        .setOrigin(0.5)
-        .setDepth(styles.depths.selector + 2)
-        .setInteractive({cursor: 'pointer'})
-    if (leftArrow) {
-        leftArrow.on('pointerover', () => leftArrow!.setScale(1.08))
-        leftArrow.on('pointerout', () => leftArrow!.setScale(1))
-    }
-    if (rightArrow) {
-        rightArrow.on('pointerover', () => rightArrow!.setScale(1.08))
-        rightArrow.on('pointerout', () => rightArrow!.setScale(1))
-    }
+    // createArrows will be called after isDialogOpen and nav handlers are set
     const isDialogOpen = () => {
         try {
             if (boardQuestUI?.isDialogActive?.()) return true
@@ -409,47 +220,26 @@ export function mountBoards(options: MountBoardsOptions) {
     // now that isDialogOpen is declared, wire the navigation handlers
     nextBoard = () => {
         if (isDialogOpen()) return
-        showBoard(activeBoard + 1)
+        showBoard((state.activeBoard ?? 0) + 1)
     }
     prevBoard = () => {
         if (isDialogOpen()) return
-        showBoard(activeBoard - 1)
+        showBoard((state.activeBoard ?? 0) - 1)
     }
 
-    if (leftArrow)
-        leftArrow.on(
-            'pointerdown',
-            (
-                _p: Phaser.Input.Pointer,
-                _x: number,
-                _y: number,
-                e: Phaser.Types.Input.EventData
-            ) => {
-                try {
-                    e.stopPropagation()
-                } catch {}
-                if (isDialogOpen()) return
-                showBoard(activeBoard - 1)
-            }
-        )
-    if (rightArrow)
-        rightArrow.on(
-            'pointerdown',
-            (
-                _p: Phaser.Input.Pointer,
-                _x: number,
-                _y: number,
-                e: Phaser.Types.Input.EventData
-            ) => {
-                try {
-                    e.stopPropagation()
-                } catch {}
-                if (isDialogOpen()) return
-                showBoard(activeBoard + 1)
-            }
-        )
-    if (leftArrow) elements.push(leftArrow)
-    if (rightArrow) elements.push(rightArrow)
+    // create arrows now that nav handlers and isDialogOpen exist
+    const arrows = createArrows({
+        scene,
+        centerX,
+        titleSizeNum,
+        styles,
+        elements,
+        onLeft: () => prevBoard(),
+        onRight: () => nextBoard(),
+        isDialogOpen,
+    })
+    leftArrow = arrows.leftArrow
+    rightArrow = arrows.rightArrow
     // keys
     leftKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT)
     rightKey = scene.input.keyboard!.addKey(
