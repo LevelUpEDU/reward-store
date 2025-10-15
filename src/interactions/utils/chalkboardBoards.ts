@@ -157,21 +157,32 @@ export function mountBoards(options: MountBoardsOptions) {
     }
 
     cleanupBoard = () => {
-        if (boardNav) {
+        // Use state.boardNav instead of local boardNav to get the live reference
+        if (state.boardNav) {
             try {
-                boardNav.cleanup()
+                state.boardNav.cleanup()
             } catch {
                 /* ignore */
             }
-            boardNav = null
+            state.boardNav = null
         }
-        boardQuestUI = null
+        state.boardQuestUI = null
         boardElements.forEach((el) => el.destroy())
         boardElements.length = 0
     }
 
     // Use external showBoard implementation to shrink this file size
-    const state = {
+    // Explicitly type state object to allow mutation of boardNav and boardQuestUI
+    const state: {
+        activeBoard: number
+        boardElements: Phaser.GameObjects.GameObject[]
+        boardNav: ReturnType<typeof createMenuNavigation> | null
+        boardQuestUI: ReturnType<typeof createQuestUI> | null
+        cleanupBoard: (() => void) | null
+        subtitle: Phaser.GameObjects.Text | null
+        setSubtitle: (t: Phaser.GameObjects.Text) => void
+        setBoardElements: (els: Phaser.GameObjects.GameObject[]) => void
+    } = {
         activeBoard,
         boardElements,
         boardNav,
@@ -209,7 +220,8 @@ export function mountBoards(options: MountBoardsOptions) {
     // createArrows will be called after isDialogOpen and nav handlers are set
     const isDialogOpen = () => {
         try {
-            if (boardQuestUI?.isDialogActive?.()) return true
+            // Use state.boardQuestUI to check the live reference
+            if (state.boardQuestUI?.isDialogActive?.()) return true
             const flag = (
                 scene as unknown as {data?: Phaser.Data.DataManager}
             ).data?.get?.('__dialogActive__')
