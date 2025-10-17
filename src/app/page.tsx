@@ -1,38 +1,11 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import './styles.css'
-import Image from 'next/image'
+import PixelatedBackground from '../components/PixelatedBackground'
 
 // change the background image here only
 const IMAGE_SRC = '/bcit-2.jpg'
 
-// display the background image first to avoid "flickering"
-const PixelatedBackground = dynamic(
-    () => import('../components/PixelatedBackground'),
-    {
-        ssr: false,
-        loading: () => (
-            <div
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100vw',
-                    height: '100vh',
-                    zIndex: -1,
-                }}>
-                <Image
-                    src={IMAGE_SRC}
-                    alt=""
-                    fill
-                    style={{objectFit: 'cover'}}
-                    priority
-                />
-            </div>
-        ),
-    }
-)
 export default function Home() {
     return (
         <div>

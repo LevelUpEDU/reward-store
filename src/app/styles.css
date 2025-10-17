@@ -16,7 +16,6 @@ body {
 
 #pixelated-bg {
     position: fixed;
-    background-color: #44316fff;
     top: 0;
     left: 0;
     width: 100vw;
@@ -33,6 +32,8 @@ body {
     padding: 1rem;
     width: 100%;
     max-width: 400px;
+    position: relative;
+    z-index: 1;
 }
 
 h1 {
