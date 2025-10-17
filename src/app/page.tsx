@@ -72,7 +72,7 @@ export default function Home() {
                         <div className="divider">or</div>
 
                         <div className="register-link">
-                            Don't have an account?{' '}
+                            Don&apos;t have an account?{' '}
                             <a href="#register">Register here</a>
                         </div>
                     </form>
