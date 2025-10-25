@@ -3,7 +3,7 @@ import type {MapConfig} from '@/types'
 
 export class Lobby extends Scene {
     private rewardsMap?: Phaser.Tilemaps.Tilemap
-    private rewardsLayer?: Phaser.Tilemaps.TilemapLayer
+    private rewardsLayer?: Phaser.Tilemaps.TilemapLayer | null
     private rewardsVisible = false
 
     private static readonly CONFIG: MapConfig = {
@@ -149,6 +149,11 @@ export class Lobby extends Scene {
                 'Interface windows' // Phaser image key
             )
 
+            if (!tileset) {
+                console.error('Failed to load tileset for rewards map')
+                return
+            }
+
             this.rewardsLayer = this.rewardsMap.createLayer(
                 'base_layer',
                 tileset,
@@ -157,10 +162,10 @@ export class Lobby extends Scene {
             )
 
             // UI overlay styling
-            this.rewardsLayer.setScrollFactor(0)
-            this.rewardsLayer.setScale(2.5)
-            this.rewardsLayer.setAlpha(0.9)
-            this.rewardsLayer.setPosition(200, 100)
+            this.rewardsLayer!.setScrollFactor(0)
+            this.rewardsLayer!.setScale(2.5)
+            this.rewardsLayer!.setAlpha(0.9)
+            this.rewardsLayer!.setPosition(200, 100)
         } else {
             this.rewardsLayer?.setVisible(true)
         }
