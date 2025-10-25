@@ -1,6 +1,5 @@
 import {interactionRegistry} from './interactionRegistry'
 import {chalkboardStyles as styles} from './styles/chalkboardStyles'
-import {createMenuNavigation} from '@/utils/menuNavigation'
 import {loadQuests} from './utils/questData'
 import {
     createOverlay,
@@ -8,8 +7,9 @@ import {
     createBackground,
     createTitle,
     createEmptyMessage,
-    createQuestUI,
 } from './utils/chalkboardUIHelpers'
+// board UI extracted to utils/chalkboardBoards
+import {mountBoards} from './utils/chalkboardBoards'
 
 interactionRegistry.register('chalkboard', async (scene, _data?) => {
     scene.interactionHandler.blockMovement()
@@ -46,7 +46,7 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
     )
     elements.push(overlay, border, background)
 
-    // Create title
+    // Create title (will update with course title after load)
     const title = createTitle(
         scene,
         centerX,
@@ -56,9 +56,30 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
     )
     elements.push(title)
 
-    // Load and display quests
-    const quests = await loadQuests()
-    const doneStates: boolean[] = quests.map((q) => Boolean(q.done))
+    // Load and display quests (default courseId = 3)
+    // Prefer passing a student identity from env for dev flow
+    // Access process.env only when available (server-side or build-time). Avoid referencing
+    // `process` directly in the browser, which throws "process is not defined" at runtime.
+    let devStudent = 'zion_li@my.bcit.ca'
+    try {
+        if (typeof process !== 'undefined') {
+            const proc = process as unknown as
+                | {env?: Record<string, string | undefined>}
+                | undefined
+            const envEmail = proc?.env?.DEV_STUDENT_EMAIL
+            if (typeof envEmail === 'string' && envEmail.length > 0)
+                devStudent = envEmail
+        }
+    } catch {
+        // ignore - fallback to default email when process is not present in the runtime
+    }
+    const {course, quests} = await loadQuests(3, devStudent)
+    const _doneStates: boolean[] = quests.map((q) => Boolean(q.done))
+
+    // If backend returned a course title, update the heading text
+    if (course?.title) {
+        title.setText(`Quests for ${course.title}`)
+    }
 
     const listStartX = centerX - interfaceWidth / 2 + styles.layout.padding
     const listStartY = centerY - interfaceHeight / 2 + styles.layout.listStartY
@@ -68,10 +89,65 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
         styles.layout.padding -
         styles.layout.doneColumnOffsetX
 
-    const cleanup = (nav?: any) => {
-        if (nav) nav.cleanup()
-        elements.forEach((el) => el.destroy())
-        scene.interactionHandler.unblockMovement()
+    // Group quests into three boards using server-provided submission metadata:
+    // Available = no submission, Submitted = submission exists and status === 'pending',
+    // Approved = submission exists and status === 'approved'
+    const boards: {name: string; quests: typeof quests}[] = [
+        {
+            name: 'Available',
+            quests: quests.filter((q) => !q.submissionId) as typeof quests,
+        },
+        {
+            name: 'Submitted',
+            quests: quests.filter(
+                (q) => q.submissionId && q.submissionStatus === 'pending'
+            ) as typeof quests,
+        },
+        {
+            name: 'Approved',
+            quests: quests.filter(
+                (q) => q.submissionId && q.submissionStatus === 'approved'
+            ) as typeof quests,
+        },
+    ]
+
+    let _cleaned = false
+    let cleanup = (nav?: {cleanup?: () => void}) => {
+        if (_cleaned) return
+        _cleaned = true
+        try {
+            console.warn('[chalkboard] cleanup called', {
+                navProvided: Boolean(nav),
+            })
+        } catch {}
+        try {
+            if (nav && typeof nav.cleanup === 'function') {
+                try {
+                    nav.cleanup()
+                } catch {
+                    /* ignore */
+                }
+            }
+        } catch {
+            /* ignore */
+        }
+        try {
+            elements.forEach((el) => {
+                try {
+                    el.destroy()
+                } catch {
+                    /* ignore */
+                }
+            })
+            elements.length = 0
+        } catch {
+            /* ignore */
+        }
+        try {
+            scene.interactionHandler.unblockMovement()
+        } catch {
+            /* ignore */
+        }
     }
 
     if (quests.length === 0) {
@@ -83,31 +159,20 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
             }
         })
     } else {
-        const questUI = createQuestUI(
+        const originalCleanup = cleanup
+        const boardsMount = mountBoards({
             scene,
-            quests,
-            doneStates,
+            elements,
+            overlay,
+            border,
+            title,
+            boards,
             listStartX,
             listStartY,
-            doneX
-        )
-        elements.push(...questUI.elements)
-
-        const navigation = createMenuNavigation({
-            scene,
-            itemCount: quests.length,
-            onSelectionChange: (idx) => questUI.updateVisuals(idx),
-            onSelect: (idx) => questUI.toggleDone(idx),
-            onClose: () => cleanup(navigation),
+            doneX,
+            originalCleanup,
         })
-
-        overlay.setInteractive()
-        overlay.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            if (!border.getBounds().contains(pointer.x, pointer.y)) {
-                cleanup(navigation)
-            }
-        })
-
-        questUI.updateVisuals(0)
+        // reassign cleanup so callers perform extended cleanup from the mount
+        cleanup = () => boardsMount.cleanup()
     }
 })
