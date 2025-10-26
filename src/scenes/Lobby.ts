@@ -5,6 +5,21 @@ export class Lobby extends Scene {
     private rewardsMap?: Phaser.Tilemaps.Tilemap
     private rewardsLayer?: Phaser.Tilemaps.TilemapLayer | null
     private rewardsVisible = false
+    private badgesText?: Phaser.GameObjects.Text // Add text object for badges
+    private rewardsText?: Phaser.GameObjects.Text // Add text object for rewards
+    private interactKey?: Phaser.Input.Keyboard.Key // Add variable for 'E' key
+    private interactiveObject?: Phaser.GameObjects.Rectangle // Add variable for interactive object
+    private escKey?: Phaser.Input.Keyboard.Key // Explicitly declare escKey as a class property
+
+    // Sample data for badges and rewards (replace with actual data source)
+    private playerData = {
+        badges: ['Math Master', 'Science Star', 'History Hero'], // Example badges
+        rewards: [
+            'Gold Star',
+            'Bonus Points: 500',
+            'Certificate of Excellence',
+        ], // Example rewards
+    }
 
     private static readonly CONFIG: MapConfig = {
         name: 'lobby',
@@ -119,14 +134,21 @@ export class Lobby extends Scene {
         this.defineSceneTransitions()
         // Add rewards map toggle
         this.setupRewardsOverlay()
+        // Add interactive object
+        this.setupInteractiveObject() // New method call
     }
 
     private setupRewardsOverlay(): void {
-        const escKey = this.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.ESC
-        )
+        // Initialize escKey if not already set
+        if (!this.escKey) {
+            this.escKey = this.input.keyboard!.addKey(
+                Phaser.Input.Keyboard.KeyCodes.ESC
+            )
+        }
 
-        escKey.on('down', () => {
+        // Remove any existing listeners to prevent duplicates
+        this.escKey.off('down')
+        this.escKey.on('down', () => {
             this.rewardsVisible = !this.rewardsVisible
             if (this.rewardsVisible) {
                 this.showRewardsOverlay()
@@ -168,10 +190,68 @@ export class Lobby extends Scene {
         } else {
             this.rewardsLayer?.setVisible(true)
         }
+
+        // Add Badges and Rewards text
+        const badgeList =
+            this.playerData.badges.length > 0 ?
+                this.playerData.badges.join('\n')
+            :   'No badges earned yet'
+        const rewardList =
+            this.playerData.rewards.length > 0 ?
+                this.playerData.rewards.join('\n')
+            :   'No rewards earned yet'
+
+        // Create or update badges text
+        if (!this.badgesText) {
+            this.badgesText = this.add.text(
+                300, // Adjust x position
+                200, // Adjust y position
+                `Badges Earned:\n${badgeList}`,
+                {
+                    fontSize: '24px',
+                    color: '#ffffff',
+                    backgroundColor: '#00000080', // Semi-transparent black background
+                    padding: {x: 10, y: 10},
+                    wordWrap: {width: 300},
+                }
+            )
+            this.badgesText.setScrollFactor(0) // Fixed to camera
+        } else {
+            this.badgesText.setText(`Badges Earned:\n${badgeList}`)
+            this.badgesText.setVisible(true)
+        }
+
+        // Create or update rewards text
+        if (!this.rewardsText) {
+            this.rewardsText = this.add.text(
+                600, // Adjust x position
+                200, // Adjust y position
+                `Rewards Earned:\n${rewardList}`,
+                {
+                    fontSize: '24px',
+                    color: '#ffffff',
+                    backgroundColor: '#00000080',
+                    padding: {x: 10, y: 10},
+                    wordWrap: {width: 300},
+                }
+            )
+            this.rewardsText.setScrollFactor(0)
+        } else {
+            this.rewardsText.setText(`Rewards Earned:\n${rewardList}`)
+            this.rewardsText.setVisible(true)
+        }
     }
 
     private hideRewardsOverlay(): void {
-        this.rewardsLayer?.setVisible(false)
+        if (this.rewardsLayer) {
+            this.rewardsLayer.setVisible(false)
+        }
+        if (this.badgesText) {
+            this.badgesText.setVisible(false)
+        }
+        if (this.rewardsText) {
+            this.rewardsText.setVisible(false)
+        }
     }
 
     private setCameraResolution(): void {
@@ -232,5 +312,62 @@ export class Lobby extends Scene {
         this.cameras.main.once('camerafadeoutcomplete', () => {
             this.scene.start(targetSceneKey)
         })
+    }
+
+    private setupInteractiveObject(): void {
+        // Create a rectangular object (you can replace with a sprite if desired)
+        this.interactiveObject = this.add.rectangle(
+            600, // x position (adjust as needed)
+            600, // y position (adjust as needed)
+            64, // width
+            64, // height
+            0xff0000, // red color for visibility
+            0.5 // semi-transparent
+        )
+
+        // Add physics to the object
+        this.physics.add.existing(this.interactiveObject, true) // true = static object
+
+        // Ensure the player is defined and has a physics body
+        if (this.player && this.player.body) {
+            // Add overlap detection between player and interactive object
+            this.physics.add.overlap(
+                this.player,
+                this.interactiveObject,
+                this.handleInteraction,
+                undefined,
+                this
+            )
+        } else {
+            console.error('Player or player.body is not defined')
+        }
+
+        // Initialize interactKey if not already set
+        if (!this.interactKey) {
+            // Set up the 'E' key
+            this.interactKey = this.input.keyboard!.addKey(
+                Phaser.Input.Keyboard.KeyCodes.E
+            )
+        }
+
+        // Remove any existing listeners to prevent duplicates
+        this.interactKey.off('down')
+        this.interactKey.on('down', () => {
+            // Only trigger if overlapping
+            if (
+                this.physics.world.overlap(this.player, this.interactiveObject)
+            ) {
+                this.rewardsVisible = !this.rewardsVisible
+                if (this.rewardsVisible) {
+                    this.showRewardsOverlay()
+                } else {
+                    this.hideRewardsOverlay()
+                }
+            }
+        })
+    }
+
+    private handleInteraction(): void {
+        // add later
     }
 }
