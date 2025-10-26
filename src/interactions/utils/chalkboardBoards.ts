@@ -42,8 +42,8 @@ export function mountBoards(options: MountBoardsOptions) {
 
     const activeBoard = 0
     let boardElements: Phaser.GameObjects.GameObject[] = []
-    let boardNav: ReturnType<typeof createMenuNavigation> | null = null
-    let boardQuestUI: ReturnType<typeof createQuestUI> | null = null
+    const boardNav: ReturnType<typeof createMenuNavigation> | null = null
+    const boardQuestUI: ReturnType<typeof createQuestUI> | null = null
     let _cleanedUp = false
 
     const centerX = scene.scale.width / 2

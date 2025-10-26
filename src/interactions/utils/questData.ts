@@ -38,7 +38,6 @@ export async function loadQuests(
         const res = await fetch(`/api/quests?${qs.toString()}`)
         if (!res.ok) return {course: {}, quests: []}
         const data = await res.json()
-        console.log('data: ', data)
 
         const rawQuests =
             Array.isArray(data?.quests) ? (data.quests as QuestResponse[])

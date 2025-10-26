@@ -119,7 +119,6 @@ export class Lobby extends Scene {
         this.defineSceneTransitions()
         // Add rewards map toggle
         this.setupRewardsOverlay()
-        console.log(this.textures.exists('Interface windows')) // should log true
     }
 
     private setupRewardsOverlay(): void {

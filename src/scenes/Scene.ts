@@ -165,10 +165,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         // Add each layer, passing ALL tilesets (Phaser will use only the relevant ones)
         this.mapConfig.layers.forEach((layerConfig) => {
             if (allTilesets.length > 0) {
-                const layer = this.map.createLayer(
-                    layerConfig.name,
-                    allTilesets
-                )
+                this.map.createLayer(layerConfig.name, allTilesets)
                 // layer?.setScale(0.5)
             }
         })
