@@ -1,5 +1,3 @@
-// src/app/student/DashboardContent/StudentQuestsPage.tsx
-
 'use client'
 
 import React, {useState, useEffect} from 'react'
@@ -111,7 +109,7 @@ const StudentQuestsPage = ({setActiveTab}: StudentQuestsPageProps) => {
     const attendedQuests = quests.filter((quest) => quest.isAttended)
     const availableQuests = quests.filter((quest) => !quest.isAttended)
 
-    const getStatusBadge = (status: string | null) => {
+    const getStatusBadge = (status: string | null | undefined) => {
         switch (status) {
             case 'pending':
                 return <span className="status-badge pending"> Pending</span>

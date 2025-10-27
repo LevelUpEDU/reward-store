@@ -1,4 +1,5 @@
 // src/app/student/page.tsx
+// student dashboard
 'use client'
 
 import React, {useState} from 'react'

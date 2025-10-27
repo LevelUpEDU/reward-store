@@ -1,5 +1,3 @@
-// src/app/student/DashboardContent/StudentDashboardContent.tsx
-
 import React from 'react'
 import StudentHomePage from './StudentHomePage'
 import StudentCoursesPage from './StudentCoursesPage'

@@ -1,5 +1,3 @@
-// src/app/student/DashboardContent/StudentHomePage.tsx
-
 'use client'
 
 import React, {useState, useEffect} from 'react'
@@ -55,7 +53,7 @@ const StudentHomePage = ({setActiveTab}: StudentHomePageProps) => {
                 ])
 
                 setCourses(coursesData)
-                setQuests(questsData.slice(0, 5)) // Show only recent 5 quests
+                setQuests(questsData.slice(0, 5))
             } catch (err: any) {
                 setError(err.message)
             } finally {

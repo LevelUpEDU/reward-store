@@ -39,9 +39,15 @@ src/
 
 ## Business Rules
 
-1. Transactions must reference exactly one submission, or redemption: 
-`CHECK ((submission_id IS NOT NULL AND redemption_id IS NULL) OR (submission_id IS NULL AND redemption_id IS NOT NULL))`
-2. Student points are not stored in student table to protect against data inconsistency (use a SUM instead)
+1. Transactions must reference exactly one of: submission OR redemption
+2. Student points are not stored in student table to protect against data inconsistency (use a SUM instead) 
+3. Students cannot register for the same course multiple times
+4. Student points cannot go negative (redemptions will be prevented if insufficient points)
+5. REWARD cost must be >= 0
+6. REWARD quantity_limit must be NULL (unlimited) or an integer > 0
+7. REWARD automatically deactivates when calculated quantity reaches 0
+8. REWARD quantity remaining to be calculated from REDEMPTION table and compared against REWARD quantity_limit
+9. Cancelled redemptions do not change REWARD back to active or add quantity to rewards
 ## Database Schema
 ```mermaid
 ---
@@ -50,88 +56,97 @@ config:
 ---
 erDiagram
 	direction BT
+	
 	STUDENT {
-		string email PK ""  
-		string name  ""
-		date last_signin  ""
+		string id PK
+		string name
+		date last_signin "nullable"
 	}
+	
 	INSTRUCTOR {
-		int instructor_id PK ""  
-		string name  ""  
-		string email  ""  
-		date last_signin  ""  
+		string id PK
+		string name
+		date last_signin "nullable"
 	}
+	
 	REGISTRATION {
-		int student_id FK ""  
-		int course_id FK ""  
+		string student_id FK
+		int course_id FK
+		string COMPOSITE_PK "PRIMARY KEY (student_id, course_id)"
 	}
+	
 	COURSE {
-		int course_id PK ""  
-		string course_code ""  
-		int instructor_id FK ""  
-		string title  ""  
-		string description  ""  
+		int id PK
+		string course_code "unique, auto-generated"
+		string instructor_id FK
+		string title
+		text description "nullable"
 	}
+	
 	QUEST {
-		int quest_id PK ""  
-		int course_id FK ""
-        int created_by FK "references INSTRUCTOR"  
-		string title  ""  
-		int points_value  ""  
-		date expiration_date  ""  
-		date created_date  ""  
+		int id PK
+		int course_id FK
+		string created_by FK "references INSTRUCTOR"
+		string title
+		int points
+		date created_date
+		date expiration_date "nullable"
 	}
+	
 	SUBMISSION {
-		int submission_id PK ""  
-		int student_id FK ""  
-		int quest_id FK ""  
-		date submitted_date  ""  
-		string status  ""  
-		int verified_by FK ""  
-		date verified_date  ""  
+		int id PK
+		string student_id FK
+		int quest_id FK
+		date submission_date
+		enum status "pending | approved | rejected"
+		string verified_by FK "nullable, references INSTRUCTOR"
+		date verified_date "nullable"
 	}
+	
 	TRANSACTION {
-		int transaction_id PK ""  
-		int student_id FK ""  
-		int points  ""  
-		date transaction_date  ""  
-		int submission_id FK "nullable"  
+		int id PK
+		string student_id FK
+		int points_value
+		date transaction_date
+		int submission_id FK "nullable"
 		int redemption_id FK "nullable"
 	}
+	
 	REDEMPTION {
-		int redemption_id PK ""  
-		int student_id FK ""  
-		int reward_id FK ""  
-		date redemption_date  ""  
-		string status  "pending | completed | cancelled"  
-		date completion_date  ""  
-		string instructor_notes  ""  
-		string student_notes  ""  
+		int id PK
+		string student_id FK
+		int reward_id FK
+		date redemption_date
+		enum status "pending | fulfilled | cancelled"
+		date fulfillment_date "nullable"
+		text instructor_notes "nullable"
+		text student_notes "nullable"
 	}
+	
 	REWARD {
-		int reward_id PK ""  
-		int course_id FK ""  
-		date created_date  ""  
-		string name  ""  
-		text description  ""  
-		int point_cost  ""  
-		string reward_type  ""  
-		int quantity_limit  ""  
-		boolean active  ""  
+		int id PK
+		int course_id FK
+		date created_date
+		string name
+		text description "nullable"
+		int cost
+		int quantity_limit "nullable"
+		enum type "unspecified"
+		boolean active "default true"
 	}
+	
 	STUDENT||--o{REGISTRATION:"has"
 	COURSE||--o{REGISTRATION:"contains"
 	INSTRUCTOR||--o{COURSE:"teaches"
 	COURSE||--o{QUEST:"has"
 	INSTRUCTOR||--o{QUEST:"creates"
-	INSTRUCTOR||--o{REWARD:"manages"
+	COURSE||--o{REWARD:"has"
 	STUDENT||--o{SUBMISSION:"submits"
 	QUEST||--o{SUBMISSION:"receives"
 	INSTRUCTOR||--o{SUBMISSION:"verifies"
-    STUDENT||--o{TRANSACTION:"has"
-	STUDENT||--o{REDEMPTION:"triggers a"
-	REWARD||--o{REDEMPTION:"redeemed as"    
-    SUBMISSION||--||TRANSACTION:"creates"
-    REDEMPTION||--||TRANSACTION:"creates"
-
+	STUDENT||--o{TRANSACTION:"has"
+	STUDENT||--o{REDEMPTION:"initiates"
+	REWARD||--o{REDEMPTION:"redeemed as"
+	SUBMISSION||--||TRANSACTION:"creates"
+	REDEMPTION||--||TRANSACTION:"creates"
 ```

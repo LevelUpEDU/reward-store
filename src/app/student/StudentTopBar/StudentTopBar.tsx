@@ -1,4 +1,3 @@
-// src/app/student/StudentTopBar/StudentTopBar.tsx
 'use client'
 
 import React from 'react'
