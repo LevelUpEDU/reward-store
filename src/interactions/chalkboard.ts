@@ -1,90 +1,113 @@
 import {interactionRegistry} from './interactionRegistry'
+import {chalkboardStyles as styles} from './styles/chalkboardStyles'
+import {createMenuNavigation} from '@/utils/menuNavigation'
+import {loadQuests} from './utils/questData'
+import {
+    createOverlay,
+    createBorder,
+    createBackground,
+    createTitle,
+    createEmptyMessage,
+    createQuestUI,
+} from './utils/chalkboardUIHelpers'
 
-interactionRegistry.register('chalkboard', (scene, _data?) => {
+interactionRegistry.register('chalkboard', async (scene, _data?) => {
     scene.interactionHandler.blockMovement()
-    const screenWidth = scene.scale.width
-    const screenHeight = scene.scale.height
-    const interfaceWidth = screenWidth * 0.8
-    const interfaceHeight = screenHeight * 0.8
+
+    const {width: screenWidth, height: screenHeight} = scene.scale
+    const interfaceWidth = screenWidth * styles.interfaceWidthRatio
+    const interfaceHeight = screenHeight * styles.interfaceHeightRatio
     const centerX = screenWidth / 2
     const centerY = screenHeight / 2
 
-    const escKey = scene.input.keyboard!.addKey(
-        Phaser.Input.Keyboard.KeyCodes.ESC
-    )
-    const qKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q)
+    const elements: Phaser.GameObjects.GameObject[] = []
 
-    const overlay = scene.add.rectangle(
+    // Create base UI layers
+    const overlay = createOverlay(
+        scene,
         centerX,
         centerY,
         screenWidth,
-        screenHeight,
-        0x000000,
-        0.7
+        screenHeight
     )
-    overlay.setDepth(3000)
-
-    const border = scene.add.rectangle(
-        centerX,
-        centerY,
-        interfaceWidth + 16,
-        interfaceHeight + 16,
-        0x8b4513
-    )
-    border.setDepth(3000)
-
-    const chalkboardBg = scene.add.rectangle(
+    const border = createBorder(
+        scene,
         centerX,
         centerY,
         interfaceWidth,
-        interfaceHeight,
-        0x2d5016
+        interfaceHeight
     )
-    chalkboardBg.setDepth(3001)
+    const background = createBackground(
+        scene,
+        centerX,
+        centerY,
+        interfaceWidth,
+        interfaceHeight
+    )
+    elements.push(overlay, border, background)
 
-    const chalkboardText = scene.add
-        .text(centerX, centerY - 30, 'Welcome to the platform', {
-            fontSize: '48px',
-            color: '#ffffff',
-            fontFamily: 'Arial, sans-serif',
-            align: 'center',
-        })
-        .setOrigin(0.5)
-        .setDepth(3002)
+    // Create title
+    const title = createTitle(
+        scene,
+        centerX,
+        centerY,
+        interfaceWidth,
+        interfaceHeight
+    )
+    elements.push(title)
 
-    const closeButton = scene.add
-        .text(
-            centerX,
-            centerY + interfaceHeight / 2 - 60,
-            'Click anywhere, press Q or ESC to close',
-            {
-                fontSize: '24px',
-                color: '#cccccc',
-                fontFamily: 'Arial, sans-serif',
-                align: 'center',
-            }
-        )
-        .setOrigin(0.5)
-        .setDepth(3002)
+    // Load and display quests
+    const quests = await loadQuests()
+    const doneStates: boolean[] = quests.map((q) => Boolean(q.done))
 
-    const elements = [
-        overlay,
-        border,
-        chalkboardBg,
-        chalkboardText,
-        closeButton,
-    ]
+    const listStartX = centerX - interfaceWidth / 2 + styles.layout.padding
+    const listStartY = centerY - interfaceHeight / 2 + styles.layout.listStartY
+    const doneX =
+        centerX +
+        interfaceWidth / 2 -
+        styles.layout.padding -
+        styles.layout.doneColumnOffsetX
 
-    const closeInterface = () => {
+    const cleanup = (nav?: any) => {
+        if (nav) nav.cleanup()
         elements.forEach((el) => el.destroy())
-        escKey.off('down', closeInterface)
-        qKey.off('down', closeInterface)
         scene.interactionHandler.unblockMovement()
     }
 
-    overlay.setInteractive()
-    overlay.on('pointerdown', closeInterface)
+    if (quests.length === 0) {
+        elements.push(createEmptyMessage(scene, centerX, centerY))
+        overlay.setInteractive()
+        overlay.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            if (!border.getBounds().contains(pointer.x, pointer.y)) {
+                cleanup()
+            }
+        })
+    } else {
+        const questUI = createQuestUI(
+            scene,
+            quests,
+            doneStates,
+            listStartX,
+            listStartY,
+            doneX
+        )
+        elements.push(...questUI.elements)
 
-    escKey.on('down', closeInterface)
-    qKey.on('down', closeInterface)
+        const navigation = createMenuNavigation({
+            scene,
+            itemCount: quests.length,
+            onSelectionChange: (idx) => questUI.updateVisuals(idx),
+            onSelect: (idx) => questUI.toggleDone(idx),
+            onClose: () => cleanup(navigation),
+        })
+
+        overlay.setInteractive()
+        overlay.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            if (!border.getBounds().contains(pointer.x, pointer.y)) {
+                cleanup(navigation)
+            }
+        })
+
+        questUI.updateVisuals(0)
+    }
 })
