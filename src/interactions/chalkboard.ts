@@ -160,6 +160,54 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
         })
     } else {
         const originalCleanup = cleanup
+
+        // Refresh callback: re-fetch quests and rebuild boards
+        const refreshQuests = async () => {
+            try {
+                const {course: freshCourse, quests: freshQuests} =
+                    await loadQuests(3, devStudent)
+
+                // Update title if course changed
+                if (freshCourse?.title) {
+                    title.setText(`Quests for ${freshCourse.title}`)
+                }
+
+                // Rebuild boards with fresh data
+                const freshBoards: {
+                    name: string
+                    quests: typeof freshQuests
+                }[] = [
+                    {
+                        name: 'Available',
+                        quests: freshQuests.filter(
+                            (q) => !q.submissionId
+                        ) as typeof freshQuests,
+                    },
+                    {
+                        name: 'Submitted',
+                        quests: freshQuests.filter(
+                            (q) =>
+                                q.submissionId &&
+                                q.submissionStatus === 'pending'
+                        ) as typeof freshQuests,
+                    },
+                    {
+                        name: 'Approved',
+                        quests: freshQuests.filter(
+                            (q) =>
+                                q.submissionId &&
+                                q.submissionStatus === 'approved'
+                        ) as typeof freshQuests,
+                    },
+                ]
+
+                return freshBoards
+            } catch (err) {
+                console.error('[chalkboard] refreshQuests error', err)
+                return null
+            }
+        }
+
         const boardsMount = mountBoards({
             scene,
             elements,
@@ -171,6 +219,7 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
             listStartY,
             doneX,
             originalCleanup,
+            refreshQuests,
         })
         // reassign cleanup so callers perform extended cleanup from the mount
         cleanup = () => boardsMount.cleanup()

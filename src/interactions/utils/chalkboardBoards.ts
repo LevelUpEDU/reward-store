@@ -1,13 +1,9 @@
-/* eslint-disable max-lines */
 import {chalkboardStyles as styles} from '../styles/chalkboardStyles'
 import type {Scene} from '@/scenes/Scene'
 import {createMenuNavigation} from '@/utils/menuNavigation'
 import {createQuestUI} from './chalkboardQuestList'
 import {createArrows} from './chalkboardBoardsHelpers'
 import {createShowBoard} from './chalkboardBoardsShow'
-
-// minimal raw quest shape used when mapping server data to the internal Quest type
-// (moved into the show helper)
 
 type SceneLike = Scene
 type GameObjectWithBounds = Phaser.GameObjects.GameObject & {
@@ -24,6 +20,9 @@ type MountBoardsOptions = {
     listStartY: number
     doneX: number
     originalCleanup: (nav?: {cleanup?: () => void}) => void
+    refreshQuests?: () => Promise<
+        {name: string; quests: Array<{id?: number; done?: boolean}>}[] | null
+    >
 }
 
 export function mountBoards(options: MountBoardsOptions) {
@@ -38,6 +37,7 @@ export function mountBoards(options: MountBoardsOptions) {
         listStartY,
         doneX,
         originalCleanup,
+        refreshQuests,
     } = options
 
     const activeBoard = 0
@@ -45,6 +45,7 @@ export function mountBoards(options: MountBoardsOptions) {
     const boardNav: ReturnType<typeof createMenuNavigation> | null = null
     const boardQuestUI: ReturnType<typeof createQuestUI> | null = null
     let _cleanedUp = false
+    let currentBoards = boards // Mutable reference to boards array
 
     const centerX = scene.scale.width / 2
     const centerY = scene.scale.height / 2
@@ -156,6 +157,36 @@ export function mountBoards(options: MountBoardsOptions) {
         }
     }
 
+    // Use external showBoard implementation to shrink this file size
+    // Explicitly type state object to allow mutation of boardNav and boardQuestUI
+    // Declare state early so cleanupBoard can reference it
+    const state: {
+        activeBoard: number
+        boardElements: Phaser.GameObjects.GameObject[]
+        boardNav: ReturnType<typeof createMenuNavigation> | null
+        boardQuestUI: ReturnType<typeof createQuestUI> | null
+        cleanupBoard: (() => void) | null
+        subtitle: Phaser.GameObjects.Text | null
+        setSubtitle: (t: Phaser.GameObjects.Text) => void
+        setBoardElements: (els: Phaser.GameObjects.GameObject[]) => void
+        getBoards: () => typeof boards
+        setBoards: (b: typeof boards) => void
+    } = {
+        activeBoard,
+        boardElements,
+        boardNav,
+        boardQuestUI,
+        // Will be assigned after cleanupBoard is defined
+        cleanupBoard: null,
+        subtitle,
+        setSubtitle: (t: Phaser.GameObjects.Text) => (subtitle = t),
+        setBoardElements: (els: Phaser.GameObjects.GameObject[]) =>
+            (boardElements = els),
+        // Use getter to always return the live reference
+        getBoards: () => currentBoards,
+        setBoards: (b: typeof boards) => (currentBoards = b),
+    }
+
     cleanupBoard = () => {
         // Use state.boardNav instead of local boardNav to get the live reference
         if (state.boardNav) {
@@ -171,35 +202,12 @@ export function mountBoards(options: MountBoardsOptions) {
         boardElements.length = 0
     }
 
-    // Use external showBoard implementation to shrink this file size
-    // Explicitly type state object to allow mutation of boardNav and boardQuestUI
-    const state: {
-        activeBoard: number
-        boardElements: Phaser.GameObjects.GameObject[]
-        boardNav: ReturnType<typeof createMenuNavigation> | null
-        boardQuestUI: ReturnType<typeof createQuestUI> | null
-        cleanupBoard: (() => void) | null
-        subtitle: Phaser.GameObjects.Text | null
-        setSubtitle: (t: Phaser.GameObjects.Text) => void
-        setBoardElements: (els: Phaser.GameObjects.GameObject[]) => void
-    } = {
-        activeBoard,
-        boardElements,
-        boardNav,
-        boardQuestUI,
-        // call the current cleanupBoard dynamically so helper uses the live function
-        cleanupBoard: () => {
-            if (cleanupBoard) cleanupBoard()
-        },
-        subtitle,
-        setSubtitle: (t: Phaser.GameObjects.Text) => (subtitle = t),
-        setBoardElements: (els: Phaser.GameObjects.GameObject[]) =>
-            (boardElements = els),
-    }
+    // Now assign the cleanupBoard function to state
+    state.cleanupBoard = cleanupBoard
+
     const showBoard = createShowBoard({
         scene,
         elements,
-        boards,
         listStartX,
         listStartY,
         doneX,
@@ -215,6 +223,7 @@ export function mountBoards(options: MountBoardsOptions) {
         isCleanedUp: () => _cleanedUp,
         overlay,
         border,
+        refreshQuests,
     })
 
     // createArrows will be called after isDialogOpen and nav handlers are set

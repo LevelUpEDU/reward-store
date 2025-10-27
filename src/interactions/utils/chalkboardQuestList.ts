@@ -13,7 +13,8 @@ export function createQuestUI(
     startY: number,
     doneX: number,
     showDoneColumn: boolean = true,
-    _navigationSetter?: (controls: MenuNavigationControls) => void
+    _navigationSetter?: (controls: MenuNavigationControls) => void,
+    onQuestSubmitted?: () => Promise<void>
 ) {
     const questTexts: Phaser.GameObjects.Text[] = []
     const doneMarks: Phaser.GameObjects.Text[] = []
@@ -121,6 +122,18 @@ export function createQuestUI(
                         if (!ok) {
                             doneStates[index] = false
                             mark.setVisible(false)
+                        } else {
+                            // Quest successfully submitted - trigger refresh if callback provided
+                            if (onQuestSubmitted) {
+                                try {
+                                    await onQuestSubmitted()
+                                } catch (refreshErr) {
+                                    console.error(
+                                        '[chalkboard] onQuestSubmitted error',
+                                        refreshErr
+                                    )
+                                }
+                            }
                         }
                     } catch (err) {
                         console.error('[chalkboard] persistToggle error', err)
