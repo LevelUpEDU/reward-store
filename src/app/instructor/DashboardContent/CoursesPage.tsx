@@ -1,11 +1,9 @@
-// src/app/instructor/DashboardContent/CoursesPage.tsx
 'use client'
 
 import React, {useState, useEffect} from 'react'
 import CourseCard from '../CourseCard/CourseCard'
 import CourseDetailPage from './CourseDetailPage'
 
-// 假设 Course 类型是这样
 type Course = {
     id: number
     title: string
@@ -99,29 +97,3 @@ const CoursesPage = ({setActiveTab}: CoursesPageProps) => {
 }
 
 export default CoursesPage
-
-// src/app/instructor/DashboardContent/CoursesPage.tsx
-
-// import React from 'react';
-// import CourseCard from '../CourseCard/CourseCard';
-
-// const CoursesPage = () => (
-//   <div className="page-content">
-//     <h1 className="page-title">Courses List</h1>
-//     <div className="courses-grid">
-
-//       <CourseCard title="Full Stack Development" />
-//       <CourseCard title="Advanced Java" />
-//       <CourseCard title="Cloud Security" />
-//       <CourseCard title="TypeScript" />
-//       <CourseCard title="Node.js Backend"/>
-//       <CourseCard title="Artificial Intelligence" />
-
-//       {/* <CourseCard title="Full Stack Development" students={245} completion={78} image="#b6b3b3ff" />
-//       */}
-
-//     </div>
-//   </div>
-// );
-
-// export default CoursesPage;

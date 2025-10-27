@@ -96,7 +96,6 @@ export default function HomePage() {
                                 <LoginForm
                                     onSuccess={() => {
                                         setShowLogin(false)
-                                        // User will be redirected automatically
                                     }}
                                     onSwitchToSignUp={() => {
                                         setShowLogin(false)
@@ -112,7 +111,6 @@ export default function HomePage() {
                                 <SignUpForm
                                     onSuccess={() => {
                                         setShowSignUp(false)
-                                        // User will be redirected automatically
                                     }}
                                     onSwitchToLogin={() => {
                                         setShowSignUp(false)

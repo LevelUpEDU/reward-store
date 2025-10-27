@@ -1,5 +1,3 @@
-// src/app/instructor/DashboardContent/QuestsPage.tsx
-
 'use client'
 
 import React, {useState, useEffect} from 'react'
@@ -116,7 +114,6 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
                 throw new Error(data.message || 'Failed to process submission')
             }
 
-            // Update the submission status locally
             setSelectedQuest((prev) => {
                 if (!prev) return null
                 return {
@@ -254,7 +251,6 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
                 </div>
             }
 
-            {/* Submissions Modal */}
             {selectedQuest && (
                 <div
                     className="modal-overlay"

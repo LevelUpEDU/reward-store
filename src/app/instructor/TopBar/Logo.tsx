@@ -1,5 +1,3 @@
-// src/app/instructor/TopBar/Logo.tsx
-
 import React from 'react'
 import logo from '../public/Logo_green.jpg'
 

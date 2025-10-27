@@ -41,7 +41,6 @@ export default function CourseDetailPage({
             try {
                 setIsLoading(true)
 
-                // Fetch course details
                 const courseResponse = await fetch('/api/courses')
                 if (!courseResponse.ok) {
                     throw new Error('Failed to fetch course')
@@ -56,7 +55,6 @@ export default function CourseDetailPage({
                 }
                 setCourse(currentCourse)
 
-                // Fetch quests for this course
                 const questsResponse = await fetch(
                     `/api/quests/course/${courseId}`
                 )
@@ -64,7 +62,6 @@ export default function CourseDetailPage({
                     const questsData = await questsResponse.json()
                     setQuests(questsData)
                 } else {
-                    // If no quests endpoint exists yet, show empty state
                     setQuests([])
                 }
             } catch (err: any) {
@@ -89,7 +86,6 @@ export default function CourseDetailPage({
     }
 
     const handleAddQuest = () => {
-        // Navigate to create quest page with course pre-selected
         setActiveTab('create_quest', courseId)
     }
 

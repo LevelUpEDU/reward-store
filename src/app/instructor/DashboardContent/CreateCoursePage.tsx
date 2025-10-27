@@ -1,11 +1,9 @@
-// src/app/DashboardContent/CreateCoursePage.tsx
-
 'use client'
 
 import {useState} from 'react'
 
 type CreateCoursePageProps = {
-    setActiveTab: (tab: 'courses') => void // 定义回调函数类型
+    setActiveTab: (tab: 'courses') => void
 }
 
 export default function CreateCoursePage({
@@ -28,7 +26,6 @@ export default function CreateCoursePage({
         })
 
         if (response.ok) {
-            // 成功后，调用回调函数切换回课程列表视图
             alert('Course created successfully!')
             setActiveTab('courses')
         } else {
@@ -43,7 +40,6 @@ export default function CreateCoursePage({
             <h1 className="page-title">Create a New Course</h1>
             <div className="settings-section">
                 {' '}
-                {/* 复用你的 settings 页面的样式 */}
                 <form onSubmit={handleSubmit} className="settings-form">
                     <div className="form-group">
                         <label htmlFor="title">Course Title</label>
@@ -72,8 +68,7 @@ export default function CreateCoursePage({
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="save-btn" // 复用你的保存按钮样式
-                    >
+                        className="save-btn">
                         {isLoading ? 'Creating...' : 'Create Course'}
                     </button>
                 </form>

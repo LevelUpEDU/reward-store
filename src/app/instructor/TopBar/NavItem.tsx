@@ -1,5 +1,3 @@
-// src/app/instructor/TopBar/NavItem.tsx
-
 import React from 'react'
 
 type NavItemProps = {

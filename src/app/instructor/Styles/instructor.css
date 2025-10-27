@@ -221,14 +221,10 @@ body {
 
 /* ===== Welcome Banner ===== */
 .welcome-banner {
-    /* background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);*/
-    /* background-color: #d1fae5; */
-    /* color: var(--color-white); */
     color: black;
     padding: var(--spacing-xl);
     border-radius: var(--radius-lg);
     margin-bottom: var(--spacing-xl);
-    /* box-shadow: var(--shadow-lg); */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -781,14 +777,12 @@ body {
 .progress-bar {
     width: 100%;
     height: 8px;
-    /* background-color:rgb(179, 207, 136); */
     border-radius: 999px;
     overflow: hidden;
 }
 
 .progress-fill {
     height: 100%;
-    /* background-color: var(--color-success); */
     background-color: rgb(179, 207, 136);
     border-radius: 999px;
     transition: width 300ms;
@@ -843,7 +837,6 @@ body {
 
 .save-btn {
     padding: var(--spacing-sm) var(--spacing-xl);
-    /* background-color: var(--color-primary); */
     background-color: #49784b;
     color: var(--color-white);
     border: none;

@@ -1,4 +1,3 @@
-// src/app/instructor/DashboardContent/SettingsPage.tsx
 import React from 'react'
 
 const SettingsPage = () => (
