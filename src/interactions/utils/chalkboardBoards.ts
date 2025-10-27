@@ -1,13 +1,9 @@
-/* eslint-disable max-lines */
 import {chalkboardStyles as styles} from '../styles/chalkboardStyles'
 import type {Scene} from '@/scenes/Scene'
 import {createMenuNavigation} from '@/utils/menuNavigation'
 import {createQuestUI} from './chalkboardQuestList'
 import {createArrows} from './chalkboardBoardsHelpers'
 import {createShowBoard} from './chalkboardBoardsShow'
-
-// minimal raw quest shape used when mapping server data to the internal Quest type
-// (moved into the show helper)
 
 type SceneLike = Scene
 type GameObjectWithBounds = Phaser.GameObjects.GameObject & {
@@ -46,8 +42,8 @@ export function mountBoards(options: MountBoardsOptions) {
 
     const activeBoard = 0
     let boardElements: Phaser.GameObjects.GameObject[] = []
-    let boardNav: ReturnType<typeof createMenuNavigation> | null = null
-    let boardQuestUI: ReturnType<typeof createQuestUI> | null = null
+    const boardNav: ReturnType<typeof createMenuNavigation> | null = null
+    const boardQuestUI: ReturnType<typeof createQuestUI> | null = null
     let _cleanedUp = false
     let currentBoards = boards // Mutable reference to boards array
 
@@ -161,23 +157,9 @@ export function mountBoards(options: MountBoardsOptions) {
         }
     }
 
-    cleanupBoard = () => {
-        // Use state.boardNav instead of local boardNav to get the live reference
-        if (state.boardNav) {
-            try {
-                state.boardNav.cleanup()
-            } catch {
-                /* ignore */
-            }
-            state.boardNav = null
-        }
-        state.boardQuestUI = null
-        boardElements.forEach((el) => el.destroy())
-        boardElements.length = 0
-    }
-
     // Use external showBoard implementation to shrink this file size
     // Explicitly type state object to allow mutation of boardNav and boardQuestUI
+    // Declare state early so cleanupBoard can reference it
     const state: {
         activeBoard: number
         boardElements: Phaser.GameObjects.GameObject[]
@@ -194,10 +176,8 @@ export function mountBoards(options: MountBoardsOptions) {
         boardElements,
         boardNav,
         boardQuestUI,
-        // call the current cleanupBoard dynamically so helper uses the live function
-        cleanupBoard: () => {
-            if (cleanupBoard) cleanupBoard()
-        },
+        // Will be assigned after cleanupBoard is defined
+        cleanupBoard: null,
         subtitle,
         setSubtitle: (t: Phaser.GameObjects.Text) => (subtitle = t),
         setBoardElements: (els: Phaser.GameObjects.GameObject[]) =>
@@ -206,10 +186,28 @@ export function mountBoards(options: MountBoardsOptions) {
         getBoards: () => currentBoards,
         setBoards: (b: typeof boards) => (currentBoards = b),
     }
+
+    cleanupBoard = () => {
+        // Use state.boardNav instead of local boardNav to get the live reference
+        if (state.boardNav) {
+            try {
+                state.boardNav.cleanup()
+            } catch {
+                /* ignore */
+            }
+            state.boardNav = null
+        }
+        state.boardQuestUI = null
+        boardElements.forEach((el) => el.destroy())
+        boardElements.length = 0
+    }
+
+    // Now assign the cleanupBoard function to state
+    state.cleanupBoard = cleanupBoard
+
     const showBoard = createShowBoard({
         scene,
         elements,
-        boards: currentBoards,
         listStartX,
         listStartY,
         doneX,
