@@ -3,7 +3,7 @@
         {
             "title": "learn terminal commands",
             "points": 100,
-            "done": false
+            "done": true
         },
         {
             "title": "create a GitHub repo",
