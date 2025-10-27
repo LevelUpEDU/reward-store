@@ -57,7 +57,9 @@ type CreateQuestUIFn = (
     listStartX: number,
     listStartY: number,
     doneX: number,
-    showDone: boolean
+    showDone: boolean,
+    navigationSetter?: (controls: MenuNavigationControls) => void,
+    onQuestSubmitted?: () => Promise<void>
 ) => QuestUI
 
 type CreateMenuNavArgs = {
@@ -93,11 +95,17 @@ export function createShowBoard(context: {
         subtitle: Phaser.GameObjects.Text | null
         setSubtitle: (t: Phaser.GameObjects.Text) => void
         setBoardElements: (els: Phaser.GameObjects.GameObject[]) => void
+        getBoards: () => Array<{name: string; quests: Array<SmallQuest>}>
+        setBoards: (b: Array<{name: string; quests: Array<SmallQuest>}>) => void
     }
     extendedCleanup: () => void
     isCleanedUp: () => boolean
     overlay: unknown
     border: {getBounds?: () => Phaser.Geom.Rectangle}
+    refreshQuests?: () => Promise<Array<{
+        name: string
+        quests: Array<SmallQuest>
+    }> | null>
 }) {
     const {
         scene,
@@ -118,9 +126,11 @@ export function createShowBoard(context: {
         isCleanedUp,
         overlay,
         border,
+        refreshQuests,
     } = context
 
     return function showBoard(index: number, fadeIn = false) {
+        const boards = state.getBoards() // Get fresh boards reference
         const idx = ((index % boards.length) + boards.length) % boards.length
         state.activeBoard = idx
         if (state.cleanupBoard) state.cleanupBoard()
@@ -198,6 +208,33 @@ export function createShowBoard(context: {
                     submissionStatus: q?.submissionStatus ?? null,
                 })
             )
+
+            // Handler to refresh boards after quest submission
+            const handleQuestSubmitted = async () => {
+                if (!refreshQuests) return
+                try {
+                    const freshBoards = await refreshQuests()
+                    if (freshBoards && freshBoards.length > 0) {
+                        // Update the boards reference
+                        state.setBoards(freshBoards)
+                        // Stay on the current board (Available) and just refresh it
+                        // This will remove the submitted quest from the Available board
+                        const currentBoardIndex = state.activeBoard
+                        // Small delay to let the checkmark animation complete
+                        setTimeout(() => {
+                            if (!isCleanedUp()) {
+                                showBoard(currentBoardIndex, true) // Re-render current board with fade-in
+                            }
+                        }, 400)
+                    }
+                } catch (err) {
+                    console.error(
+                        '[chalkboardBoardsShow] handleQuestSubmitted error',
+                        err
+                    )
+                }
+            }
+
             try {
                 state.boardQuestUI = createQuestUI(
                     scene,
@@ -206,7 +243,9 @@ export function createShowBoard(context: {
                     listStartX,
                     listStartY,
                     doneX,
-                    showDone
+                    showDone,
+                    undefined, // navigationSetter will be set later
+                    handleQuestSubmitted
                 ) as QuestUI
                 state.boardElements.push(...state.boardQuestUI.elements)
                 elements.push(...state.boardQuestUI.elements)

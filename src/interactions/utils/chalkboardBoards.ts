@@ -24,6 +24,9 @@ type MountBoardsOptions = {
     listStartY: number
     doneX: number
     originalCleanup: (nav?: {cleanup?: () => void}) => void
+    refreshQuests?: () => Promise<
+        {name: string; quests: Array<{id?: number; done?: boolean}>}[] | null
+    >
 }
 
 export function mountBoards(options: MountBoardsOptions) {
@@ -38,6 +41,7 @@ export function mountBoards(options: MountBoardsOptions) {
         listStartY,
         doneX,
         originalCleanup,
+        refreshQuests,
     } = options
 
     const activeBoard = 0
@@ -45,6 +49,7 @@ export function mountBoards(options: MountBoardsOptions) {
     let boardNav: ReturnType<typeof createMenuNavigation> | null = null
     let boardQuestUI: ReturnType<typeof createQuestUI> | null = null
     let _cleanedUp = false
+    let currentBoards = boards // Mutable reference to boards array
 
     const centerX = scene.scale.width / 2
     const centerY = scene.scale.height / 2
@@ -182,6 +187,8 @@ export function mountBoards(options: MountBoardsOptions) {
         subtitle: Phaser.GameObjects.Text | null
         setSubtitle: (t: Phaser.GameObjects.Text) => void
         setBoardElements: (els: Phaser.GameObjects.GameObject[]) => void
+        getBoards: () => typeof boards
+        setBoards: (b: typeof boards) => void
     } = {
         activeBoard,
         boardElements,
@@ -195,11 +202,14 @@ export function mountBoards(options: MountBoardsOptions) {
         setSubtitle: (t: Phaser.GameObjects.Text) => (subtitle = t),
         setBoardElements: (els: Phaser.GameObjects.GameObject[]) =>
             (boardElements = els),
+        // Use getter to always return the live reference
+        getBoards: () => currentBoards,
+        setBoards: (b: typeof boards) => (currentBoards = b),
     }
     const showBoard = createShowBoard({
         scene,
         elements,
-        boards,
+        boards: currentBoards,
         listStartX,
         listStartY,
         doneX,
@@ -215,6 +225,7 @@ export function mountBoards(options: MountBoardsOptions) {
         isCleanedUp: () => _cleanedUp,
         overlay,
         border,
+        refreshQuests,
     })
 
     // createArrows will be called after isDialogOpen and nav handlers are set
