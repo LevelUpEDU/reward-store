@@ -108,7 +108,9 @@ export function renderQuestList(
             doneX,
             showDone,
             undefined, // navigationSetter will be set later
-            handleQuestSubmitted
+            handleQuestSubmitted,
+            board.name, // pass board name
+            (scene as any).userEmail || '' // pass user email if available
         )
         state.boardElements.push(...state.boardQuestUI.elements)
         elements.push(...state.boardQuestUI.elements)

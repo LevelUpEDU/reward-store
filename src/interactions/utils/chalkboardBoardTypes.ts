@@ -59,7 +59,9 @@ export type CreateQuestUIFn = (
     doneX: number,
     showDone: boolean,
     navigationSetter?: (controls: MenuNavigationControls) => void,
-    onQuestSubmitted?: () => Promise<void>
+    onQuestSubmitted?: () => Promise<void>,
+    boardName?: string,
+    userEmail?: string
 ) => QuestUI
 
 export type CreateMenuNavArgs = {

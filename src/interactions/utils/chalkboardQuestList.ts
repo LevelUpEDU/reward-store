@@ -14,7 +14,9 @@ export function createQuestUI(
     doneX: number,
     showDoneColumn: boolean = true,
     _navigationSetter?: (controls: MenuNavigationControls) => void,
-    onQuestSubmitted?: () => Promise<void>
+    onQuestSubmitted?: () => Promise<void>,
+    boardName?: string, // pass board name to detect 'Approved'
+    userEmail?: string // pass user email for claim
 ) {
     const questTexts: Phaser.GameObjects.Text[] = []
     const doneMarks: Phaser.GameObjects.Text[] = []
@@ -193,6 +195,8 @@ export function createQuestUI(
         })
     }
 
+    const claimedStates: boolean[] = quests.map(() => false)
+
     quests.forEach((q, i) => {
         const y = startY + i * styles.layout.rowSpacing
         const combined = `${i + 1}. ${q.title}   (${q.points}pts)`
@@ -277,6 +281,55 @@ export function createQuestUI(
                 if (!dialogActive) updateVisuals(i)
             })
             hit.on('pointerdown', handleSelectClick)
+        }
+
+        // Add claim button for Approved board
+        let claimBtn: Phaser.GameObjects.Text | null = null
+        let claimedLabel: Phaser.GameObjects.Text | null = null
+        if (boardName === 'Approved' && q.submissionId && userEmail) {
+            claimBtn = scene.add
+                .text(doneX - 72, y, 'Claim', {
+                    fontSize: styles.typography.questSize,
+                    color: '#fff',
+                    backgroundColor: '#2e7d32',
+                    fontFamily: styles.typography.fontFamily,
+                    padding: {left: 12, right: 12, top: 2, bottom: 2},
+                })
+                .setOrigin(0, 0.5)
+                .setDepth(styles.depths.text + 2)
+                .setInteractive({cursor: 'pointer'})
+            claimBtn.on('pointerdown', async () => {
+                claimBtn?.setText('...')
+                try {
+                    const res = await fetch('/api/transactions', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            email: userEmail,
+                            points: q.points,
+                            submissionId: q.submissionId,
+                        }),
+                    })
+                    if (res.ok) {
+                        claimedStates[i] = true
+                        claimBtn?.destroy()
+                        claimedLabel = scene.add
+                            .text(doneX + 24, y, 'Claimed', {
+                                fontSize: styles.typography.questSize,
+                                color: '#bdbdbd',
+                                fontFamily: styles.typography.fontFamily,
+                            })
+                            .setOrigin(0, 0.5)
+                            .setDepth(styles.depths.text + 2)
+                        elements.push(claimedLabel)
+                    } else {
+                        claimBtn?.setText('Claim')
+                    }
+                } catch {
+                    claimBtn?.setText('Claim')
+                }
+            })
+            elements.push(claimBtn)
         }
     })
 

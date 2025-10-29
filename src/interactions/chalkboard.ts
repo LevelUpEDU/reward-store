@@ -91,6 +91,8 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
     } catch {
         // ignore - fallback to default email when process is not present in the runtime
     }
+    // Pass user email to scene for claim button
+    ;(scene as any).userEmail = devStudent
 
     const {course, quests} = await loadQuests(3, devStudent)
     const _doneStates: boolean[] = quests.map((q) => Boolean(q.done))
