@@ -12,29 +12,29 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
 
     const elements: Phaser.GameObjects.GameObject[] = []
 
-    // Create phone container background (matching HTML design)
-    const phoneContainer = scene.add.rectangle(
+    // Create white padding background
+    const whitePadding = scene.add.rectangle(
         centerX,
         centerY,
-        380 * SCALE,
-        500 * SCALE,
+        350 * SCALE,
+        570 * SCALE,
         0xe8e8e8
     )
-    phoneContainer.setStrokeStyle(0, 0x000000, 0)
-    phoneContainer.setScrollFactor(0)
-    elements.push(phoneContainer)
+    whitePadding.setStrokeStyle(0, 0x000000, 0)
+    whitePadding.setScrollFactor(0)
+    elements.push(whitePadding)
 
-    // Create screen area
-    const screenArea = scene.add.rectangle(
+    // Create gray keypad area
+    const keypadArea = scene.add.rectangle(
         centerX,
-        centerY - 50 * SCALE,
+        centerY,
         330 * SCALE,
-        350 * SCALE,
+        550 * SCALE,
         0x3a4556
     )
-    screenArea.setStrokeStyle(2 * SCALE, 0x1a202c)
-    screenArea.setScrollFactor(0)
-    elements.push(screenArea)
+    keypadArea.setStrokeStyle(2 * SCALE, 0x1a202c)
+    keypadArea.setScrollFactor(0)
+    elements.push(keypadArea)
 
     // Create title
     const title = scene.add.text(
@@ -87,21 +87,21 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
     }[] = []
     const keyPositions = [
         // Row 1
-        {x: centerX - 80 * SCALE, y: centerY - 20 * SCALE, num: '1'},
-        {x: centerX, y: centerY - 20 * SCALE, num: '2'},
-        {x: centerX + 80 * SCALE, y: centerY - 20 * SCALE, num: '3'},
+        {x: centerX - 80 * SCALE, y: centerY - 40 * SCALE, num: '1'},
+        {x: centerX, y: centerY - 40 * SCALE, num: '2'},
+        {x: centerX + 80 * SCALE, y: centerY - 40 * SCALE, num: '3'},
         // Row 2
         {x: centerX - 80 * SCALE, y: centerY + 20 * SCALE, num: '4'},
         {x: centerX, y: centerY + 20 * SCALE, num: '5'},
         {x: centerX + 80 * SCALE, y: centerY + 20 * SCALE, num: '6'},
         // Row 3
-        {x: centerX - 80 * SCALE, y: centerY + 60 * SCALE, num: '7'},
-        {x: centerX, y: centerY + 60 * SCALE, num: '8'},
-        {x: centerX + 80 * SCALE, y: centerY + 60 * SCALE, num: '9'},
+        {x: centerX - 80 * SCALE, y: centerY + 80 * SCALE, num: '7'},
+        {x: centerX, y: centerY + 80 * SCALE, num: '8'},
+        {x: centerX + 80 * SCALE, y: centerY + 80 * SCALE, num: '9'},
         // Row 4
-        {x: centerX - 80 * SCALE, y: centerY + 100 * SCALE, num: '✕'},
-        {x: centerX, y: centerY + 100 * SCALE, num: '0'},
-        {x: centerX + 80 * SCALE, y: centerY + 100 * SCALE, num: '⌫'},
+        {x: centerX - 80 * SCALE, y: centerY + 140 * SCALE, num: '✕'},
+        {x: centerX, y: centerY + 140 * SCALE, num: '0'},
+        {x: centerX + 80 * SCALE, y: centerY + 140 * SCALE, num: '⌫'},
     ]
 
     keyPositions.forEach((pos) => {
@@ -134,9 +134,9 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
 
     // Create action buttons (matching HTML design)
     const enterBtn = scene.add.rectangle(
-        centerX - 50 * SCALE,
-        centerY + 150 * SCALE,
-        120 * SCALE,
+        centerX - 60 * SCALE,
+        centerY + 200 * SCALE,
+        100 * SCALE,
         40 * SCALE,
         0x10b981
     )
@@ -146,8 +146,8 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
     elements.push(enterBtn)
 
     const enterText = scene.add.text(
-        centerX - 50 * SCALE,
-        centerY + 150 * SCALE,
+        centerX - 60 * SCALE,
+        centerY + 200 * SCALE,
         '✓ Enter',
         {
             fontSize: `${16 * SCALE}px`,
@@ -162,9 +162,9 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
 
     // Create close button
     const closeBtn = scene.add.rectangle(
-        centerX + 50 * SCALE,
-        centerY + 150 * SCALE,
-        120 * SCALE,
+        centerX + 60 * SCALE,
+        centerY + 200 * SCALE,
+        100 * SCALE,
         40 * SCALE,
         0xef4444
     )
@@ -174,8 +174,8 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
     elements.push(closeBtn)
 
     const closeText = scene.add.text(
-        centerX + 50 * SCALE,
-        centerY + 150 * SCALE,
+        centerX + 60 * SCALE,
+        centerY + 200 * SCALE,
         '✕ Close',
         {
             fontSize: `${16 * SCALE}px`,
@@ -220,6 +220,128 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
         keyData.bg.on('pointerdown', handleKeyPress)
         keyData.text.on('pointerdown', handleKeyPress)
     })
+
+    // Keyboard navigation
+    let selectedKeyIndex = 4 // Start at key 5 (center)
+    let selectedKey = keypadKeys[selectedKeyIndex]
+
+    // Highlight selected key
+    const highlightSelectedKey = () => {
+        keypadKeys.forEach((keyData, index) => {
+            if (index === selectedKeyIndex) {
+                keyData.bg.setFillStyle(0xffff00) // Yellow highlight
+                keyData.bg.setAlpha(0.8)
+            } else {
+                keyData.bg.setFillStyle(0xffffff) // White background
+                keyData.bg.setAlpha(1)
+            }
+        })
+    }
+
+    // Initialize highlight
+    highlightSelectedKey()
+
+    // Keyboard input handler
+    const handleKeyboardInput = (event: KeyboardEvent) => {
+        console.log('Key pressed:', event.key) // Debug log
+        const key = event.key.toLowerCase()
+
+        // Prevent default behavior for our keys
+        if (
+            ['w', 'a', 's', 'd', ' ', 'e', 'c'].includes(key) ||
+            [
+                'ArrowUp',
+                'ArrowDown',
+                'ArrowLeft',
+                'ArrowRight',
+                'Enter',
+                'Backspace',
+                'Delete',
+                'Escape',
+            ].includes(event.key)
+        ) {
+            event.preventDefault()
+        }
+
+        // Navigation
+        if (key === 'w' || event.key === 'ArrowUp') {
+            if (selectedKeyIndex >= 3) {
+                selectedKeyIndex -= 3
+                highlightSelectedKey()
+                console.log('Moved up to index:', selectedKeyIndex)
+            }
+        } else if (key === 's' || event.key === 'ArrowDown') {
+            if (selectedKeyIndex <= 8) {
+                selectedKeyIndex += 3
+                highlightSelectedKey()
+                console.log('Moved down to index:', selectedKeyIndex)
+            }
+        } else if (key === 'a' || event.key === 'ArrowLeft') {
+            if (selectedKeyIndex > 0) {
+                selectedKeyIndex -= 1
+                highlightSelectedKey()
+                console.log('Moved left to index:', selectedKeyIndex)
+            }
+        } else if (key === 'd' || event.key === 'ArrowRight') {
+            if (selectedKeyIndex < 11) {
+                selectedKeyIndex += 1
+                highlightSelectedKey()
+                console.log('Moved right to index:', selectedKeyIndex)
+            }
+        }
+        // Selection
+        else if (key === ' ' || key === 'e') {
+            selectedKey = keypadKeys[selectedKeyIndex]
+            console.log('Selected key:', selectedKey?.num)
+            if (selectedKey) {
+                if (selectedKey.num === '✕') {
+                    currentInput = ''
+                    updateDisplay()
+                } else if (selectedKey.num === '⌫') {
+                    currentInput = currentInput.slice(0, -1)
+                    updateDisplay()
+                } else if (selectedKey.num >= '0' && selectedKey.num <= '9') {
+                    if (currentInput.length < 6) {
+                        currentInput += selectedKey.num
+                        updateDisplay()
+                    }
+                }
+            }
+        }
+        // Direct number input
+        else if (key >= '0' && key <= '9') {
+            console.log(
+                'Number key pressed:',
+                key,
+                'Current input:',
+                currentInput
+            )
+            if (currentInput.length < 6) {
+                currentInput += key
+                updateDisplay()
+                console.log('Updated input:', currentInput)
+            } else {
+                console.log('Input full, ignoring key')
+            }
+        }
+        // Backspace/Delete
+        else if (event.key === 'Backspace' || event.key === 'Delete') {
+            currentInput = currentInput.slice(0, -1)
+            updateDisplay()
+        }
+        // Clear
+        else if (event.key === 'Escape' || key === 'c') {
+            currentInput = ''
+            updateDisplay()
+        }
+        // Submit
+        else if (event.key === 'Enter') {
+            handleEnterPress()
+        }
+    }
+
+    // Add keyboard listener
+    document.addEventListener('keydown', handleKeyboardInput)
 
     // Enter button functionality
     const handleEnterPress = () => {
@@ -294,6 +416,8 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
                 /* ignore */
             }
         })
+        // Remove keyboard listener
+        document.removeEventListener('keydown', handleKeyboardInput)
         scene.interactionHandler.unblockMovement()
     }
 
