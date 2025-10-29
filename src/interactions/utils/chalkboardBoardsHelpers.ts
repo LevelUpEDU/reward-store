@@ -118,6 +118,7 @@ export function createArrows(opts: {
     elements.push(leftLabel, rightLabel)
 
     function updateLabels(activeIdx: number) {
+        if (!leftLabel.active || !rightLabel.active) return
         const leftBoardIdx =
             (activeIdx - 1 + boardNames.length) % boardNames.length
         const rightBoardIdx = (activeIdx + 1) % boardNames.length
