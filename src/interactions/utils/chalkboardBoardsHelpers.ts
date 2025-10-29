@@ -15,6 +15,8 @@ export function createArrows(opts: {
     onLeft: () => void
     onRight: () => void
     isDialogOpen: () => boolean
+    boardNames: string[]
+    activeBoard: number
 }) {
     const {
         scene,
@@ -25,16 +27,17 @@ export function createArrows(opts: {
         onLeft,
         onRight,
         isDialogOpen,
+        boardNames,
+        activeBoard,
     } = opts
-    const arrowSize = Math.max(32, Math.round(titleSizeNum * 0.8))
-    const arrowLeftX =
-        centerX -
-        (scene.scale.width * styles.interfaceWidthRatio) / 2 +
-        styles.layout.padding / 2
-    const arrowRightX =
-        centerX +
+    const arrowSize = Math.max(48, Math.round(titleSizeNum * 1.4))
+    // Move arrows further from center by increasing offset
+    const arrowOffset =
         (scene.scale.width * styles.interfaceWidthRatio) / 2 -
-        styles.layout.padding / 2
+        styles.layout.padding / 2 +
+        24 // increase 16px further from center
+    const arrowLeftX = centerX - arrowOffset
+    const arrowRightX = centerX + arrowOffset
     const arrowY = scene.scale.height / 2
 
     const leftArrow = scene.add
@@ -93,9 +96,37 @@ export function createArrows(opts: {
         }
     )
 
-    elements.push(leftArrow, rightArrow)
+    // Board name labels under arrows (store references for dynamic update)
+    const labelFontSize = Math.round(arrowSize * 0.28) // smaller font size
+    const labelYOffset = arrowSize * 0.7 // slightly closer to arrow
+    const leftLabel = scene.add
+        .text(arrowLeftX, arrowY + labelYOffset, '', {
+            fontSize: `${labelFontSize}px`,
+            color: styles.colors.questText,
+            fontFamily: styles.typography.fontFamily,
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(styles.depths.selector + 2)
+    const rightLabel = scene.add
+        .text(arrowRightX, arrowY + labelYOffset, '', {
+            fontSize: `${labelFontSize}px`,
+            color: styles.colors.questText,
+            fontFamily: styles.typography.fontFamily,
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(styles.depths.selector + 2)
+    elements.push(leftLabel, rightLabel)
 
-    return {leftArrow, rightArrow}
+    function updateLabels(activeIdx: number) {
+        const leftBoardIdx =
+            (activeIdx - 1 + boardNames.length) % boardNames.length
+        const rightBoardIdx = (activeIdx + 1) % boardNames.length
+        leftLabel.setText(boardNames[leftBoardIdx])
+        rightLabel.setText(boardNames[rightBoardIdx])
+    }
+    updateLabels(activeBoard)
+
+    return {leftArrow, rightArrow, leftLabel, rightLabel, updateLabels}
 }
 
 export function bindOverlayPointer(opts: {
