@@ -7,6 +7,7 @@ import {
     createBackground,
     createTitle,
     createEmptyMessage,
+    createLoadingAnimation,
 } from './utils/chalkboardUIHelpers'
 // board UI extracted to utils/chalkboardBoards
 import {mountBoards} from './utils/chalkboardBoards'
@@ -56,6 +57,23 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
     )
     elements.push(title)
 
+    // Create loading text in the center of the chalkboard
+    const loadingText = scene.add
+        .text(centerX, centerY, 'Loading', {
+            fontSize: styles.typography.titleSize,
+            color: styles.colors.titleText,
+            fontFamily: styles.typography.fontFamily,
+        })
+        .setOrigin(0.5)
+        .setDepth(styles.depths.text + 1)
+    elements.push(loadingText)
+
+    // Hide title during loading
+    title.setAlpha(0)
+
+    // Start loading animation
+    const stopLoadingAnimation = createLoadingAnimation(scene, loadingText)
+
     // Load and display quests (default courseId = 3)
     // Prefer passing a student identity from env for dev flow
     // Access process.env only when available (server-side or build-time). Avoid referencing
@@ -73,12 +91,24 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
     } catch {
         // ignore - fallback to default email when process is not present in the runtime
     }
+
     const {course, quests} = await loadQuests(3, devStudent)
     const _doneStates: boolean[] = quests.map((q) => Boolean(q.done))
 
-    // If backend returned a course title, update the heading text
+    // Stop loading animation and remove loading text
+    stopLoadingAnimation()
+    try {
+        loadingText.destroy()
+    } catch {
+        /* ignore */
+    }
+
+    // Show and update title with course name
+    title.setAlpha(1)
     if (course?.title) {
         title.setText(`Quests for ${course.title}`)
+    } else {
+        title.setText('Quests')
     }
 
     const listStartX = centerX - interfaceWidth / 2 + styles.layout.padding
@@ -115,6 +145,12 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
     let cleanup = (nav?: {cleanup?: () => void}) => {
         if (_cleaned) return
         _cleaned = true
+        // Stop loading animation if still running
+        try {
+            stopLoadingAnimation()
+        } catch {
+            /* ignore */
+        }
         try {
             console.warn('[chalkboard] cleanup called', {
                 navProvided: Boolean(nav),
