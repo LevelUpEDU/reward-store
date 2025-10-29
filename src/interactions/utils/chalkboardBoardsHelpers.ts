@@ -126,7 +126,25 @@ export function createArrows(opts: {
     }
     updateLabels(activeBoard)
 
-    return {leftArrow, rightArrow, leftLabel, rightLabel, updateLabels}
+    function highlightArrow(which: 'left' | 'right') {
+        const arrow = which === 'left' ? leftArrow : rightArrow
+        scene.tweens.add({
+            targets: arrow,
+            scale: 1.18,
+            duration: 80,
+            yoyo: true,
+            ease: 'Quad.Out',
+        })
+    }
+
+    return {
+        leftArrow,
+        rightArrow,
+        leftLabel,
+        rightLabel,
+        updateLabels,
+        highlightArrow,
+    }
 }
 
 export function bindOverlayPointer(opts: {

@@ -273,10 +273,22 @@ export function mountBoards(options: MountBoardsOptions) {
     aKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A)
     dKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D)
     // navigation functions are hoisted above; use them here
-    leftKey.on('down', prevBoard)
-    rightKey.on('down', nextBoard)
-    aKey.on('down', prevBoard)
-    dKey.on('down', nextBoard)
+    leftKey.on('down', () => {
+        if (arrows && arrows.highlightArrow) arrows.highlightArrow('left')
+        prevBoard()
+    })
+    rightKey.on('down', () => {
+        if (arrows && arrows.highlightArrow) arrows.highlightArrow('right')
+        nextBoard()
+    })
+    aKey.on('down', () => {
+        if (arrows && arrows.highlightArrow) arrows.highlightArrow('left')
+        prevBoard()
+    })
+    dKey.on('down', () => {
+        if (arrows && arrows.highlightArrow) arrows.highlightArrow('right')
+        nextBoard()
+    })
     // Patch showBoard to update labels on board switch
     const originalShowBoard = showBoard
     function showBoardWithLabelUpdate(idx: number, fadeIn?: boolean) {
