@@ -3,45 +3,46 @@ import {interactionRegistry} from './interactionRegistry'
 interactionRegistry.register('keypad', async (scene, _data?) => {
     scene.interactionHandler.blockMovement()
 
+    // Scale factor - change this number to adjust size (1.0 = original, 2.0 = 2x, etc.)
+    const SCALE = 2.0
+
     const {width: screenWidth, height: screenHeight} = scene.scale
-    const interfaceWidth = screenWidth * 0.6
-    const interfaceHeight = screenHeight * 0.6
     const centerX = screenWidth / 2
     const centerY = screenHeight / 2
 
     const elements: Phaser.GameObjects.GameObject[] = []
 
-    // Create phone container background (matching HTML design) - 2x zoom
+    // Create phone container background (matching HTML design)
     const phoneContainer = scene.add.rectangle(
         centerX,
         centerY,
-        760,
-        1000,
+        380 * SCALE,
+        500 * SCALE,
         0xe8e8e8
     )
     phoneContainer.setStrokeStyle(0, 0x000000, 0)
     phoneContainer.setScrollFactor(0)
     elements.push(phoneContainer)
 
-    // Create screen area - 2x zoom
+    // Create screen area
     const screenArea = scene.add.rectangle(
         centerX,
-        centerY - 100,
-        660,
-        700,
+        centerY - 50 * SCALE,
+        330 * SCALE,
+        350 * SCALE,
         0x3a4556
     )
-    screenArea.setStrokeStyle(4, 0x1a202c)
+    screenArea.setStrokeStyle(2 * SCALE, 0x1a202c)
     screenArea.setScrollFactor(0)
     elements.push(screenArea)
 
-    // Create title - 2x zoom
+    // Create title
     const title = scene.add.text(
         centerX,
-        centerY - 400,
+        centerY - 200 * SCALE,
         '📚 Enter Course Code',
         {
-            fontSize: '36px',
+            fontSize: `${18 * SCALE}px`,
             color: '#ffd700',
             align: 'center',
             fontStyle: 'bold',
@@ -51,29 +52,34 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
     title.setScrollFactor(0)
     elements.push(title)
 
-    // Create display (matching HTML design) - 2x zoom
+    // Create display (matching HTML design)
     const displayBg = scene.add.rectangle(
         centerX,
-        centerY - 240,
-        600,
-        120,
+        centerY - 120 * SCALE,
+        300 * SCALE,
+        60 * SCALE,
         0x3d4a5c
     )
-    displayBg.setStrokeStyle(4, 0x2d3748)
+    displayBg.setStrokeStyle(2 * SCALE, 0x2d3748)
     displayBg.setScrollFactor(0)
     elements.push(displayBg)
 
-    const displayText = scene.add.text(centerX, centerY - 240, '---·---', {
-        fontSize: '64px',
-        color: '#ffd700',
-        fontFamily: 'Courier New',
-        align: 'center',
-    })
+    const displayText = scene.add.text(
+        centerX,
+        centerY - 120 * SCALE,
+        '---·---',
+        {
+            fontSize: `${32 * SCALE}px`,
+            color: '#ffd700',
+            fontFamily: 'Courier New',
+            align: 'center',
+        }
+    )
     displayText.setOrigin(0.5)
     displayText.setScrollFactor(0)
     elements.push(displayText)
 
-    // Create keypad grid (matching HTML layout exactly) - 2x zoom
+    // Create keypad grid (matching HTML layout exactly)
     const keypadKeys: {
         bg: Phaser.GameObjects.Rectangle
         text: Phaser.GameObjects.Text
@@ -81,34 +87,40 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
     }[] = []
     const keyPositions = [
         // Row 1
-        {x: centerX - 160, y: centerY - 40, num: '1'},
-        {x: centerX, y: centerY - 40, num: '2'},
-        {x: centerX + 160, y: centerY - 40, num: '3'},
+        {x: centerX - 80 * SCALE, y: centerY - 20 * SCALE, num: '1'},
+        {x: centerX, y: centerY - 20 * SCALE, num: '2'},
+        {x: centerX + 80 * SCALE, y: centerY - 20 * SCALE, num: '3'},
         // Row 2
-        {x: centerX - 160, y: centerY + 40, num: '4'},
-        {x: centerX, y: centerY + 40, num: '5'},
-        {x: centerX + 160, y: centerY + 40, num: '6'},
+        {x: centerX - 80 * SCALE, y: centerY + 20 * SCALE, num: '4'},
+        {x: centerX, y: centerY + 20 * SCALE, num: '5'},
+        {x: centerX + 80 * SCALE, y: centerY + 20 * SCALE, num: '6'},
         // Row 3
-        {x: centerX - 160, y: centerY + 120, num: '7'},
-        {x: centerX, y: centerY + 120, num: '8'},
-        {x: centerX + 160, y: centerY + 120, num: '9'},
+        {x: centerX - 80 * SCALE, y: centerY + 60 * SCALE, num: '7'},
+        {x: centerX, y: centerY + 60 * SCALE, num: '8'},
+        {x: centerX + 80 * SCALE, y: centerY + 60 * SCALE, num: '9'},
         // Row 4
-        {x: centerX - 160, y: centerY + 200, num: '✕'},
-        {x: centerX, y: centerY + 200, num: '0'},
-        {x: centerX + 160, y: centerY + 200, num: '⌫'},
+        {x: centerX - 80 * SCALE, y: centerY + 100 * SCALE, num: '✕'},
+        {x: centerX, y: centerY + 100 * SCALE, num: '0'},
+        {x: centerX + 80 * SCALE, y: centerY + 100 * SCALE, num: '⌫'},
     ]
 
     keyPositions.forEach((pos) => {
-        // Create key background (matching HTML button style) - 2x zoom
-        const keyBg = scene.add.rectangle(pos.x, pos.y, 120, 100, 0xffffff)
-        keyBg.setStrokeStyle(4, 0x94a3b8)
+        // Create key background (matching HTML button style)
+        const keyBg = scene.add.rectangle(
+            pos.x,
+            pos.y,
+            60 * SCALE,
+            50 * SCALE,
+            0xffffff
+        )
+        keyBg.setStrokeStyle(2 * SCALE, 0x94a3b8)
         keyBg.setInteractive()
         keyBg.setScrollFactor(0)
         elements.push(keyBg)
 
-        // Create key text (matching HTML font) - 2x zoom
+        // Create key text (matching HTML font)
         const keyText = scene.add.text(pos.x, pos.y, pos.num, {
-            fontSize: '36px',
+            fontSize: `${18 * SCALE}px`,
             color: '#2d3748',
             align: 'center',
             fontStyle: 'bold',
@@ -120,48 +132,58 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
         keypadKeys.push({bg: keyBg, text: keyText, num: pos.num})
     })
 
-    // Create action buttons (matching HTML design) - 2x zoom
+    // Create action buttons (matching HTML design)
     const enterBtn = scene.add.rectangle(
-        centerX - 100,
-        centerY + 300,
-        240,
-        80,
+        centerX - 50 * SCALE,
+        centerY + 150 * SCALE,
+        120 * SCALE,
+        40 * SCALE,
         0x10b981
     )
-    enterBtn.setStrokeStyle(4, 0x065f46)
+    enterBtn.setStrokeStyle(2 * SCALE, 0x065f46)
     enterBtn.setInteractive()
     enterBtn.setScrollFactor(0)
     elements.push(enterBtn)
 
-    const enterText = scene.add.text(centerX - 100, centerY + 300, '✓ Enter', {
-        fontSize: '32px',
-        color: '#ffffff',
-        align: 'center',
-        fontStyle: 'bold',
-    })
+    const enterText = scene.add.text(
+        centerX - 50 * SCALE,
+        centerY + 150 * SCALE,
+        '✓ Enter',
+        {
+            fontSize: `${16 * SCALE}px`,
+            color: '#ffffff',
+            align: 'center',
+            fontStyle: 'bold',
+        }
+    )
     enterText.setOrigin(0.5)
     enterText.setScrollFactor(0)
     elements.push(enterText)
 
-    // Create close button - 2x zoom
+    // Create close button
     const closeBtn = scene.add.rectangle(
-        centerX + 100,
-        centerY + 300,
-        240,
-        80,
+        centerX + 50 * SCALE,
+        centerY + 150 * SCALE,
+        120 * SCALE,
+        40 * SCALE,
         0xef4444
     )
-    closeBtn.setStrokeStyle(4, 0x7f1d1d)
+    closeBtn.setStrokeStyle(2 * SCALE, 0x7f1d1d)
     closeBtn.setInteractive()
     closeBtn.setScrollFactor(0)
     elements.push(closeBtn)
 
-    const closeText = scene.add.text(centerX + 100, centerY + 300, '✕ Close', {
-        fontSize: '32px',
-        color: '#ffffff',
-        align: 'center',
-        fontStyle: 'bold',
-    })
+    const closeText = scene.add.text(
+        centerX + 50 * SCALE,
+        centerY + 150 * SCALE,
+        '✕ Close',
+        {
+            fontSize: `${16 * SCALE}px`,
+            color: '#ffffff',
+            align: 'center',
+            fontStyle: 'bold',
+        }
+    )
     closeText.setOrigin(0.5)
     closeText.setScrollFactor(0)
     elements.push(closeText)
