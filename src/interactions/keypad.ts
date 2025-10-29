@@ -99,14 +99,14 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
     ]
 
     keyPositions.forEach((pos) => {
-        // Create key background (exact HTML button styling with 2x size)
+        // Create key background (matching HTML button style) - 2x zoom
         const keyBg = scene.add.rectangle(pos.x, pos.y, 120, 100, 0xffffff)
         keyBg.setStrokeStyle(4, 0x94a3b8)
         keyBg.setInteractive()
         keyBg.setScrollFactor(0)
         elements.push(keyBg)
 
-        // Create key text (exact HTML font styling with 2x size)
+        // Create key text (matching HTML font) - 2x zoom
         const keyText = scene.add.text(pos.x, pos.y, pos.num, {
             fontSize: '36px',
             color: '#2d3748',
@@ -120,7 +120,7 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
         keypadKeys.push({bg: keyBg, text: keyText, num: pos.num})
     })
 
-    // Create action buttons (exact HTML styling with 2x size)
+    // Create action buttons (matching HTML design) - 2x zoom
     const enterBtn = scene.add.rectangle(
         centerX - 100,
         centerY + 300,
@@ -143,7 +143,7 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
     enterText.setScrollFactor(0)
     elements.push(enterText)
 
-    // Create close button (exact HTML styling with 2x size)
+    // Create close button - 2x zoom
     const closeBtn = scene.add.rectangle(
         centerX + 100,
         centerY + 300,
