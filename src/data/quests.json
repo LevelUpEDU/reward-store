@@ -3,12 +3,12 @@
         {
             "title": "learn terminal commands",
             "points": 100,
-            "done": true
+            "done": false
         },
         {
             "title": "create a GitHub repo",
             "points": 50,
-            "done": false
+            "done": true
         },
         {
             "title": "do a pull request",

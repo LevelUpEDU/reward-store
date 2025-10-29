@@ -24,7 +24,7 @@ export class Scene extends Phaser.Scene implements GameScene {
     protected spriteObjects: Set<string> = new Set()
     public collisionGroup!: Phaser.Physics.Arcade.StaticGroup
 
-    private inputHandler!: InputHandler
+    protected inputHandler!: InputHandler
     public interactionHandler!: InteractionHandler
     public player!: Phaser.Physics.Arcade.Sprite
 
