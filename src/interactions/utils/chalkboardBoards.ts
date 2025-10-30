@@ -197,6 +197,13 @@ export function mountBoards(options: MountBoardsOptions) {
             }
             state.boardNav = null
         }
+        // Destroy all quest UI elements, including late-added ones like 'Claimed' label
+        if (
+            state.boardQuestUI &&
+            typeof state.boardQuestUI.destroyAllElements === 'function'
+        ) {
+            state.boardQuestUI.destroyAllElements()
+        }
         state.boardQuestUI = null
         boardElements.forEach((el) => el.destroy())
         boardElements.length = 0

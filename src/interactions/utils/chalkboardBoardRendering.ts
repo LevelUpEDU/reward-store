@@ -99,6 +99,16 @@ export function renderQuestList(
 ): void {
     // Create quest UI
     try {
+        // Destroy all previous quest UI elements before switching
+        if (
+            state.boardQuestUI &&
+            typeof state.boardQuestUI.destroyAllElements === 'function'
+        ) {
+            state.boardQuestUI.destroyAllElements()
+        }
+        state.boardElements.length = 0
+        // Only pass showDone as true if board.name is 'Available'
+        const showDoneAvailable = board.name === 'Available' ? showDone : false
         state.boardQuestUI = createQuestUI(
             scene,
             mappedQuests,
@@ -106,14 +116,15 @@ export function renderQuestList(
             listStartX,
             listStartY,
             doneX,
-            showDone,
+            showDoneAvailable,
             undefined, // navigationSetter will be set later
             handleQuestSubmitted,
             board.name, // pass board name
-            (scene as any).userEmail || '' // pass user email if available
+            (scene as any).userEmail || '', // pass user email if available
+            (scene as any).claimedSubmissionIds || []
         )
         state.boardElements.push(...state.boardQuestUI.elements)
-        elements.push(...state.boardQuestUI.elements)
+        // Do NOT push quest UI elements to the global elements array here, only to boardElements
     } catch {
         // Fail silently if quest UI creation fails
     }

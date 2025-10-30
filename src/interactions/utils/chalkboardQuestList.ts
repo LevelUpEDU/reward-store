@@ -16,14 +16,17 @@ export function createQuestUI(
     _navigationSetter?: (controls: MenuNavigationControls) => void,
     onQuestSubmitted?: () => Promise<void>,
     boardName?: string, // pass board name to detect 'Approved'
-    userEmail?: string // pass user email for claim
+    userEmail?: string, // pass user email for claim
+    claimedSubmissionIds?: number[] // pass claimed submission ids for Approved board
 ) {
     const questTexts: Phaser.GameObjects.Text[] = []
     const doneMarks: Phaser.GameObjects.Text[] = []
     const elements: Phaser.GameObjects.GameObject[] = []
 
     let selector: Phaser.GameObjects.Rectangle | undefined = undefined
-    if (showDoneColumn) {
+    // Only render Done column and selector for Available board
+    const showDone = showDoneColumn && boardName === 'Available'
+    if (showDone) {
         selector = scene.add.rectangle(
             doneX,
             startY,
@@ -228,7 +231,7 @@ export function createQuestUI(
             styles.depths.background
         )
 
-        if (showDoneColumn) {
+        if (showDone) {
             const tick = scene.add
                 .text(doneX, y, '✓', {
                     fontSize: `${Math.round(styles.selector.size * 1.6)}px`,
@@ -283,55 +286,86 @@ export function createQuestUI(
             hit.on('pointerdown', handleSelectClick)
         }
 
-        // Add claim button for Approved board
+        // Add claim button or claimed label for Approved board
         let claimBtn: Phaser.GameObjects.Text | null = null
         let claimedLabel: Phaser.GameObjects.Text | null = null
         if (boardName === 'Approved' && q.submissionId && userEmail) {
-            claimBtn = scene.add
-                .text(doneX - 72, y, 'Claim', {
-                    fontSize: styles.typography.questSize,
-                    color: '#fff',
-                    backgroundColor: '#2e7d32',
-                    fontFamily: styles.typography.fontFamily,
-                    padding: {left: 12, right: 12, top: 2, bottom: 2},
-                })
-                .setOrigin(0, 0.5)
-                .setDepth(styles.depths.text + 2)
-                .setInteractive({cursor: 'pointer'})
-            claimBtn.on('pointerdown', async () => {
-                claimBtn?.setText('...')
-                try {
-                    const res = await fetch('/api/transactions', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            email: userEmail,
-                            points: q.points,
-                            submissionId: q.submissionId,
-                        }),
+            const isClaimed =
+                Array.isArray(claimedSubmissionIds) &&
+                claimedSubmissionIds.includes(q.submissionId)
+            if (isClaimed) {
+                claimedLabel = scene.add
+                    .text(doneX - 72, y, 'Claimed', {
+                        fontSize: styles.typography.questSize,
+                        color: '#bdbdbd',
+                        fontFamily: styles.typography.fontFamily,
                     })
-                    if (res.ok) {
-                        claimedStates[i] = true
-                        claimBtn?.destroy()
-                        claimedLabel = scene.add
-                            .text(doneX + 24, y, 'Claimed', {
-                                fontSize: styles.typography.questSize,
-                                color: '#bdbdbd',
-                                fontFamily: styles.typography.fontFamily,
-                            })
-                            .setOrigin(0, 0.5)
-                            .setDepth(styles.depths.text + 2)
-                        elements.push(claimedLabel)
-                    } else {
+                    .setOrigin(0, 0.5)
+                    .setDepth(styles.depths.text + 2)
+                elements.push(claimedLabel)
+            } else {
+                claimBtn = scene.add
+                    .text(doneX - 72, y, 'Claim', {
+                        fontSize: styles.typography.questSize,
+                        color: '#fff',
+                        backgroundColor: '#2e7d32',
+                        fontFamily: styles.typography.fontFamily,
+                        padding: {left: 12, right: 12, top: 2, bottom: 2},
+                    })
+                    .setOrigin(0, 0.5)
+                    .setDepth(styles.depths.text + 2)
+                    .setInteractive({cursor: 'pointer'})
+                claimBtn.on('pointerdown', async () => {
+                    claimBtn?.setText('...')
+                    try {
+                        const res = await fetch('/api/transactions', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                email: userEmail,
+                                points: q.points,
+                                submissionId: q.submissionId,
+                            }),
+                        })
+                        if (res.ok) {
+                            claimedStates[i] = true
+                            claimBtn?.destroy()
+                            claimedLabel = scene.add
+                                .text(doneX - 72, y, 'Claimed', {
+                                    fontSize: styles.typography.questSize,
+                                    color: '#bdbdbd',
+                                    fontFamily: styles.typography.fontFamily,
+                                })
+                                .setOrigin(0, 0.5)
+                                .setDepth(styles.depths.text + 2)
+                            elements.push(claimedLabel)
+                            console.log(
+                                '[chalkboardQuestList] Claimed label pushed to elements:',
+                                claimedLabel
+                            )
+                            console.log(elements)
+                        } else {
+                            claimBtn?.setText('Claim')
+                        }
+                    } catch {
                         claimBtn?.setText('Claim')
                     }
-                } catch {
-                    claimBtn?.setText('Claim')
-                }
-            })
-            elements.push(claimBtn)
+                })
+                elements.push(claimBtn)
+            }
         }
     })
+
+    // Debug: log destruction of all elements
+    function destroyAllElements() {
+        elements.forEach((el) => {
+            console.log('[chalkboardQuestList] Destroying element:', el)
+            try {
+                el.destroy()
+            } catch {}
+        })
+        elements.length = 0
+    }
 
     return {
         elements,
@@ -339,5 +373,6 @@ export function createQuestUI(
         toggleDone,
         navigationSetter: setNavigationControls,
         isDialogActive: () => dialogActive,
+        destroyAllElements,
     }
 }

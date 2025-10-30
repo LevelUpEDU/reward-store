@@ -37,6 +37,7 @@ export interface QuestUI {
     updateVisuals: (i: number) => void
     toggleDone: (i: number) => void
     navigationSetter?: (nav: MenuNavigationControls) => void
+    destroyAllElements?: () => void
 }
 
 export type MenuNav = MenuNavigationControls
@@ -61,7 +62,8 @@ export type CreateQuestUIFn = (
     navigationSetter?: (controls: MenuNavigationControls) => void,
     onQuestSubmitted?: () => Promise<void>,
     boardName?: string,
-    userEmail?: string
+    userEmail?: string,
+    claimedSubmissionIds?: number[]
 ) => QuestUI
 
 export type CreateMenuNavArgs = {
