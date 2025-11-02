@@ -2,6 +2,7 @@
 
 import {useEffect, useState} from 'react'
 import {useRouter, useSearchParams} from 'next/navigation'
+import Link from 'next/link'
 import {useUser} from '@auth0/nextjs-auth0/client'
 import PixelatedBackground from '../../components/PixelatedBackground'
 import '../styles.css'
@@ -74,13 +75,13 @@ export default function RegisterPage() {
                     {error ?
                         <div style={{textAlign: 'center', color: '#ffffff'}}>
                             <p>{error}</p>
-                            <a href="/">
+                            <Link href="/">
                                 <button
                                     type="button"
                                     className="btn btn-primary">
                                     Go Back
                                 </button>
-                            </a>
+                            </Link>
                         </div>
                     :   <div style={{textAlign: 'center', color: '#ffffff'}}>
                             <p>Setting up your account...</p>
