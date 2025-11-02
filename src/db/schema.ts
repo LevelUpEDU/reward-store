@@ -126,7 +126,7 @@ export const reward = pgTable(
 )
 
 export const redemption = pgTable('redemption', {
-    id: serial('id').primaryKey().unique(),
+    id: serial('id').primaryKey(),
     studentId: varchar('student_id')
         .references(() => student.email)
         .notNull(),
