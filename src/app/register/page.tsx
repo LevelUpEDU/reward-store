@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect, useState} from 'react'
+import {useEffect, useState, Suspense} from 'react'
 import {useRouter, useSearchParams} from 'next/navigation'
 import Link from 'next/link'
 import {useUser} from '@auth0/nextjs-auth0/client'
@@ -9,7 +9,7 @@ import '../styles.css'
 
 const IMAGE_SRC = '/bcit-2.jpg'
 
-export default function RegisterPage() {
+function RegisterContent() {
     const {user, isLoading} = useUser()
     const searchParams = useSearchParams()
     const router = useRouter()
@@ -91,5 +91,18 @@ export default function RegisterPage() {
             </div>
             <PixelatedBackground imageSrc={IMAGE_SRC} />
         </div>
+    )
+}
+
+/* wrap the existing content in a "suspense" boundary
+ * this signals an asynchronous operation to Next.js
+ *
+ * required so Next.js doesn't try to statically build this page and fail
+ */
+export default function RegisterPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <RegisterContent />
+        </Suspense>
     )
 }
