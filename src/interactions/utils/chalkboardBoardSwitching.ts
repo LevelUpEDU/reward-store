@@ -1,3 +1,8 @@
+// Add interface for scene with userEmail and claimedSubmissionIds
+interface SceneWithUser extends Phaser.Scene {
+    userEmail?: string
+    claimedSubmissionIds?: string[]
+}
 import type {Scene} from '@/scenes/Scene'
 import type {
     SmallQuest,
@@ -246,26 +251,31 @@ export function createShowBoard(context: ShowBoardContext) {
             )
 
             // If Approved board, fetch claimedSubmissionIds before rendering
-            if (board.name === 'Approved' && (scene as any).userEmail) {
+            if (
+                board.name === 'Approved' &&
+                (scene as SceneWithUser).userEmail
+            ) {
                 try {
                     const emailParam = encodeURIComponent(
-                        (scene as any).userEmail
+                        (scene as SceneWithUser).userEmail!
                     )
                     const response = await fetch(
                         `/api/transactions?email=${emailParam}`
                     )
                     if (response.ok) {
-                        const apiResult = await response.json()
-                        ;(scene as any).claimedSubmissionIds =
+                        const apiResult = (await response.json()) as {
+                            claimedSubmissionIds?: string[]
+                        }
+                        ;(scene as SceneWithUser).claimedSubmissionIds =
                             apiResult.claimedSubmissionIds || []
                     } else {
-                        ;(scene as any).claimedSubmissionIds = []
+                        ;(scene as SceneWithUser).claimedSubmissionIds = []
                     }
                 } catch {
-                    ;(scene as any).claimedSubmissionIds = []
+                    ;(scene as SceneWithUser).claimedSubmissionIds = []
                 }
             } else {
-                ;(scene as any).claimedSubmissionIds = []
+                ;(scene as SceneWithUser).claimedSubmissionIds = []
             }
             // Render quest list and navigation
             renderQuestList(

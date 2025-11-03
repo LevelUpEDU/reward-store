@@ -1,3 +1,8 @@
+// Add interface for scene with userEmail and claimedSubmissionIds
+interface SceneWithUser extends Phaser.Scene {
+    userEmail?: string
+    claimedSubmissionIds?: string[]
+}
 import type {Scene} from '@/scenes/Scene'
 import type {
     SmallQuest,
@@ -120,8 +125,10 @@ export function renderQuestList(
             undefined, // navigationSetter will be set later
             handleQuestSubmitted,
             board.name, // pass board name
-            (scene as any).userEmail || '', // pass user email if available
-            (scene as any).claimedSubmissionIds || []
+            (scene as SceneWithUser).userEmail || '', // pass user email if available
+            ((scene as SceneWithUser).claimedSubmissionIds || [])
+                .map((id) => Number(id))
+                .filter((id) => !isNaN(id))
         )
         state.boardElements.push(...state.boardQuestUI.elements)
         // Do NOT push quest UI elements to the global elements array here, only to boardElements

@@ -2,7 +2,6 @@ import {
     getClaimedSubmissionIds,
     createTransaction,
 } from '@/db/queries/transaction'
-
 import {type NextRequest, NextResponse} from 'next/server'
 
 export async function GET(req: NextRequest) {

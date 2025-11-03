@@ -92,7 +92,11 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
         // ignore - fallback to default email when process is not present in the runtime
     }
     // Pass user email to scene for claim button
-    ;(scene as any).userEmail = devStudent
+    // Define a type for scene with userEmail
+    interface SceneWithUser extends Phaser.Scene {
+        userEmail?: string
+    }
+    ;(scene as SceneWithUser).userEmail = devStudent
 
     const {course, quests} = await loadQuests(3, devStudent)
     const _doneStates: boolean[] = quests.map((q) => Boolean(q.done))
