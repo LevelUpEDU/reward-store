@@ -10,45 +10,40 @@ export default function Home() {
     return (
         <div>
             <div id="ui">
-                <h1> LevelUp EDU</h1>
+                <h1>LevelUp EDU</h1>
                 <div id="sign-in">
-                    <form id="signin-form">
-                        <div className="form-group">
-                            <label htmlFor="email">Username</label>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                placeholder="your.email@example.com"
-                                required
-                            />
+                    <div className="auth-container">
+                        {/* register */}
+                        <div className="auth-section">
+                            <h2>New Student?</h2>
+                            <p>Create an account</p>
+                            <a href="/auth/login?screen_hint=signup&returnTo=/register?role=student">
+                                <button
+                                    type="button"
+                                    className="btn btn-primary">
+                                    Create Account
+                                </button>
+                            </a>
                         </div>
-
-                        <div className="form-group">
-                            <label htmlFor="password">Password</label>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                placeholder="Enter your password"
-                                required
-                            />
-                            <div className="forgot-password">
-                                <a href="#forgot">Forgot password?</a>
-                            </div>
-                        </div>
-
-                        <button type="submit" className="btn btn-primary">
-                            Sign In
-                        </button>
 
                         <div className="divider">or</div>
 
-                        <div className="register-link">
-                            Don&apos;t have an account?{' '}
-                            <a href="#register">Register here</a>
+                        {/* sign in */}
+                        <div className="auth-section">
+                            <h2>Already have an account?</h2>
+                            <a href="/auth/login?returnTo=/game">
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary">
+                                    Sign In
+                                </button>
+                            </a>
                         </div>
-                    </form>
+
+                        <div className="info-text">
+                            <p>Sign in with Google, Apple, or Microsoft</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             <PixelatedBackground imageSrc={IMAGE_SRC} />

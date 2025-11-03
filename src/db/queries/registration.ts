@@ -25,6 +25,7 @@ export async function getStudentsInCourse(
         .select({
             email: student.email,
             name: student.name,
+            auth0Id: student.auth0Id,
             lastSignin: student.lastSignin,
         })
         .from(registration)
