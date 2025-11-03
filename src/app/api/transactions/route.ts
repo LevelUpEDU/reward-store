@@ -1,4 +1,9 @@
-import {getClaimedSubmissionIds} from '@/db/queries/transaction'
+import {
+    getClaimedSubmissionIds,
+    createTransaction,
+} from '@/db/queries/transaction'
+
+import {type NextRequest, NextResponse} from 'next/server'
 
 export async function GET(req: NextRequest) {
     const email = req.nextUrl.searchParams.get('email')
@@ -12,10 +17,6 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({error: (err as Error).message}, {status: 500})
     }
 }
-
-import {NextRequest, NextResponse} from 'next/server'
-import {createTransaction} from '@/db/queries/transaction'
-
 export async function POST(req: NextRequest) {
     try {
         const {email, points, submissionId} = await req.json()
