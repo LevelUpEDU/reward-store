@@ -5,7 +5,7 @@ import {eq} from 'drizzle-orm'
 
 export async function GET() {
     // placeholder until oauth is working
-    let studentEmail = 'student@bcit.ca'
+    const studentEmail = 'student@bcit.ca'
 
     // Get all courses the student is already registered for
     const studentRegistrations = await db.query.registration.findMany({

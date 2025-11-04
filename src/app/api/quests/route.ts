@@ -9,17 +9,11 @@ const dataPath = path.join(process.cwd(), 'src', 'data', 'quests.json')
 // We will use the project's existing Drizzle/Neon helpers when DATABASE_URL is set.
 // The project exposes queries in src/db/queries; import the helper to read quests.
 let useDb = false
-let importError: unknown = null
-try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    const {getQuestsByCourse} = await import('@/db/queries/quest')
-    if (typeof getQuestsByCourse === 'function' && process.env.DATABASE_URL) {
-        useDb = true
-    }
-} catch (e) {
-    // capture the import error for debugging — we'll still gracefully fall back to file
-    importError = e
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+const {getQuestsByCourse} = await import('@/db/queries/quest')
+if (typeof getQuestsByCourse === 'function' && process.env.DATABASE_URL) {
+    useDb = true
 }
 
 export async function POST(request: Request) {
