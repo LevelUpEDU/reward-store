@@ -1,6 +1,5 @@
 import React from 'react'
 import Link from 'next/link'
-import {signOut} from 'next-auth/react'
 import Logo from './Logo'
 import NavItem from './NavItem'
 
@@ -17,11 +16,7 @@ const TopBar = ({activeTab, setActiveTab}: TopBarProps) => {
         {id: 'students', label: 'Students'},
     ]
 
-    const handleLogout = () => {
-        if (window.confirm('Are you sure you want to logout?')) {
-            signOut({callbackUrl: '/'})
-        }
-    }
+    const handleLogout = () => {}
 
     return (
         <header className="topbar">

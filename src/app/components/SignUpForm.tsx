@@ -1,7 +1,6 @@
 'use client'
 
 import React, {useState} from 'react'
-import {signIn} from 'next-auth/react'
 import {useRouter} from 'next/navigation'
 import './AuthForm.css'
 
@@ -55,162 +54,142 @@ export default function SignUpForm({
             return
         }
 
-        try {
-            // Create user account
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: formData.name,
-                    email: formData.email,
-                    password: formData.password,
-                    userType: formData.userType,
-                }),
-            })
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.message || 'Registration failed')
-            }
-
-            // Auto sign in after successful registration
-            const result = await signIn('credentials', {
+        // Create user account
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: formData.name,
                 email: formData.email,
                 password: formData.password,
-                redirect: false,
-            })
+                userType: formData.userType,
+            }),
+        })
 
-            if (result?.error) {
-                setError(
-                    'Registration successful, but auto-login failed. Please sign in manually.'
-                )
-            } else if (result?.ok) {
-                onSuccess()
-                // Redirect based on user type
-                // We need to wait a moment for the session to update
-                setTimeout(() => {
-                    router.push('/')
-                }, 100)
-            }
-        } catch (error: any) {
-            setError(
-                error.message ||
-                    'An error occurred during registration. Please try again.'
-            )
-        } finally {
-            setIsLoading(false)
+        if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.message || 'Registration failed')
         }
-    }
 
-    return (
-        <div className="auth-form">
-            <div className="auth-form-header">
-                <h2>Create Account</h2>
-                <p>Join LevelUpEDU and start your learning journey!</p>
-            </div>
+        onSuccess()
+        // Redirect based on user type
+        // We need to wait a moment for the session to update
+        setTimeout(() => {
+            router.push('/')
+        }, 100)
 
-            <form onSubmit={handleSubmit} className="auth-form-content">
-                {error && <div className="error-message">{error}</div>}
-
-                <div className="form-group">
-                    <label htmlFor="name">Full Name</label>
-                    <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        required
-                        placeholder="Enter your full name"
-                        disabled={isLoading}
-                    />
+        return (
+            <div className="auth-form">
+                <div className="auth-form-header">
+                    <h2>Create Account</h2>
+                    <p>Join LevelUpEDU and start your learning journey!</p>
                 </div>
 
-                <div className="form-group">
-                    <label htmlFor="email">Email</label>
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        required
-                        placeholder="Enter your email"
-                        disabled={isLoading}
-                    />
-                </div>
+                <form onSubmit={handleSubmit} className="auth-form-content">
+                    {error && <div className="error-message">{error}</div>}
 
-                <div className="form-group">
-                    <label htmlFor="userType">Account Type</label>
-                    <select
-                        id="userType"
-                        name="userType"
-                        value={formData.userType}
-                        onChange={handleChange}
-                        required
-                        disabled={isLoading}
-                        className="form-select">
-                        <option value="student">Student</option>
-                        <option value="instructor">Instructor</option>
-                    </select>
-                </div>
+                    <div className="form-group">
+                        <label htmlFor="name">Full Name</label>
+                        <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            required
+                            placeholder="Enter your full name"
+                            disabled={isLoading}
+                        />
+                    </div>
 
-                <div className="form-group">
-                    <label htmlFor="password">Password</label>
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        required
-                        placeholder="Create a password (min 6 characters)"
-                        disabled={isLoading}
-                        minLength={6}
-                    />
-                </div>
+                    <div className="form-group">
+                        <label htmlFor="email">Email</label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                            placeholder="Enter your email"
+                            disabled={isLoading}
+                        />
+                    </div>
 
-                <div className="form-group">
-                    <label htmlFor="confirmPassword">Confirm Password</label>
-                    <input
-                        type="password"
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        required
-                        placeholder="Confirm your password"
-                        disabled={isLoading}
-                    />
-                </div>
+                    <div className="form-group">
+                        <label htmlFor="userType">Account Type</label>
+                        <select
+                            id="userType"
+                            name="userType"
+                            value={formData.userType}
+                            onChange={handleChange}
+                            required
+                            disabled={isLoading}
+                            className="form-select">
+                            <option value="student">Student</option>
+                            <option value="instructor">Instructor</option>
+                        </select>
+                    </div>
 
-                <button
-                    type="submit"
-                    className="btn btn-primary btn-full"
-                    disabled={isLoading}>
-                    {isLoading ? 'Creating Account...' : 'Create Account'}
-                </button>
+                    <div className="form-group">
+                        <label htmlFor="password">Password</label>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            required
+                            placeholder="Create a password (min 6 characters)"
+                            disabled={isLoading}
+                            minLength={6}
+                        />
+                    </div>
 
-                <div className="auth-form-footer">
-                    <p>
-                        Already have an account?{' '}
+                    <div className="form-group">
+                        <label htmlFor="confirmPassword">
+                            Confirm Password
+                        </label>
+                        <input
+                            type="password"
+                            id="confirmPassword"
+                            name="confirmPassword"
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                            required
+                            placeholder="Confirm your password"
+                            disabled={isLoading}
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        className="btn btn-primary btn-full"
+                        disabled={isLoading}>
+                        {isLoading ? 'Creating Account...' : 'Create Account'}
+                    </button>
+
+                    <div className="auth-form-footer">
+                        <p>
+                            Already have an account?{' '}
+                            <button
+                                type="button"
+                                onClick={onSwitchToLogin}
+                                className="link-button">
+                                Sign in here
+                            </button>
+                        </p>
                         <button
                             type="button"
-                            onClick={onSwitchToLogin}
-                            className="link-button">
-                            Sign in here
+                            onClick={onCancel}
+                            className="btn btn-outline btn-small">
+                            Cancel
                         </button>
-                    </p>
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="btn btn-outline btn-small">
-                        Cancel
-                    </button>
-                </div>
-            </form>
-        </div>
-    )
+                    </div>
+                </form>
+            </div>
+        )
+    }
 }

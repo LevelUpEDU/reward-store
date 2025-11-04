@@ -1,4 +1,3 @@
-import SessionProvider from './providers/SessionProvider'
 import './styles/globals.css'
 
 export const metadata = {
@@ -9,9 +8,7 @@ export const metadata = {
 export default function RootLayout({children}: {children: React.ReactNode}) {
     return (
         <html lang="en">
-            <body>
-                <SessionProvider>{children}</SessionProvider>
-            </body>
+            <body>{children}</body>
         </html>
     )
 }
