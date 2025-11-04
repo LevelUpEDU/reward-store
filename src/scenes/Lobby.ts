@@ -225,6 +225,45 @@ export class Lobby extends Scene {
                 this
             )
         })
+
+        // Add hello portal near classroom portal
+        this.createHelloPortal()
+    }
+
+    // Create hello popup portal - using chalkboard interaction system
+    private createHelloPortal(): void {
+        const helloPortal = this.add.rectangle(
+            500, // Close to classroom portal (400)
+            400, // Same Y as classroom portal
+            64,
+            64,
+            0xff0000, // RED color to distinguish from classroom portal
+            0.3
+        )
+        this.physics.add.existing(helloPortal, true)
+
+        // Create interaction zone (like chalkboard)
+        const interactionZone = this.add.rectangle(
+            500,
+            400,
+            64,
+            64,
+            0x00ff00,
+            0
+        )
+        this.physics.add.existing(interactionZone, true)
+
+        // Set interaction data (like chalkboard)
+        const config = {
+            name: 'Course Code Entry',
+            type: 'keypad',
+            tooltip: 'Press E to enter course code',
+            canInteract: true,
+        }
+        interactionZone.setData('config', config)
+
+        // Add to interaction group
+        this.interactionHandler.interactionGroup.add(interactionZone)
     }
 
     private transitionTo(targetSceneKey: string): void {

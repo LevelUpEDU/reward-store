@@ -1,0 +1,194 @@
+@import url('https://fonts.googleapis.com/css2?family=Micro+5&family=Pixelify+Sans:wght@400..700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#pixelated-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    z-index: -1;
+}
+
+#ui {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding: 1rem;
+    width: 100%;
+    max-width: 400px;
+    position: relative;
+    z-index: 1;
+}
+
+h1 {
+    font-family: 'Pixelify Sans', sans-serif;
+    color: #ffff00;
+    text-shadow: 3px 3px 0px #000000;
+    font-size: 4rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+#sign-in {
+    font-family: 'Micro 5', sans-serif;
+    width: 100%;
+    max-width: 400px;
+    background-color: #44316fff;
+    border: 0.5em ridge #ffff00;
+    padding: 2rem;
+    z-index: 1;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+label {
+    display: block;
+    color: #ffffff;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+input[type='email'],
+input[type='password'],
+input[type='text'] {
+    font-family: 'Micro 5', sans-serif;
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+    font-size: 1.2rem;
+    transition: border-color 0.2s ease;
+}
+
+input[type='email']:focus,
+input[type='password']:focus,
+input[type='text']:focus {
+    outline: none;
+    border-color: #ffff00;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.btn {
+    font-family: 'Micro 5', sans-serif;
+    width: 100%;
+    padding: 0.875rem;
+    border: 3px solid #000000;
+    border-radius: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.1s ease;
+}
+
+.btn-primary {
+    background-color: #ffff00;
+    color: #000000;
+}
+
+.btn-primary:hover {
+    background-color: #ffff33;
+}
+
+.btn-primary:active {
+    transform: translate(2px, 2px);
+}
+
+.divider {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 1.5rem 0;
+    position: relative;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 2px;
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.divider::before {
+    left: 0;
+}
+
+.divider::after {
+    right: 0;
+}
+
+.register-link {
+    text-align: center;
+    color: #ffffff;
+    margin-top: 1rem;
+    font-size: 1rem;
+}
+
+.register-link a {
+    color: #ffff00;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.register-link a:hover {
+    text-decoration: underline;
+}
+
+.forgot-password {
+    text-align: right;
+    margin-top: 0.5rem;
+}
+
+.forgot-password a {
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    font-size: 1rem;
+}
+
+.forgot-password a:hover {
+    color: #ffff00;
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    #sign-in {
+        padding: 1.5rem;
+    }
+
+    .btn {
+        font-size: 2rem;
+    }
+}

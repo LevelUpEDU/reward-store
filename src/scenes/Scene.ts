@@ -9,10 +9,16 @@ import {createCollisionBox} from '@/utils/physics'
 import {addPulseEffect} from '@/utils/sprites'
 import {InputHandler} from '@/utils/inputHandler'
 import {InteractionHandler} from '@/interactions/interactionHandler'
+import {RewardPointsUI} from '@/utils/rewardPointsUI'
 import '@/interactions'
 
 interface SpriteManifest {
     sprites: string[]
+}
+
+// Define a type for scene with user data
+interface SceneWithUser extends Phaser.Scene {
+    userEmail?: string
 }
 
 export class Scene extends Phaser.Scene implements GameScene {
@@ -24,9 +30,12 @@ export class Scene extends Phaser.Scene implements GameScene {
     protected spriteObjects: Set<string> = new Set()
     public collisionGroup!: Phaser.Physics.Arcade.StaticGroup
 
-    private inputHandler!: InputHandler
+    protected inputHandler!: InputHandler
     public interactionHandler!: InteractionHandler
     public player!: Phaser.Physics.Arcade.Sprite
+
+    // UI components
+    protected rewardPointsUI?: RewardPointsUI
 
     // input objects
     public cursors!: Phaser.Types.Input.Keyboard.CursorKeys
@@ -89,6 +98,9 @@ export class Scene extends Phaser.Scene implements GameScene {
             '/assets/sprites/Bob_run_16x16.json'
         )
 
+        // UI assets
+        this.load.image('coin-icon', '/assets/sprites/coin.png')
+
         this.load.on('complete', () => {
             this.mapConfig.tilesets.forEach((tileset) => {
                 this.textures
@@ -109,6 +121,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.createInteractables()
 
         this.setupInput()
+        this.setupRewardPointsUI()
     }
 
     /* for adding images - images are stored in /public/assets/sprites/{sceneName}/
@@ -292,6 +305,69 @@ export class Scene extends Phaser.Scene implements GameScene {
         camera.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
         // camera.setZoom(1) // adjust zoom for how close/far you want it
         camera.roundPixels = true // keeps pixel art crisp
+    }
+
+    protected setupRewardPointsUI(): void {
+        this.rewardPointsUI = new RewardPointsUI(this)
+
+        // Try to get user email and fetch points
+        const userEmail = this.getUserEmail()
+        if (userEmail) {
+            this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
+        } else {
+            // If no user email, show 0 points
+            this.rewardPointsUI.setPoints(0)
+        }
+    }
+
+    protected getUserEmail(): string | undefined {
+        // Check if userEmail is set on the scene
+        const sceneWithUser = this as unknown as SceneWithUser
+        if (sceneWithUser.userEmail) {
+            return sceneWithUser.userEmail
+        }
+
+        // Default student email for development
+        let devStudent = 'zion_li@my.bcit.ca'
+
+        // Try to get from environment or process (for development)
+        try {
+            if (typeof process !== 'undefined') {
+                const proc = process as unknown as
+                    | {env?: Record<string, string | undefined>}
+                    | undefined
+                const envEmail =
+                    proc?.env?.DEV_STUDENT_EMAIL ||
+                    proc?.env?.NEXT_PUBLIC_DEV_STUDENT_EMAIL
+                if (typeof envEmail === 'string' && envEmail.length > 0) {
+                    devStudent = envEmail
+                }
+            }
+        } catch {
+            // ignore
+        }
+
+        return devStudent
+    }
+
+    /**
+     * Update the reward points UI with new points value
+     * Call this after the player earns or spends points
+     */
+    public updateRewardPoints(newPoints: number): void {
+        if (this.rewardPointsUI) {
+            this.rewardPointsUI.animatePointsChange(newPoints)
+        }
+    }
+
+    /**
+     * Refresh the reward points from the API
+     */
+    public async refreshRewardPoints(): Promise<void> {
+        const userEmail = this.getUserEmail()
+        if (userEmail && this.rewardPointsUI) {
+            await this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
+        }
     }
 
     update(): void {
