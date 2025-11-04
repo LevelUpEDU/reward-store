@@ -3,13 +3,10 @@ import {db} from '@/db'
 import {submission, quest, transaction} from '@/db/schema'
 import {eq, and} from 'drizzle-orm'
 
-export async function PATCH(
-    request: Request,
-    {params}: {params: {questId: string; submissionId: string}}
-) {
+export async function PATCH(request: Request) {
     try {
-        const questId = parseInt(params.questId)
-        const submissionId = parseInt(params.submissionId)
+        const questId = 6
+        const submissionId = 7
 
         //placeholder
         const userEmail = 'user@bcit.ca'
