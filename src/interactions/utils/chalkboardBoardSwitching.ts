@@ -1,3 +1,8 @@
+// Add interface for scene with userEmail and claimedSubmissionIds
+interface SceneWithUser extends Phaser.Scene {
+    userEmail?: string
+    claimedSubmissionIds?: string[]
+}
 import type {Scene} from '@/scenes/Scene'
 import type {
     SmallQuest,
@@ -167,7 +172,7 @@ export function createShowBoard(context: ShowBoardContext) {
         refreshQuests,
     } = context
 
-    return function showBoard(index: number, fadeIn = false) {
+    return async function showBoard(index: number, fadeIn = false) {
         // Get fresh boards reference
         const boards = state.getBoards()
 
@@ -177,6 +182,15 @@ export function createShowBoard(context: ShowBoardContext) {
 
         // Clean up previous board
         if (state.cleanupBoard) state.cleanupBoard()
+        // Explicitly destroy all boardElements (including Done label) in case any remain
+        if (Array.isArray(state.boardElements)) {
+            state.boardElements.forEach((el) => {
+                try {
+                    el.destroy()
+                } catch {}
+            })
+            state.boardElements.length = 0
+        }
         if (isCleanedUp()) return
 
         // Get current board data
@@ -199,11 +213,11 @@ export function createShowBoard(context: ShowBoardContext) {
         const localDoneStates = board.quests.map((q: SmallQuest) =>
             Boolean(q.done)
         )
-        const showDone =
-            state.activeBoard === 0 && (boards[0]?.quests?.length ?? 0) > 0
+        // Only show the Done label for the Available board (never for Submitted or Approved)
+        const showDone = board.name === 'Available' && board.quests.length > 0
 
         // Handle empty Available board
-        if (state.activeBoard === 0 && board.quests.length === 0) {
+        if (board.name === 'Available' && board.quests.length === 0) {
             renderEmptyMessage(
                 scene,
                 centerX,
@@ -213,8 +227,8 @@ export function createShowBoard(context: ShowBoardContext) {
                 elements
             )
         } else {
-            // Render Done column label for Available board
-            if (showDone) {
+            // Render Done column label only for Available board (double-check)
+            if (board.name === 'Available' && showDone) {
                 renderDoneLabel(
                     scene,
                     doneX,
@@ -236,6 +250,33 @@ export function createShowBoard(context: ShowBoardContext) {
                 isCleanedUp
             )
 
+            // If Approved board, fetch claimedSubmissionIds before rendering
+            if (
+                board.name === 'Approved' &&
+                (scene as SceneWithUser).userEmail
+            ) {
+                try {
+                    const emailParam = encodeURIComponent(
+                        (scene as SceneWithUser).userEmail!
+                    )
+                    const response = await fetch(
+                        `/api/transactions?email=${emailParam}`
+                    )
+                    if (response.ok) {
+                        const apiResult = (await response.json()) as {
+                            claimedSubmissionIds?: string[]
+                        }
+                        ;(scene as SceneWithUser).claimedSubmissionIds =
+                            apiResult.claimedSubmissionIds || []
+                    } else {
+                        ;(scene as SceneWithUser).claimedSubmissionIds = []
+                    }
+                } catch {
+                    ;(scene as SceneWithUser).claimedSubmissionIds = []
+                }
+            } else {
+                ;(scene as SceneWithUser).claimedSubmissionIds = []
+            }
             // Render quest list and navigation
             renderQuestList(
                 scene,

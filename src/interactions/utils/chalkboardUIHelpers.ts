@@ -84,7 +84,7 @@ export function createTitle(
         .text(
             cx - iw / 2 + styles.layout.titleOffsetX,
             cy - ih / 2 + styles.layout.titleOffsetY,
-            'Quests for <course name>',
+            'Loading',
             {
                 fontSize: styles.typography.titleSize,
                 color: styles.colors.titleText,
@@ -93,6 +93,40 @@ export function createTitle(
         )
         .setOrigin(0, 0.5)
         .setDepth(styles.depths.text)
+}
+
+export function createLoadingAnimation(
+    scene: Scene,
+    titleText: Phaser.GameObjects.Text
+) {
+    let dotCount = 0
+    const maxDots = 3
+    const baseText = 'Loading'
+
+    // Create a timer that updates every 400ms
+    const timer = scene.time.addEvent({
+        delay: 400,
+        callback: () => {
+            dotCount = (dotCount + 1) % (maxDots + 1)
+            const dots = '.'.repeat(dotCount)
+            try {
+                titleText.setText(baseText + dots)
+            } catch {
+                // If text object is destroyed, stop the timer
+                timer.destroy()
+            }
+        },
+        loop: true,
+    })
+
+    // Return cleanup function
+    return () => {
+        try {
+            timer.destroy()
+        } catch {
+            // Ignore if already destroyed
+        }
+    }
 }
 
 export function createEmptyMessage(scene: Scene, x: number, y: number) {

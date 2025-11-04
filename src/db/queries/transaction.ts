@@ -1,3 +1,21 @@
+import {eq, and, isNotNull} from 'drizzle-orm'
+// Returns all claimed submission IDs for a given user
+export async function getClaimedSubmissionIds(
+    email: string
+): Promise<number[]> {
+    const rows = await db
+        .select({submissionId: transaction.submissionId})
+        .from(transaction)
+        .where(
+            and(
+                eq(transaction.studentId, email),
+                isNotNull(transaction.submissionId)
+            )
+        )
+    return rows
+        .map((row) => row.submissionId)
+        .filter((id): id is number => id !== null)
+}
 import {db} from '../index'
 import {transaction} from '../schema'
 

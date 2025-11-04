@@ -197,6 +197,13 @@ export function mountBoards(options: MountBoardsOptions) {
             }
             state.boardNav = null
         }
+        // Destroy all quest UI elements, including late-added ones like 'Claimed' label
+        if (
+            state.boardQuestUI &&
+            typeof state.boardQuestUI.destroyAllElements === 'function'
+        ) {
+            state.boardQuestUI.destroyAllElements()
+        }
         state.boardQuestUI = null
         boardElements.forEach((el) => el.destroy())
         boardElements.length = 0
@@ -205,7 +212,7 @@ export function mountBoards(options: MountBoardsOptions) {
     // Now assign the cleanupBoard function to state
     state.cleanupBoard = cleanupBoard
 
-    const showBoard = createShowBoard({
+    let showBoard: (idx: number, fadeIn?: boolean) => void = createShowBoard({
         scene,
         elements,
         listStartX,
@@ -249,8 +256,9 @@ export function mountBoards(options: MountBoardsOptions) {
         showBoard((state.activeBoard ?? 0) - 1)
     }
 
+    let arrows: ReturnType<typeof createArrows> | null = null
     // create arrows now that nav handlers and isDialogOpen exist
-    const arrows = createArrows({
+    arrows = createArrows({
         scene,
         centerX,
         titleSizeNum,
@@ -259,6 +267,8 @@ export function mountBoards(options: MountBoardsOptions) {
         onLeft: () => prevBoard(),
         onRight: () => nextBoard(),
         isDialogOpen,
+        boardNames: currentBoards.map((b) => b.name),
+        activeBoard: state.activeBoard ?? 0,
     })
     leftArrow = arrows.leftArrow
     rightArrow = arrows.rightArrow
@@ -270,10 +280,32 @@ export function mountBoards(options: MountBoardsOptions) {
     aKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A)
     dKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D)
     // navigation functions are hoisted above; use them here
-    leftKey.on('down', prevBoard)
-    rightKey.on('down', nextBoard)
-    aKey.on('down', prevBoard)
-    dKey.on('down', nextBoard)
+    leftKey.on('down', () => {
+        if (arrows && arrows.highlightArrow) arrows.highlightArrow('left')
+        prevBoard()
+    })
+    rightKey.on('down', () => {
+        if (arrows && arrows.highlightArrow) arrows.highlightArrow('right')
+        nextBoard()
+    })
+    aKey.on('down', () => {
+        if (arrows && arrows.highlightArrow) arrows.highlightArrow('left')
+        prevBoard()
+    })
+    dKey.on('down', () => {
+        if (arrows && arrows.highlightArrow) arrows.highlightArrow('right')
+        nextBoard()
+    })
+    // Patch showBoard to update labels on board switch
+    const originalShowBoard = showBoard
+    function showBoardWithLabelUpdate(idx: number, fadeIn?: boolean) {
+        if (arrows && arrows.updateLabels) {
+            arrows.updateLabels(idx % currentBoards.length)
+        }
+        return originalShowBoard(idx, fadeIn)
+    }
+    // Replace showBoard with patched version
+    showBoard = showBoardWithLabelUpdate
     // show initial
     showBoard(0, true)
 
