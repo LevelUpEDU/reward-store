@@ -3,11 +3,11 @@ import {db} from '@/db'
 import {submission, quest, student} from '@/db/schema'
 import {eq, and} from 'drizzle-orm'
 
-export async function GET({params}: {params: {questId: string}}) {
+export async function GET(_request: Request) {
     try {
+        const questId = 6
         const instructorEmail = 'awei@bcit.ca'
 
-        const questId = parseInt(params.questId)
         if (isNaN(questId)) {
             return NextResponse.json(
                 {message: 'Invalid quest ID'},

@@ -3,10 +3,9 @@ import {db} from '@/db'
 import {quest} from '@/db/schema'
 import {eq} from 'drizzle-orm'
 
-export async function GET({params}: {params: Promise<{courseId: string}>}) {
+export async function GET(_request: Request) {
     try {
-        const {courseId: courseIdParam} = await params
-        const courseId = parseInt(courseIdParam)
+        const courseId = 6
         if (isNaN(courseId)) {
             return NextResponse.json(
                 {message: 'Invalid course ID'},
