@@ -40,7 +40,7 @@ export default function CreateQuestPage({
                     setError('Failed to load courses')
                 }
             } catch (error) {
-                setError('Failed to load courses')
+                setError(`${error}`)
             } finally {
                 setIsLoadingCourses(false)
             }
@@ -84,7 +84,7 @@ export default function CreateQuestPage({
                 setError(data.message || 'Failed to create the quest.')
             }
         } catch (error) {
-            setError('An error occurred while creating the quest.')
+            setError(`An error occurred while creating the quest: ${error} `)
         } finally {
             setIsLoading(false)
         }

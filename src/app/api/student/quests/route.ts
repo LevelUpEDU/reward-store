@@ -1,24 +1,16 @@
 import {NextResponse} from 'next/server'
-import {getServerSession} from 'next-auth'
-import {authOptions} from '../../auth/[...nextauth]/route'
 import {db} from '@/db'
 import {quest, course, registration, submission} from '@/db/schema'
 import {eq, inArray} from 'drizzle-orm'
 
 export async function GET() {
     try {
-        // Check authentication
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                {message: 'Not authenticated'},
-                {status: 401}
-            )
-        }
+        // placeholder until oauth is working
+        let studentEmail = 'student@bcit.ca'
 
         // Get all courses the student is registered for
         const studentRegistrations = await db.query.registration.findMany({
-            where: eq(registration.studentId, session.user.email),
+            where: eq(registration.studentId, studentEmail),
             columns: {courseId: true},
         })
 
@@ -67,7 +59,7 @@ export async function GET() {
 
         // Check which quests the student has already attended and their status
         const studentSubmissions = await db.query.submission.findMany({
-            where: eq(submission.studentId, session.user.email),
+            where: eq(submission.studentId, studentEmail),
             columns: {
                 questId: true,
                 status: true,
@@ -90,7 +82,7 @@ export async function GET() {
             const submission = submissionMap.get(quest.id)
             return {
                 ...quest,
-                isAttended: !!submission,
+                isAttended: Boolean(submission),
                 submissionStatus: submission?.status || null,
                 submissionDate: submission?.submissionDate || null,
                 verifiedDate: submission?.verifiedDate || null,

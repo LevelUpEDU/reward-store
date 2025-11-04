@@ -1,5 +1,4 @@
 import {NextResponse} from 'next/server'
-import {authOptions} from '../../auth/[...nextauth]/route'
 import {db} from '@/db'
 import {quest, course} from '@/db/schema'
 import {eq} from 'drizzle-orm'

@@ -2,8 +2,8 @@ import {NextResponse} from 'next/server'
 import {getServerSession} from 'next-auth'
 import {authOptions} from '../../auth/[...nextauth]/route'
 import {db} from '@/db'
-import {student, registration, course} from '@/db/schema'
-import {eq, and} from 'drizzle-orm'
+import {student, course} from '@/db/schema'
+import {eq} from 'drizzle-orm'
 
 export async function GET() {
     try {

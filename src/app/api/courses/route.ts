@@ -1,8 +1,4 @@
 import {NextResponse} from 'next/server'
-// 假设你已经配置好了 next-auth
-import {authOptions} from '../auth/[...nextauth]/route' // 确保路径正确
-import {db} from '@/db' // 确保路径正确
-import {course} from '@/db/schema' // 确保路径正确
 
 export async function POST(request: Request) {
     // 1. 验证用户是否登录

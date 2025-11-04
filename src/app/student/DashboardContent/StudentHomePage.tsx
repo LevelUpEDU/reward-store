@@ -33,7 +33,7 @@ const StudentHomePage = ({setActiveTab}: StudentHomePageProps) => {
     const [courses, setCourses] = useState<Course[]>([])
     const [quests, setQuests] = useState<Quest[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+    const [_error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -90,7 +90,7 @@ const StudentHomePage = ({setActiveTab}: StudentHomePageProps) => {
         <div className="student-page-content">
             <div className="welcome-banner">
                 <h1>Welcome, {session?.user?.name}!</h1>
-                <p>Here's your learning overview</p>
+                <p>Here&apos;s your learning overview</p>
             </div>
 
             <div className="section-header">

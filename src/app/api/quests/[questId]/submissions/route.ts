@@ -2,13 +2,10 @@ import {NextResponse} from 'next/server'
 import {getServerSession} from 'next-auth'
 import {authOptions} from '../../../auth/[...nextauth]/route'
 import {db} from '@/db'
-import {submission, quest, student, course} from '@/db/schema'
+import {submission, quest, student} from '@/db/schema'
 import {eq, and} from 'drizzle-orm'
 
-export async function GET(
-    request: Request,
-    {params}: {params: {questId: string}}
-) {
+export async function GET({params}: {params: {questId: string}}) {
     try {
         // Check authentication
         const session = await getServerSession(authOptions)

@@ -1,6 +1,4 @@
 import {NextResponse} from 'next/server'
-import {getServerSession} from 'next-auth'
-import {authOptions} from '../auth/[...nextauth]/route'
 import {db} from '@/db'
 import {quest} from '@/db/schema'
 import fs from 'fs'
@@ -26,14 +24,8 @@ try {
 
 export async function POST(request: Request) {
     try {
-        // Check authentication
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                {message: 'Not authenticated'},
-                {status: 401}
-            )
-        }
+        // placeholder until auth0 is integrated
+        const userEmail = 'awei@bcit.ca'
 
         const {title, points, courseId, expirationDate} = await request.json()
 
@@ -51,7 +43,7 @@ export async function POST(request: Request) {
                 title,
                 points: parseInt(points),
                 courseId: parseInt(courseId),
-                createdBy: session.user.email,
+                createdBy: userEmail,
                 createdDate: new Date(),
                 expirationDate:
                     expirationDate ? new Date(expirationDate) : null,
@@ -76,14 +68,8 @@ export async function POST(request: Request) {
 
 export async function GET() {
     try {
-        if (useDb) {
-            const {dbGetQuests} = await import('./helpers')
-            return await dbGetQuests(request)
-        }
-
         // Fallback to file-based data
         // eslint-disable-next-line no-console
-        console.log('[api/quests] falling back to JSON file at', dataPath)
         if (!fs.existsSync(dataPath)) {
             return NextResponse.json({quests: []})
         }
@@ -106,8 +92,6 @@ export async function GET() {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json()
-        // eslint-disable-next-line no-console
-        console.log('[api/quests] PATCH received body=', JSON.stringify(body))
         const {index, done, confirmed, questId} = body
         if (
             (typeof index !== 'number' && typeof questId !== 'number') ||
@@ -153,14 +137,8 @@ export async function PATCH(request: Request) {
         if (typeof confirmed === 'boolean')
             data.quests[index].confirmed = confirmed
         fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf8')
-        // eslint-disable-next-line no-console
-        console.log(
-            '[api/quests] file-fallback PATCH successful, responding ok'
-        )
         return NextResponse.json({ok: true, quests: data.quests})
     } catch (err: unknown) {
-        // eslint-disable-next-line no-console
-        console.error('[api/quests] PATCH error', err)
         const payload: Record<string, unknown> = {error: String(err)}
         if (process.env.NODE_ENV !== 'production' && err instanceof Error)
             payload.stack = err.stack

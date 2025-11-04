@@ -23,7 +23,7 @@ type StudentQuestsPageProps = {
     setActiveTab: (tab: string) => void
 }
 
-const StudentQuestsPage = ({setActiveTab}: StudentQuestsPageProps) => {
+const StudentQuestsPage = ({}: StudentQuestsPageProps) => {
     const [quests, setQuests] = useState<Quest[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -86,7 +86,7 @@ const StudentQuestsPage = ({setActiveTab}: StudentQuestsPageProps) => {
                 alert(data.message || 'Failed to attend quest')
             }
         } catch (err: any) {
-            alert('Failed to attend quest')
+            alert(`Failed to attend quest: ${err}`)
         }
     }
 

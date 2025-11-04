@@ -245,8 +245,8 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
                 </div>
             :   <div className="empty-state">
                     <p>
-                        No quests created yet. Click "Add Quest" to create your
-                        first quest!
+                        No quests created yet. Click &ldquo;Add Quest&rdquo; to
+                        create your first quest!
                     </p>
                 </div>
             }

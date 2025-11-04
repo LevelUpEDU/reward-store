@@ -2,7 +2,6 @@
 
 import React, {useState, useEffect} from 'react'
 import CourseCard from '../CourseCard/CourseCard'
-import CourseDetailPage from './CourseDetailPage'
 
 type Course = {
     id: number
@@ -87,8 +86,8 @@ const CoursesPage = ({setActiveTab}: CoursesPageProps) => {
                 </div>
             :   <div className="empty-state">
                     <p>
-                        You haven't created any courses yet. Click the button
-                        above to get started!
+                        You haven&apos;t created any courses yet. Click the
+                        button above to get started!
                     </p>
                 </div>
             }

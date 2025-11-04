@@ -23,7 +23,7 @@ type StudentCoursesPageProps = {
     setActiveTab: (tab: string) => void
 }
 
-const StudentCoursesPage = ({setActiveTab}: StudentCoursesPageProps) => {
+const StudentCoursesPage = ({}: StudentCoursesPageProps) => {
     const [registeredCourses, setRegisteredCourses] = useState<Course[]>([])
     const [availableCourses, setAvailableCourses] = useState<AvailableCourse[]>(
         []
@@ -31,7 +31,7 @@ const StudentCoursesPage = ({setActiveTab}: StudentCoursesPageProps) => {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showRegisterForm, setShowRegisterForm] = useState(false)
-    const [registerCourseId, setRegisterCourseId] = useState<number | null>(
+    const [_registerCourseId, _setRegisterCourseId] = useState<number | null>(
         null
     )
 
@@ -81,7 +81,7 @@ const StudentCoursesPage = ({setActiveTab}: StudentCoursesPageProps) => {
                 alert(data.message || 'Failed to register for course')
             }
         } catch (err: any) {
-            alert('Failed to register for course')
+            alert(`Failed to register for course: ${err}`)
         }
     }
 

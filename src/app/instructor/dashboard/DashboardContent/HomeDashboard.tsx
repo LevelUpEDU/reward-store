@@ -1,7 +1,6 @@
 'use client'
 
 import React, {useState, useEffect} from 'react'
-import StatsCard from '../StatsCard/StatsCard'
 import CourseCard from '../CourseCard/CourseCard'
 
 type Course = {
@@ -32,7 +31,7 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
     const [courses, setCourses] = useState<Course[]>([])
     const [quests, setQuests] = useState<Quest[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
+    const [_error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -140,8 +139,8 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
                 </div>
             :   <div className="empty-state">
                     <p>
-                        No courses created yet. Click "Add Course" to get
-                        started!
+                        No courses created yet. Click &ldquo;Add Course&rdquo;
+                        to get started!
                     </p>
                 </div>
             }
@@ -187,8 +186,8 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
                 </div>
             :   <div className="quests-preview">
                     <p>
-                        No quests created yet. Click "Add Quest" to create your
-                        first quest!
+                        No quests created yet. Click &ldquo;Add Quest&rdquo; to
+                        create your first quest!
                     </p>
                 </div>
             }

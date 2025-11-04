@@ -1,14 +1,8 @@
 'use client'
-import React, {useState} from 'react'
 import Link from 'next/link'
-import LoginForm from './components/LoginForm'
-import SignUpForm from './components/SignUpForm'
 import '../styles/home.css'
 
 export default function HomePage() {
-    const [showLogin, setShowLogin] = useState(false)
-    const [showSignUp, setShowSignUp] = useState(false)
-
     return (
         <div className="home-container">
             <div className="hero-section">

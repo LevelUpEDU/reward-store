@@ -1,7 +1,6 @@
 'use client'
 
 import React, {useState} from 'react'
-import {useRouter} from 'next/navigation'
 import './AuthForm.css'
 
 interface LoginFormProps {
@@ -10,16 +9,11 @@ interface LoginFormProps {
     onCancel: () => void
 }
 
-export default function LoginForm({
-    onSuccess,
-    onSwitchToSignUp,
-    onCancel,
-}: LoginFormProps) {
+export default function LoginForm({}: LoginFormProps) {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState('')
-    const router = useRouter()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -71,17 +65,13 @@ export default function LoginForm({
 
                     <div className="auth-form-footer">
                         <p>
-                            Don't have an account?{' '}
-                            <button
-                                type="button"
-                                onClick={onSwitchToSignUp}
-                                className="link-button">
+                            Don&apos;t have an account?{' '}
+                            <button type="button" className="link-button">
                                 Sign up here
                             </button>
                         </p>
                         <button
                             type="button"
-                            onClick={onCancel}
                             className="btn btn-outline btn-small">
                             Cancel
                         </button>
