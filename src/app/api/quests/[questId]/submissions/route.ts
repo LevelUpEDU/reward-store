@@ -1,20 +1,11 @@
 import {NextResponse} from 'next/server'
-import {getServerSession} from 'next-auth'
-import {authOptions} from '../../../auth/[...nextauth]/route'
 import {db} from '@/db'
 import {submission, quest, student} from '@/db/schema'
 import {eq, and} from 'drizzle-orm'
 
 export async function GET({params}: {params: {questId: string}}) {
     try {
-        // Check authentication
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                {message: 'Not authenticated'},
-                {status: 401}
-            )
-        }
+        const instructorEmail = 'awei@bcit.ca'
 
         const questId = parseInt(params.questId)
         if (isNaN(questId)) {
@@ -28,7 +19,7 @@ export async function GET({params}: {params: {questId: string}}) {
         const questDetails = await db.query.quest.findFirst({
             where: and(
                 eq(quest.id, questId),
-                eq(quest.createdBy, session.user.email)
+                eq(quest.createdBy, instructorEmail)
             ),
             columns: {id: true, title: true, courseId: true},
         })
