@@ -70,6 +70,7 @@ export default function GameComponent() {
             const Phaser = await import('phaser')
 
             // default scene to load
+            const {Lobby} = await import('@/scenes/Lobby')
             const {Classroom} = await import('@/scenes/Classroom')
 
             const config = {
@@ -83,8 +84,8 @@ export default function GameComponent() {
                 scale: {
                     mode: Phaser.Scale.FIT,
                     autoCenter: Phaser.Scale.CENTER_BOTH,
-                    width: 800,
-                    height: 600,
+                    width: 1920,
+                    height: 1080,
                     parent: gameRef.current,
                 },
                 physics: {
@@ -94,7 +95,7 @@ export default function GameComponent() {
                         debug: false,
                     },
                 },
-                scene: Classroom,
+                scene: [Lobby, Classroom],
             }
 
             gameInstance = new Phaser.Game(config)

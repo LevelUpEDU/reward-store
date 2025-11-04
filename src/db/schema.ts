@@ -36,6 +36,7 @@ export const student = pgTable('student', {
     name: varchar('name').notNull(),
     password: varchar('password').notNull(), // add Password.
     lastSignin: timestamp('last_signin', {mode: 'date'}),
+    auth0Id: varchar('auth0_id').unique(),
 })
 
 export const instructor = pgTable('instructor', {
@@ -43,6 +44,7 @@ export const instructor = pgTable('instructor', {
     name: varchar('name').notNull(),
     password: varchar('password').notNull(), // add Password.
     lastSignin: timestamp('last_signin', {mode: 'date'}),
+    auth0Id: varchar('auth0_id').unique(),
 })
 
 export const course = pgTable('course', {
@@ -126,7 +128,7 @@ export const reward = pgTable(
 )
 
 export const redemption = pgTable('redemption', {
-    id: serial('id').primaryKey().unique(),
+    id: serial('id').primaryKey(),
     studentId: varchar('student_id')
         .references(() => student.email)
         .notNull(),

@@ -1,6 +1,5 @@
 import {interactionRegistry} from './interactionRegistry'
 import {chalkboardStyles as styles} from './styles/chalkboardStyles'
-import {createMenuNavigation} from '@/utils/menuNavigation'
 import {loadQuests} from './utils/questData'
 import {
     createOverlay,
@@ -8,8 +7,10 @@ import {
     createBackground,
     createTitle,
     createEmptyMessage,
-    createQuestUI,
+    createLoadingAnimation,
 } from './utils/chalkboardUIHelpers'
+// board UI extracted to utils/chalkboardBoards
+import {mountBoards} from './utils/chalkboardBoards'
 
 interactionRegistry.register('chalkboard', async (scene, _data?) => {
     scene.interactionHandler.blockMovement()
@@ -46,7 +47,7 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
     )
     elements.push(overlay, border, background)
 
-    // Create title
+    // Create title (will update with course title after load)
     const title = createTitle(
         scene,
         centerX,
@@ -56,9 +57,65 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
     )
     elements.push(title)
 
-    // Load and display quests
-    const quests = await loadQuests()
-    const doneStates: boolean[] = quests.map((q) => Boolean(q.done))
+    // Create loading text in the center of the chalkboard
+    const loadingText = scene.add
+        .text(centerX, centerY, 'Loading', {
+            fontSize: styles.typography.titleSize,
+            color: styles.colors.titleText,
+            fontFamily: styles.typography.fontFamily,
+        })
+        .setOrigin(0.5)
+        .setDepth(styles.depths.text + 1)
+    elements.push(loadingText)
+
+    // Hide title during loading
+    title.setAlpha(0)
+
+    // Start loading animation
+    const stopLoadingAnimation = createLoadingAnimation(scene, loadingText)
+
+    // Load and display quests (default courseId = 3)
+    // Prefer passing a student identity from env for dev flow
+    // Access process.env only when available (server-side or build-time). Avoid referencing
+    // `process` directly in the browser, which throws "process is not defined" at runtime.
+    let devStudent = 'zion_li@my.bcit.ca'
+    try {
+        if (typeof process !== 'undefined') {
+            const proc = process as unknown as
+                | {env?: Record<string, string | undefined>}
+                | undefined
+            const envEmail = proc?.env?.DEV_STUDENT_EMAIL
+            if (typeof envEmail === 'string' && envEmail.length > 0)
+                devStudent = envEmail
+        }
+    } catch {
+        // ignore - fallback to default email when process is not present in the runtime
+    }
+    // Pass user email to scene for claim button
+    // Define a type for scene with userEmail
+    interface SceneWithUser extends Phaser.Scene {
+        userEmail?: string
+    }
+    ;(scene as SceneWithUser).userEmail = devStudent
+
+    const {course, quests} = await loadQuests(3, devStudent)
+    const _doneStates: boolean[] = quests.map((q) => Boolean(q.done))
+
+    // Stop loading animation and remove loading text
+    stopLoadingAnimation()
+    try {
+        loadingText.destroy()
+    } catch {
+        /* ignore */
+    }
+
+    // Show and update title with course name
+    title.setAlpha(1)
+    if (course?.title) {
+        title.setText(`Quests for ${course.title}`)
+    } else {
+        title.setText('Quests')
+    }
 
     const listStartX = centerX - interfaceWidth / 2 + styles.layout.padding
     const listStartY = centerY - interfaceHeight / 2 + styles.layout.listStartY
@@ -68,10 +125,71 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
         styles.layout.padding -
         styles.layout.doneColumnOffsetX
 
-    const cleanup = (nav?: any) => {
-        if (nav) nav.cleanup()
-        elements.forEach((el) => el.destroy())
-        scene.interactionHandler.unblockMovement()
+    // Group quests into three boards using server-provided submission metadata:
+    // Available = no submission, Submitted = submission exists and status === 'pending',
+    // Approved = submission exists and status === 'approved'
+    const boards: {name: string; quests: typeof quests}[] = [
+        {
+            name: 'Available',
+            quests: quests.filter((q) => !q.submissionId) as typeof quests,
+        },
+        {
+            name: 'Submitted',
+            quests: quests.filter(
+                (q) => q.submissionId && q.submissionStatus === 'pending'
+            ) as typeof quests,
+        },
+        {
+            name: 'Approved',
+            quests: quests.filter(
+                (q) => q.submissionId && q.submissionStatus === 'approved'
+            ) as typeof quests,
+        },
+    ]
+
+    let _cleaned = false
+    let cleanup = (nav?: {cleanup?: () => void}) => {
+        if (_cleaned) return
+        _cleaned = true
+        // Stop loading animation if still running
+        try {
+            stopLoadingAnimation()
+        } catch {
+            /* ignore */
+        }
+        try {
+            console.warn('[chalkboard] cleanup called', {
+                navProvided: Boolean(nav),
+            })
+        } catch {}
+        try {
+            if (nav && typeof nav.cleanup === 'function') {
+                try {
+                    nav.cleanup()
+                } catch {
+                    /* ignore */
+                }
+            }
+        } catch {
+            /* ignore */
+        }
+        try {
+            elements.forEach((el) => {
+                try {
+                    el.destroy()
+                } catch {
+                    /* ignore */
+                }
+            })
+            elements.length = 0
+        } catch {
+            /* ignore */
+        }
+        try {
+            scene.interactionHandler.unblockMovement()
+        } catch {
+            /* ignore */
+        }
     }
 
     if (quests.length === 0) {
@@ -83,31 +201,69 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
             }
         })
     } else {
-        const questUI = createQuestUI(
+        const originalCleanup = cleanup
+
+        // Refresh callback: re-fetch quests and rebuild boards
+        const refreshQuests = async () => {
+            try {
+                const {course: freshCourse, quests: freshQuests} =
+                    await loadQuests(3, devStudent)
+
+                // Update title if course changed
+                if (freshCourse?.title) {
+                    title.setText(`Quests for ${freshCourse.title}`)
+                }
+
+                // Rebuild boards with fresh data
+                const freshBoards: {
+                    name: string
+                    quests: typeof freshQuests
+                }[] = [
+                    {
+                        name: 'Available',
+                        quests: freshQuests.filter(
+                            (q) => !q.submissionId
+                        ) as typeof freshQuests,
+                    },
+                    {
+                        name: 'Submitted',
+                        quests: freshQuests.filter(
+                            (q) =>
+                                q.submissionId &&
+                                q.submissionStatus === 'pending'
+                        ) as typeof freshQuests,
+                    },
+                    {
+                        name: 'Approved',
+                        quests: freshQuests.filter(
+                            (q) =>
+                                q.submissionId &&
+                                q.submissionStatus === 'approved'
+                        ) as typeof freshQuests,
+                    },
+                ]
+
+                return freshBoards
+            } catch (err) {
+                console.error('[chalkboard] refreshQuests error', err)
+                return null
+            }
+        }
+
+        const boardsMount = mountBoards({
             scene,
-            quests,
-            doneStates,
+            elements,
+            overlay,
+            border,
+            title,
+            boards,
             listStartX,
             listStartY,
-            doneX
-        )
-        elements.push(...questUI.elements)
-
-        const navigation = createMenuNavigation({
-            scene,
-            itemCount: quests.length,
-            onSelectionChange: (idx) => questUI.updateVisuals(idx),
-            onSelect: (idx) => questUI.toggleDone(idx),
-            onClose: () => cleanup(navigation),
+            doneX,
+            originalCleanup,
+            refreshQuests,
         })
-
-        overlay.setInteractive()
-        overlay.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            if (!border.getBounds().contains(pointer.x, pointer.y)) {
-                cleanup(navigation)
-            }
-        })
-
-        questUI.updateVisuals(0)
+        // reassign cleanup so callers perform extended cleanup from the mount
+        cleanup = () => boardsMount.cleanup()
     }
 })

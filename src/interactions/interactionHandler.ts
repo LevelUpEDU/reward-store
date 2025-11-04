@@ -12,7 +12,7 @@ export interface InteractionConfig {
 
 export class InteractionHandler {
     private scene: Scene
-    private interactionGroup: Phaser.Physics.Arcade.StaticGroup
+    public interactionGroup: Phaser.Physics.Arcade.StaticGroup
     private currentInteractionObject: Phaser.GameObjects.Rectangle | null = null
     private interactionKey: Phaser.Input.Keyboard.Key
     private nameTagText: Phaser.GameObjects.Text

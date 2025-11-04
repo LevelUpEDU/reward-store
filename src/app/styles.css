@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css2?family=Micro+5&family=Pixelify+Sans:wght@400..700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#pixelated-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    z-index: -1;
+}
+
+#ui {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding: 1rem;
+    width: 100%;
+    max-width: 400px;
+    position: relative;
+    z-index: 1;
+}
+
+h1 {
+    font-family: 'Pixelify Sans', sans-serif;
+    color: #ffff00;
+    text-shadow: 3px 3px 0px #000000;
+    font-size: 4rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+#sign-in {
+    font-family: 'Micro 5', sans-serif;
+    width: 100%;
+    max-width: 400px;
+    background-color: #44316fff;
+    border: 0.5em ridge #ffff00;
+    padding: 2rem;
+    z-index: 1;
+}
+
+.btn {
+    font-family: 'Micro 5', sans-serif;
+    width: 100%;
+    padding: 0.875rem;
+    border: 3px solid #000000;
+    border-radius: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.1s ease;
+}
+
+.btn-primary {
+    background-color: #ffff00;
+    color: #000000;
+}
+
+.btn-primary:hover {
+    background-color: #ffff33;
+}
+
+.btn-primary:active {
+    transform: translate(2px, 2px);
+}
+
+.divider {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 1.5rem 0;
+    position: relative;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 2px;
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.divider::before {
+    left: 0;
+}
+
+.divider::after {
+    right: 0;
+}
+
+@media (max-width: 768px) {
+    #sign-in {
+        padding: 1.5rem;
+    }
+
+    .btn {
+        font-size: 2rem;
+    }
+}
+
+.auth-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.auth-section {
+    text-align: center;
+}
+
+.auth-section h2 {
+    font-family: 'Pixelify Sans', sans-serif;
+    color: #ffff00;
+    text-shadow: 2px 2px 0px #000000;
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.auth-section p {
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+}
+
+.auth-section a {
+    text-decoration: none;
+}
+
+.btn-secondary {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border: 3px solid #ffff00;
+}
+
+.btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: #ffff33;
+}
+
+.btn-secondary:active {
+    transform: translate(2px, 2px);
+}
+
+.info-text {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    margin-top: 1rem;
+    letter-spacing: 0.5px;
+}
+
+.info-text p {
+    margin: 0.25rem 0;
+}
