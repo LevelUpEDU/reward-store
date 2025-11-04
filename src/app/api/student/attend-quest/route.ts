@@ -1,20 +1,11 @@
 import {NextResponse} from 'next/server'
-import {getServerSession} from 'next-auth'
-import {authOptions} from '../../auth/[...nextauth]/route'
 import {db} from '@/db'
 import {submission, quest, registration} from '@/db/schema'
 import {eq, and} from 'drizzle-orm'
 
 export async function POST(request: Request) {
     try {
-        // Check authentication
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                {message: 'Not authenticated'},
-                {status: 401}
-            )
-        }
+        const studentEmail = 'student@bcit.ca'
 
         const {questId} = await request.json()
 
@@ -41,7 +32,7 @@ export async function POST(request: Request) {
         // Check if student is registered for the course
         const studentRegistration = await db.query.registration.findFirst({
             where: and(
-                eq(registration.studentId, session.user.email),
+                eq(registration.studentId, studentEmail),
                 eq(registration.courseId, questDetails.courseId)
             ),
         })
@@ -56,7 +47,7 @@ export async function POST(request: Request) {
         // Check if student has already attended this quest
         const existingSubmission = await db.query.submission.findFirst({
             where: and(
-                eq(submission.studentId, session.user.email),
+                eq(submission.studentId, studentEmail),
                 eq(submission.questId, parseInt(questId))
             ),
         })
@@ -70,7 +61,7 @@ export async function POST(request: Request) {
 
         // Create submission record
         await db.insert(submission).values({
-            studentId: session.user.email,
+            studentId: studentEmail,
             questId: parseInt(questId),
             submissionDate: new Date(),
             status: 'pending',

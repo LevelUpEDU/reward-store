@@ -1,24 +1,10 @@
 import {NextResponse} from 'next/server'
-import {getServerSession} from 'next-auth'
-import {authOptions} from '../../../auth/[...nextauth]/route'
 import {db} from '@/db'
 import {quest} from '@/db/schema'
 import {eq} from 'drizzle-orm'
 
-export async function GET(
-    request: Request,
-    {params}: {params: Promise<{courseId: string}>}
-) {
+export async function GET({params}: {params: Promise<{courseId: string}>}) {
     try {
-        // Check authentication
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                {message: 'Not authenticated'},
-                {status: 401}
-            )
-        }
-
         const {courseId: courseIdParam} = await params
         const courseId = parseInt(courseIdParam)
         if (isNaN(courseId)) {

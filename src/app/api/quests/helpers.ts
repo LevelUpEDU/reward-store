@@ -88,19 +88,6 @@ export async function dbPatchHandler(
         process.env.DEV_STUDENT_EMAIL ??
         'zion_li@my.bcit.ca'
 
-    try {
-        const {getStudentByEmail, createStudent} = await import(
-            '@/db/queries/student'
-        )
-        const existingStudent = await getStudentByEmail(studentEmail)
-        if (!existingStudent) {
-            const name = String(studentEmail).split('@')[0] ?? 'Student'
-            await createStudent(studentEmail, name)
-        }
-    } catch {
-        // ignore student existence helper failures; createSubmission will fail if necessary
-    }
-
     if (body.done === true) {
         const existing = await getSubmissionsByStudent(studentEmail)
         const already = existing.find(

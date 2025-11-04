@@ -1,19 +1,10 @@
 import {NextResponse} from 'next/server'
-import {getServerSession} from 'next-auth'
-import {authOptions} from '../../auth/[...nextauth]/route'
 import {db} from '@/db'
 import {registration} from '@/db/schema'
 
 export async function POST(request: Request) {
     try {
-        // Check authentication
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                {message: 'Not authenticated'},
-                {status: 401}
-            )
-        }
+        const studentEmail = 'student@bcit.ca'
 
         const {courseId} = await request.json()
 
@@ -28,7 +19,7 @@ export async function POST(request: Request) {
         const existingRegistration = await db.query.registration.findFirst({
             where: (registrations, {and, eq}) =>
                 and(
-                    eq(registrations.studentId, session.user.email),
+                    eq(registrations.studentId, studentEmail),
                     eq(registrations.courseId, parseInt(courseId))
                 ),
         })
@@ -42,7 +33,7 @@ export async function POST(request: Request) {
 
         // Register the student for the course
         await db.insert(registration).values({
-            studentId: session.user.email,
+            studentId: studentEmail,
             courseId: parseInt(courseId),
         })
 

@@ -1,7 +1,6 @@
 'use client'
 
 import React, {useState, useEffect} from 'react'
-import {useSession} from 'next-auth/react'
 
 type Course = {
     id: number
@@ -29,7 +28,6 @@ type StudentHomePageProps = {
 }
 
 const StudentHomePage = ({setActiveTab}: StudentHomePageProps) => {
-    const {data: session} = useSession()
     const [courses, setCourses] = useState<Course[]>([])
     const [quests, setQuests] = useState<Quest[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -79,7 +77,7 @@ const StudentHomePage = ({setActiveTab}: StudentHomePageProps) => {
         return (
             <div className="student-page-content">
                 <div className="welcome-banner">
-                    <h1>Welcome, {session?.user?.name}!</h1>
+                    <h1>Welcome, User!</h1>
                     <p>Loading your dashboard...</p>
                 </div>
             </div>
@@ -89,7 +87,7 @@ const StudentHomePage = ({setActiveTab}: StudentHomePageProps) => {
     return (
         <div className="student-page-content">
             <div className="welcome-banner">
-                <h1>Welcome, {session?.user?.name}!</h1>
+                <h1>Welcome, User!</h1>
                 <p>Here&apos;s your learning overview</p>
             </div>
 

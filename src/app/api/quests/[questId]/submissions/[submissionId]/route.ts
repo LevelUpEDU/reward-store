@@ -1,6 +1,4 @@
 import {NextResponse} from 'next/server'
-import {getServerSession} from 'next-auth'
-import {authOptions} from '../../../../auth/[...nextauth]/route'
 import {db} from '@/db'
 import {submission, quest, transaction} from '@/db/schema'
 import {eq, and} from 'drizzle-orm'
@@ -10,17 +8,11 @@ export async function PATCH(
     {params}: {params: {questId: string; submissionId: string}}
 ) {
     try {
-        // Check authentication
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                {message: 'Not authenticated'},
-                {status: 401}
-            )
-        }
-
         const questId = parseInt(params.questId)
         const submissionId = parseInt(params.submissionId)
+
+        //placeholder
+        const userEmail = 'user@bcit.ca'
 
         if (isNaN(questId) || isNaN(submissionId)) {
             return NextResponse.json(
@@ -40,10 +32,7 @@ export async function PATCH(
 
         // Verify the instructor owns this quest
         const questDetails = await db.query.quest.findFirst({
-            where: and(
-                eq(quest.id, questId),
-                eq(quest.createdBy, session.user.email)
-            ),
+            where: and(eq(quest.id, questId), eq(quest.createdBy, userEmail)),
             columns: {id: true, points: true},
         })
 
@@ -84,7 +73,7 @@ export async function PATCH(
             .update(submission)
             .set({
                 status: newStatus,
-                verifiedBy: session.user.email,
+                verifiedBy: userEmail,
                 verifiedDate: new Date(),
             })
             .where(eq(submission.id, submissionId))

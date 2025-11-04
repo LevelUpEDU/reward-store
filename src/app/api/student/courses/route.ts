@@ -1,24 +1,15 @@
 import {NextResponse} from 'next/server'
-import {getServerSession} from 'next-auth'
-import {authOptions} from '../../auth/[...nextauth]/route'
 import {db} from '@/db'
 import {registration, course, instructor} from '@/db/schema'
 import {eq} from 'drizzle-orm'
 
 export async function GET() {
     try {
-        // Check authentication
-        const session = await getServerSession(authOptions)
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                {message: 'Not authenticated'},
-                {status: 401}
-            )
-        }
+        const studentEmail = 'student@bcit.ca'
 
         // Get all courses the student is registered for
         const studentRegistrations = await db.query.registration.findMany({
-            where: eq(registration.studentId, session.user.email),
+            where: eq(registration.studentId, studentEmail),
             columns: {courseId: true},
         })
 

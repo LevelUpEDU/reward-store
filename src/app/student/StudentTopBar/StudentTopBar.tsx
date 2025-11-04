@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import {useSession, signOut} from 'next-auth/react'
 
 type StudentTopBarProps = {
     activeTab: string
@@ -9,12 +8,6 @@ type StudentTopBarProps = {
 }
 
 const StudentTopBar = ({activeTab, setActiveTab}: StudentTopBarProps) => {
-    const {data: session} = useSession()
-
-    const handleSignOut = () => {
-        signOut({callbackUrl: '/'})
-    }
-
     return (
         <div className="student-topbar">
             <div className="topbar-left">
@@ -41,12 +34,10 @@ const StudentTopBar = ({activeTab, setActiveTab}: StudentTopBarProps) => {
 
             <div className="topbar-right">
                 <div className="user-info">
-                    <span className="user-name">{session?.user?.name}</span>
+                    <span className="user-name">User</span>
                     <span className="user-role">Student</span>
                 </div>
-                <button className="signout-btn" onClick={handleSignOut}>
-                    Sign Out
-                </button>
+                <button className="signout-btn">Sign Out</button>
             </div>
         </div>
     )
