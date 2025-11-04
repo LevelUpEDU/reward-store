@@ -7,9 +7,13 @@ import {eq} from 'drizzle-orm'
 
 export async function createInstructor(
     email: string,
-    name: string
+    name: string,
+    password: string
 ): Promise<Instructor> {
-    const result = await db.insert(instructor).values({email, name}).returning()
+    const result = await db
+        .insert(instructor)
+        .values({email, name, password})
+        .returning()
 
     return result[0]
 }

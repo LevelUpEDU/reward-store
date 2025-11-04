@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body: RegisterBody = await request.json()
-        const {email, name, auth0Id, role} = body
+        const {email, auth0Id, role} = body
 
         if (!['student', 'instructor'].includes(role)) {
             return NextResponse.json({error: 'Invalid role'}, {status: 400})
@@ -62,13 +62,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({error: 'Email in use'}, {status: 409})
         }
 
-        await db.insert(table).values({
-            email,
-            name,
-            auth0Id,
-            lastSignin: new Date(),
-        })
-
+        // TODO: add back logic to create student
+        //
         return NextResponse.json({success: true})
     } catch (error) {
         console.error('Registration error:', error)

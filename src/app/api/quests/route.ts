@@ -1,4 +1,6 @@
 import {NextResponse} from 'next/server'
+import {db} from '@/db'
+import {quest} from '@/db/schema'
 import fs from 'fs'
 import path from 'path'
 
@@ -7,51 +9,61 @@ const dataPath = path.join(process.cwd(), 'src', 'data', 'quests.json')
 // We will use the project's existing Drizzle/Neon helpers when DATABASE_URL is set.
 // The project exposes queries in src/db/queries; import the helper to read quests.
 let useDb = false
-let importError: unknown = null
-try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    const {getQuestsByCourse} = await import('@/db/queries/quest')
-    if (typeof getQuestsByCourse === 'function' && process.env.DATABASE_URL) {
-        useDb = true
-    }
-} catch (e) {
-    // capture the import error for debugging — we'll still gracefully fall back to file
-    importError = e
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+const {getQuestsByCourse} = await import('@/db/queries/quest')
+if (typeof getQuestsByCourse === 'function' && process.env.DATABASE_URL) {
+    useDb = true
 }
 
-// Log the DB decision at module load. This will appear in the Next dev server console.
-// Don't log full DATABASE_URL; only its presence to avoid leaking secrets.
-try {
-    // eslint-disable-next-line no-console
-    console.log(
-        '[api/quests] module load: useDb=',
-        useDb,
-        'DATABASE_URL=',
-        process.env.DATABASE_URL ? 'SET' : 'UNSET'
-    )
-    if (importError) {
-        // eslint-disable-next-line no-console
-        console.error(
-            '[api/quests] import error (query helper):',
-            String(importError)
-        )
-    }
-} catch {
-    /* ignore logging failures */
-}
-
-// GET: return quests from DB when available, otherwise from the local JSON
-export async function GET(request: Request) {
+export async function POST(request: Request) {
     try {
-        if (useDb) {
-            const {dbGetQuests} = await import('./helpers')
-            return await dbGetQuests(request)
+        // placeholder until auth0 is integrated
+        const userEmail = 'awei@bcit.ca'
+
+        const {title, points, courseId, expirationDate} = await request.json()
+
+        if (!title || !points || !courseId) {
+            return NextResponse.json(
+                {message: 'Title, points, and courseId are required'},
+                {status: 400}
+            )
         }
 
+        // Create quest in database
+        const newQuest = await db
+            .insert(quest)
+            .values({
+                title,
+                points: parseInt(points),
+                courseId: parseInt(courseId),
+                createdBy: userEmail,
+                createdDate: new Date(),
+                expirationDate:
+                    expirationDate ? new Date(expirationDate) : null,
+            })
+            .returning()
+
+        return NextResponse.json(
+            {
+                message: 'Quest created successfully',
+                quest: newQuest[0],
+            },
+            {status: 201}
+        )
+    } catch (error) {
+        console.error('Failed to create quest:', error)
+        return NextResponse.json(
+            {message: 'Internal Server Error'},
+            {status: 500}
+        )
+    }
+}
+
+export async function GET() {
+    try {
         // Fallback to file-based data
         // eslint-disable-next-line no-console
-        console.log('[api/quests] falling back to JSON file at', dataPath)
         if (!fs.existsSync(dataPath)) {
             return NextResponse.json({quests: []})
         }
@@ -74,8 +86,6 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json()
-        // eslint-disable-next-line no-console
-        console.log('[api/quests] PATCH received body=', JSON.stringify(body))
         const {index, done, confirmed, questId} = body
         if (
             (typeof index !== 'number' && typeof questId !== 'number') ||
@@ -121,14 +131,8 @@ export async function PATCH(request: Request) {
         if (typeof confirmed === 'boolean')
             data.quests[index].confirmed = confirmed
         fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf8')
-        // eslint-disable-next-line no-console
-        console.log(
-            '[api/quests] file-fallback PATCH successful, responding ok'
-        )
         return NextResponse.json({ok: true, quests: data.quests})
     } catch (err: unknown) {
-        // eslint-disable-next-line no-console
-        console.error('[api/quests] PATCH error', err)
         const payload: Record<string, unknown> = {error: String(err)}
         if (process.env.NODE_ENV !== 'production' && err instanceof Error)
             payload.stack = err.stack

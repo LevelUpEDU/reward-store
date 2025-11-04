@@ -7,9 +7,13 @@ import {eq, sum} from 'drizzle-orm'
 
 export async function createStudent(
     email: string,
-    name: string
+    name: string,
+    password: string
 ): Promise<Student> {
-    const result = await db.insert(student).values({email, name}).returning()
+    const result = await db
+        .insert(student)
+        .values({email, name, password})
+        .returning()
 
     return result[0]
 }

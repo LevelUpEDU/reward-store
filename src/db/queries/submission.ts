@@ -3,7 +3,8 @@ import {submission} from '../schema'
 
 import type {Quest, Submission, Transaction} from '@/types/db'
 
-import {getQuestsByCourse, getQuestById, createTransaction} from '@/db'
+import {getQuestsByCourse, getQuestById} from './quest'
+import {createTransaction} from './transaction'
 
 import {eq} from 'drizzle-orm'
 
@@ -54,7 +55,6 @@ export async function verifySubmission(
     submission: Submission
     transaction: Transaction | null
 }> {
-    // retrieve the submission and quest details
     const currentSubmission = await getSubmissionById(submissionId)
     if (!currentSubmission) {
         throw new Error('Submission not found')
@@ -62,7 +62,6 @@ export async function verifySubmission(
     const questData = await getQuestById(currentSubmission.questId)
     if (!questData) throw new Error('Quest not found')
 
-    // update the submission status
     const updatedSubmission = await db
         .update(submission)
         .set({
@@ -73,7 +72,6 @@ export async function verifySubmission(
         .where(eq(submission.id, submissionId))
         .returning()
 
-    // only update points if the submission is approved
     let transactionResult = null
     if (approved) {
         transactionResult = await createTransaction({
@@ -95,7 +93,6 @@ export async function getQuestsForStudent(
 ): Promise<Quest[]> {
     const allQuests = await getQuestsByCourse(courseId)
 
-    // get student submissions
     const submissions = await db
         .select()
         .from(submission)
@@ -103,6 +100,5 @@ export async function getQuestsForStudent(
 
     const submittedQuestIds = new Set(submissions.map((s) => s.questId))
 
-    // filter out quests where the student has submitted already
-    return allQuests.filter((q) => !submittedQuestIds.has(q.id))
+    return allQuests.filter((q: Quest) => !submittedQuestIds.has(q.id))
 }
