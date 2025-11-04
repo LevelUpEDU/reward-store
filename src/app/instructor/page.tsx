@@ -13,7 +13,8 @@ export default function HomePage() {
                         <p className="user-type">Account type: </p>
                         <div className="action-buttons">
                             <Link
-                                href="/instructor/dashboard"
+                                // href="/instructor/dashboard"
+                                href="/auth/login?screen_hint=signup&returnTo=/register?role=instructor"
                                 className="btn btn-primary">
                                 Instructor Dashboard
                             </Link>

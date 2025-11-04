@@ -51,16 +51,23 @@ function RegisterContent() {
             const data = await response.json()
 
             if (!response.ok) {
-                if (response.status === 409) {
+                if (response.status === 409 && role === 'student') {
                     // user already exists... just redirect them
                     router.push('/game')
+                    return
+                } else if (response.status === 409 && role === 'instructor') {
+                    // user already exists... just redirect them
+                    router.push('/instructor/dashboard')
                     return
                 }
                 throw new Error(data.error || 'Registration failed')
             }
 
             // success
-            router.push('/game')
+            const redirectUrl =
+                role === 'instructor' ? '/instructor/dashboard' : '/game'
+            router.push(redirectUrl)
+            return
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred')
             setRegistering(false)
