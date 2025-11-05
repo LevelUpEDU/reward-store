@@ -1,6 +1,6 @@
 'use server'
 import {db} from '../index'
-import {submission} from '../schema'
+import {submission, student} from '../schema'
 
 import type {Quest, Submission, Transaction} from '@/types/db'
 
@@ -46,6 +46,51 @@ export async function getSubmissionsByStudent(
     email: string
 ): Promise<Submission[]> {
     return db.select().from(submission).where(eq(submission.studentId, email))
+}
+
+export async function getSubmissionsByQuest(questId: number): Promise<
+    Array<
+        Submission & {
+            student: {
+                name: string
+                email: string
+            }
+        }
+    >
+> {
+    const results = await db
+        .select({
+            id: submission.id,
+            studentId: submission.studentId,
+            questId: submission.questId,
+            submissionDate: submission.submissionDate,
+            status: submission.status,
+            verifiedBy: submission.verifiedBy,
+            verifiedDate: submission.verifiedDate,
+            studentName: student.name,
+            studentEmail: student.email,
+        })
+        .from(submission)
+        .innerJoin(student, eq(submission.studentId, student.email))
+        .where(eq(submission.questId, questId))
+
+    // typescript complains that "studentName" and "studentEmail" don't exist on this type
+    // since SQL returns "student.name" and "student.email"
+    //
+    // this reshapes the structure to account for this
+    return results.map((r) => ({
+        id: r.id,
+        studentId: r.studentId,
+        questId: r.questId,
+        submissionDate: r.submissionDate,
+        status: r.status,
+        verifiedBy: r.verifiedBy,
+        verifiedDate: r.verifiedDate,
+        student: {
+            name: r.studentName,
+            email: r.studentEmail,
+        },
+    }))
 }
 
 export async function verifySubmission(
