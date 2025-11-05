@@ -36,7 +36,7 @@ body {
     z-index: 1;
 }
 
-h1 {
+#title {
     font-family: 'Pixelify Sans', sans-serif;
     color: #ffff00;
     text-shadow: 3px 3px 0px #000000;
