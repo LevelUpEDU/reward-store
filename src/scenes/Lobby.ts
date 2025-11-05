@@ -5,6 +5,46 @@ export class Lobby extends Scene {
     private rewardsMap?: Phaser.Tilemaps.Tilemap
     private rewardsLayer?: Phaser.Tilemaps.TilemapLayer | null
     private rewardsVisible = false
+    private interactKey?: Phaser.Input.Keyboard.Key
+    private interactiveObject?: Phaser.GameObjects.Rectangle
+    private escKey?: Phaser.Input.Keyboard.Key
+
+    // Navigation
+    private menuItems: Phaser.GameObjects.Text[] = []
+    private selectedIndex = 0
+    private upKey?: Phaser.Input.Keyboard.Key
+    private downKey?: Phaser.Input.Keyboard.Key
+    private enterKey?: Phaser.Input.Keyboard.Key
+
+    // Sub-screen state
+    private subScreenVisible = false
+    private subScreenTitle?: Phaser.GameObjects.Text
+    private subScreenList?: Phaser.GameObjects.Text[]
+    private subScreenBg?: Phaser.GameObjects.Rectangle
+
+    // Sub-Screen Background
+    private subScreenMap?: Phaser.Tilemaps.Tilemap
+    private subScreenLayer?: Phaser.Tilemaps.TilemapLayer | null
+
+    private backText?: Phaser.GameObjects.Text
+    private backSelected = false
+
+    // Rewards Overlay Menu Position (x/y per item)
+    private readonly MENU_POSITIONS = [
+        {x: 940, y: 315}, // REWARDS
+        {x: 880, y: 425}, // ACHIEVEMENTS
+        {x: 940, y: 540}, // BADGES
+    ]
+
+    // Sample data for badges and rewards (replace with actual data source)
+    private playerData = {
+        badges: ['Math Master', 'Science Star', 'History Hero'], // Example badges
+        rewards: [
+            'Gold Star',
+            'Bonus Points: 500',
+            'Certificate of Excellence',
+        ], // Example rewards
+    }
 
     private static readonly CONFIG: MapConfig = {
         name: 'lobby',
@@ -101,14 +141,23 @@ export class Lobby extends Scene {
     preload(): void {
         super.preload?.()
 
-        // Load the rewards map and its tileset
-        this.load.tilemapTiledJSON(
-            'rewardsMap',
-            '/assets/tilemaps/rewards.json'
+        // Load the font
+        this.load.font(
+            'CyberPunkFont',
+            '/assets/fonts/CyberpunkCraftpixPixel.otf'
         )
+
+        // Load the rewards map and its tileset
+        this.load.tilemapTiledJSON('rewardsMap', '/assets/rewards/rewards.json')
         this.load.image(
             'Interface windows',
             '/assets/tilemaps/Interface windows.png'
+        )
+
+        // Load Rewards Sub Screen Background Map
+        this.load.tilemapTiledJSON(
+            'subScreenMap',
+            '/assets/rewards/rewards_subscreen.json'
         )
     }
 
@@ -119,37 +168,66 @@ export class Lobby extends Scene {
         this.defineSceneTransitions()
         // Add rewards map toggle
         this.setupRewardsOverlay()
+        // Add interactive object
+        this.setupInteractiveObject()
+        // ---- WAIT FOR THE FONT -------------------------------------------------
+        // `this.cache.bitmapFont.exists` works for both .otf and bitmap fonts.
+        if (!this.cache.bitmapFont.exists('MyCustomFont')) {
+            // If for some reason the font didn’t load yet, wait one frame.
+            this.time.delayedCall(0, () => this.fontReady())
+        } else {
+            this.fontReady()
+        }
+    }
+
+    shutdown(): void {
+        this.upKey?.removeAllListeners()
+        this.downKey?.removeAllListeners()
+        this.enterKey?.removeAllListeners()
+        this.input.keyboard?.removeKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+        this.input.keyboard?.off('keydown-ESC')
+        this.closeSubScreen()
+        this.subScreenLayer?.destroy()
+        this.subScreenMap = undefined
+        this.subScreenLayer = undefined
+        super.shutdown?.()
+    }
+
+    private fontReady(): void {
+        this.welcomeText()
+        this.defineSceneTransitions()
+        this.setupRewardsOverlay()
+        this.setupInteractiveObject()
     }
 
     private setupRewardsOverlay(): void {
-        const escKey = this.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.ESC
-        )
+        // Initialize escKey if not already set
+        if (!this.escKey) {
+            this.escKey = this.input.keyboard!.addKey(
+                Phaser.Input.Keyboard.KeyCodes.ESC
+            )
+        }
 
-        escKey.on('down', () => {
-            this.rewardsVisible = !this.rewardsVisible
-            if (this.rewardsVisible) {
-                this.showRewardsOverlay()
-            } else {
+        // Remove any existing listeners to prevent duplicates
+        this.escKey.off('down')
+        this.escKey.on('down', () => {
+            if (this.subScreenVisible) {
+                this.closeSubScreen()
+            } else if (this.rewardsVisible) {
+                this.rewardsVisible = false
                 this.hideRewardsOverlay()
             }
         })
     }
 
     private showRewardsOverlay(): void {
+        // background UI
         if (!this.rewardsMap) {
-            // Create the rewards map from JSON
             this.rewardsMap = this.make.tilemap({key: 'rewardsMap'})
 
-            // The first argument must match the "name" in rewards.json → "Interface windows"
-            // The second argument must match the key you used in this.load.image()
-            const tileset = this.rewardsMap.addTilesetImage(
-                'Interface windows', // Tiled name
-                'Interface windows' // Phaser image key
-            )
-
+            const tileset = this.rewardsMap.addTilesetImage('Interface windows')
             if (!tileset) {
-                console.error('Failed to load tileset for rewards map')
+                console.error('Tileset missing')
                 return
             }
 
@@ -159,19 +237,350 @@ export class Lobby extends Scene {
                 0,
                 0
             )
-
-            // UI overlay styling
             this.rewardsLayer!.setScrollFactor(0)
-            this.rewardsLayer!.setScale(2.5)
-            this.rewardsLayer!.setAlpha(0.9)
-            this.rewardsLayer!.setPosition(200, 100)
+                .setScale(2.5)
+                // .setAlpha(0.9)
+                .setPosition(700, 100)
         } else {
             this.rewardsLayer?.setVisible(true)
         }
+
+        // ---------- styles ----------
+        const normalStyle = {
+            fontFamily: 'CyberPunkFont',
+            fontSize: '36px',
+            color: '#ffd700',
+            fontStyle: 'bold' as const,
+            align: 'left' as const,
+        }
+
+        // ---------- create headings (only once) ----------
+        if (this.menuItems.length === 0) {
+            const labels = ['REWARDS', 'ACHIEVEMENTS', 'BADGES']
+
+            labels.forEach((txt, i) => {
+                const pos = this.MENU_POSITIONS[i] || {x: 280, y: 160 + i * 120} // fallback
+                const item = this.add
+                    .text(pos.x, pos.y, txt, normalStyle)
+                    .setScrollFactor(0)
+                this.menuItems.push(item)
+            })
+
+            this.highlightSelected()
+        } else {
+            // already created → just show them
+            this.menuItems.forEach((t) => t.setVisible(true))
+            this.highlightSelected()
+        }
+
+        // ---------- keyboard navigation ----------
+        this.setupMenuControls()
     }
 
     private hideRewardsOverlay(): void {
         this.rewardsLayer?.setVisible(false)
+        this.menuItems.forEach((t) => t.setVisible(false))
+        this.closeSubScreen() // ensures sub-screen is gone
+    }
+
+    private highlightSelected(): void {
+        const normal = {
+            color: '#ffd700',
+            backgroundColor: undefined,
+            padding: undefined,
+        }
+        const sel = {
+            color: '#ffffff',
+            backgroundColor: '#00000088',
+            padding: {left: 12, right: 12, top: 4, bottom: 4},
+        }
+
+        this.menuItems.forEach((item, i) => {
+            if (i === this.selectedIndex) {
+                item.setStyle(sel)
+            } else {
+                item.setStyle(normal)
+            }
+        })
+    }
+
+    private setupMenuControls(): void {
+        // create keys once
+        if (!this.upKey)
+            this.upKey = this.input.keyboard!.addKey(
+                Phaser.Input.Keyboard.KeyCodes.UP
+            )
+        if (!this.downKey)
+            this.downKey = this.input.keyboard!.addKey(
+                Phaser.Input.Keyboard.KeyCodes.DOWN
+            )
+        if (!this.enterKey)
+            this.enterKey = this.input.keyboard!.addKey(
+                Phaser.Input.Keyboard.KeyCodes.ENTER
+            )
+        // also support SPACE
+        const spaceKey = this.input.keyboard!.addKey(
+            Phaser.Input.Keyboard.KeyCodes.SPACE
+        )
+
+        // remove old listeners (prevents duplicates)
+        this.upKey.off('down')
+        this.downKey.off('down')
+        this.enterKey.off('down')
+        spaceKey.off('down')
+
+        this.upKey.on('down', () => {
+            if (!this.rewardsVisible) return
+            this.selectedIndex =
+                (this.selectedIndex - 1 + this.menuItems.length) %
+                this.menuItems.length
+            this.highlightSelected()
+        })
+
+        this.downKey.on('down', () => {
+            if (!this.rewardsVisible) return
+            this.selectedIndex =
+                (this.selectedIndex + 1) % this.menuItems.length
+            this.highlightSelected()
+        })
+
+        const activate = () => {
+            // if (!this.rewardsVisible) return;
+            // const selected = this.menuItems[this.selectedIndex].text;
+            if (!this.rewardsVisible || this.subScreenVisible) return
+
+            const selected = this.menuItems[this.selectedIndex].text
+            this.openSubScreen(selected)
+            console.log('Activated:', selected)
+            // ←←←  put your own logic here  →→→
+            // e.g. open a sub-screen, play a sound, etc.
+        }
+        this.enterKey.on('down', activate)
+        spaceKey.on('down', activate)
+    }
+
+    private openSubScreen(category: string): void {
+        if (this.subScreenVisible) return
+        this.subScreenVisible = true
+        this.backSelected = false // reset
+
+        // ---- SUB-SCREEN BACKGROUND MAP ----
+        if (!this.subScreenMap) {
+            // Create the tilemap ONCE
+            this.subScreenMap = this.make.tilemap({key: 'subScreenMap'})
+            const tileset =
+                this.subScreenMap.addTilesetImage('Interface windows')
+            if (!tileset) {
+                console.error('Sub-screen tileset missing')
+                return
+            }
+
+            // Create the layer
+            this.subScreenLayer = this.subScreenMap.createLayer(
+                'base_layer',
+                tileset,
+                0,
+                0
+            )
+            if (this.subScreenLayer) {
+                this.subScreenLayer
+                    .setScrollFactor(0)
+                    .setScale(2.5) // same as main overlay
+                    .setPosition(700, 120) // same position as main overlay
+                    .setDepth(1000) // behind text
+            }
+        } else {
+            // Already created, just show it
+            this.subScreenLayer?.setVisible(true)
+        }
+
+        // Title
+        this.subScreenTitle = this.add
+            .text(900, 250, category, {
+                fontFamily: 'CyberPunkFont',
+                fontSize: '48px',
+                color: '#ffd700',
+                fontStyle: 'bold',
+                align: 'center',
+            })
+            .setScrollFactor(0)
+            .setDepth(1001)
+
+        // Content list
+        const data = this.getDataForCategory(category)
+        this.subScreenList = []
+
+        const startY = 350
+        const lineHeight = 60
+        data.forEach((item, i) => {
+            const text = this.add
+                .text(770, startY + i * lineHeight, `• ${item}`, {
+                    fontFamily: 'CyberPunkFont',
+                    fontSize: '28px',
+                    color: '#ffffff',
+                    wordWrap: {width: 1000},
+                })
+                .setScrollFactor(0)
+                .setDepth(1001)
+            this.subScreenList!.push(text)
+        })
+
+        // ---- ADD BACK BUTTON ----
+        this.backText = this.add
+            .text(1015, 840, 'BACK', {
+                fontFamily: 'CyberPunkFont',
+                fontSize: '48px',
+                color: '#ff4800',
+                align: 'center',
+            })
+            .setScrollFactor(0)
+            .setDepth(1001)
+            .setOrigin(0.5, 0)
+            .setInteractive({useHandCursor: true})
+
+        // Click to go back
+        this.backText.on('pointerdown', () => {
+            this.closeSubScreen()
+        })
+
+        // Hover effect
+        this.backText.on('pointerover', () => {
+            this.backText!.setColor('#ffffff')
+            this.backText!.setStyle({
+                backgroundColor: '#00000088',
+                padding: {left: 12, right: 12, top: 4, bottom: 4},
+            })
+        })
+        this.backText.on('pointerout', () => {
+            if (!this.backSelected) {
+                this.backText!.setColor('#ffd700')
+                this.backText!.setStyle({
+                    backgroundColor: undefined,
+                    padding: undefined,
+                })
+            }
+        })
+
+        // Initial style
+        this.updateBackStyle()
+
+        // ---- ESC TO CLOSE SUB-SCREEN ONLY ----
+        this.input.keyboard!.off('keydown-ESC') // remove old
+        this.input.keyboard!.once('keydown-ESC', () => {
+            this.closeSubScreen()
+        })
+
+        // ---- RE-ENABLE MENU NAVIGATION WITH BACK SUPPORT ----
+        this.setupSubScreenControls()
+    }
+
+    private setupSubScreenControls(): void {
+        if (!this.upKey)
+            this.upKey = this.input.keyboard!.addKey(
+                Phaser.Input.Keyboard.KeyCodes.UP
+            )
+        if (!this.downKey)
+            this.downKey = this.input.keyboard!.addKey(
+                Phaser.Input.Keyboard.KeyCodes.DOWN
+            )
+        if (!this.enterKey)
+            this.enterKey = this.input.keyboard!.addKey(
+                Phaser.Input.Keyboard.KeyCodes.ENTER
+            )
+        const spaceKey = this.input.keyboard!.addKey(
+            Phaser.Input.Keyboard.KeyCodes.SPACE
+        )
+
+        // Remove old
+        this.upKey.off('down')
+        this.downKey.off('down')
+        this.enterKey.off('down')
+        spaceKey.off('down')
+
+        this.upKey.on('down', () => {
+            if (!this.subScreenVisible) return
+            this.backSelected = false
+            this.updateBackStyle()
+            this.highlightSelected() // re-highlight main menu
+        })
+
+        this.downKey.on('down', () => {
+            if (!this.subScreenVisible) return
+            this.backSelected = true
+            this.updateBackStyle()
+            // dim main menu
+            this.menuItems.forEach((item) => {
+                item.setColor('#888888')
+                item.setStyle({backgroundColor: undefined, padding: undefined})
+            })
+        })
+
+        const activate = () => {
+            if (!this.subScreenVisible) return
+            if (this.backSelected) {
+                this.closeSubScreen()
+            }
+        }
+        this.enterKey.on('down', activate)
+        spaceKey.on('down', activate)
+    }
+
+    private updateBackStyle(): void {
+        if (!this.backText) return
+        if (this.backSelected) {
+            this.backText.setColor('#ffffff')
+            this.backText.setStyle({
+                backgroundColor: '#00000088',
+                padding: {left: 12, right: 12, top: 4, bottom: 4},
+            })
+        } else {
+            this.backText.setColor('#ffd700')
+            this.backText.setStyle({
+                backgroundColor: undefined,
+                padding: undefined,
+            })
+        }
+    }
+
+    private getDataForCategory(category: string): string[] {
+        switch (category) {
+            case 'REWARDS':
+                return this.playerData.rewards
+            case 'ACHIEVEMENTS':
+                return [
+                    'Completed Math Level 1',
+                    'Solved 50 Puzzles',
+                    'Perfect Score in Quiz #3',
+                    'Helped 5 Classmates',
+                    'Attendance Streak: 7 Days',
+                ]
+            case 'BADGES':
+                return this.playerData.badges
+            default:
+                return ['No data available']
+        }
+    }
+
+    private closeSubScreen(): void {
+        if (!this.subScreenVisible) return
+        this.subScreenVisible = false
+        this.backSelected = false
+
+        this.subScreenTitle?.destroy()
+        this.subScreenList?.forEach((t) => t.destroy())
+        this.backText?.destroy()
+
+        this.subScreenTitle = undefined
+        this.subScreenList = undefined
+        this.backText = undefined
+
+        this.subScreenLayer?.setVisible(false)
+
+        // Re-highlight main menu
+        this.highlightSelected()
+
+        // Re-enable main menu navigation
+        this.setupMenuControls()
     }
 
     private setCameraResolution(): void {
@@ -193,13 +602,13 @@ export class Lobby extends Scene {
     private welcomeText(): void {
         // Example: Add custom text or interactions
         const text = this.add.text(1000, 100, 'Welcome to the Lobby!\nKD', {
+            fontFamily: 'CyberPunkFont',
             fontSize: '60px',
             color: '#fff',
         })
         text.setScrollFactor(1)
     }
 
-    // Define transitions to other scenes
     private defineSceneTransitions(): void {
         const portals = [
             {x: 400, y: 400, width: 64, height: 64, target: 'ClassroomScene'},
@@ -271,5 +680,62 @@ export class Lobby extends Scene {
         this.cameras.main.once('camerafadeoutcomplete', () => {
             this.scene.start(targetSceneKey)
         })
+    }
+
+    private setupInteractiveObject(): void {
+        // Create a rectangular object (you can replace with a sprite if desired)
+        this.interactiveObject = this.add.rectangle(
+            600, // x position (adjust as needed)
+            600, // y position (adjust as needed)
+            64, // width
+            64, // height
+            0xff0000, // red color for visibility
+            0.5 // semi-transparent
+        )
+
+        // Add physics to the object
+        this.physics.add.existing(this.interactiveObject, true) // true = static object
+
+        // Ensure the player is defined and has a physics body
+        if (this.player && this.player.body) {
+            // Add overlap detection between player and interactive object
+            this.physics.add.overlap(
+                this.player,
+                this.interactiveObject,
+                this.handleInteraction,
+                undefined,
+                this
+            )
+        } else {
+            console.error('Player or player.body is not defined')
+        }
+
+        // Initialize interactKey if not already set
+        if (!this.interactKey) {
+            // Set up the 'E' key
+            this.interactKey = this.input.keyboard!.addKey(
+                Phaser.Input.Keyboard.KeyCodes.E
+            )
+        }
+
+        // Remove any existing listeners to prevent duplicates
+        this.interactKey.off('down')
+        this.interactKey.on('down', () => {
+            // Only trigger if overlapping
+            if (
+                this.physics.world.overlap(this.player, this.interactiveObject)
+            ) {
+                this.rewardsVisible = !this.rewardsVisible
+                if (this.rewardsVisible) {
+                    this.showRewardsOverlay()
+                } else {
+                    this.hideRewardsOverlay()
+                }
+            }
+        })
+    }
+
+    private handleInteraction(): void {
+        // add later
     }
 }

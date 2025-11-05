@@ -185,7 +185,10 @@ export class Scene extends Phaser.Scene implements GameScene {
     }
 
     protected createPlayer(): void {
-        this.anims.createFromAseprite('bob')
+        // Check if animations for 'bob' already exist
+        if (!this.anims.exists('walk_right')) {
+            this.anims.createFromAseprite('bob')
+        }
         this.player = this.physics.add.sprite(400, 300, 'bob')
         this.player.setScale(2)
     }
@@ -368,6 +371,14 @@ export class Scene extends Phaser.Scene implements GameScene {
         if (userEmail && this.rewardPointsUI) {
             await this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
         }
+    }
+
+    shutdown(): void {
+        // Remove animations for 'bob'
+        this.anims.remove('walk_right')
+        this.anims.remove('walk_up')
+        this.anims.remove('walk_left')
+        this.anims.remove('walk_down')
     }
 
     update(): void {
