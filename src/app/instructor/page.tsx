@@ -20,8 +20,7 @@ export default function HomePage() {
                                 Instructor Sign-up
                             </Link>
                             <Link
-                                // href="/instructor/dashboard"
-                                href="/auth/login?returnTo=/instructor/dashboard"
+                                href="/auth/login?returnTo=/register?role=instructor"
                                 className="btn btn-primary">
                                 Instructor Sign-in
                             </Link>

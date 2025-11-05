@@ -34,7 +34,6 @@ export const submissionStatus = pgEnum('submission_status', [
 export const student = pgTable('student', {
     email: varchar('email').primaryKey(),
     name: varchar('name').notNull(),
-    password: varchar('password').notNull(), // add Password.
     lastSignin: timestamp('last_signin', {mode: 'date'}),
     auth0Id: varchar('auth0_id').unique(),
 })
@@ -42,7 +41,6 @@ export const student = pgTable('student', {
 export const instructor = pgTable('instructor', {
     email: varchar('email').primaryKey(),
     name: varchar('name').notNull(),
-    password: varchar('password').notNull(), // add Password.
     lastSignin: timestamp('last_signin', {mode: 'date'}),
     auth0Id: varchar('auth0_id').unique(),
 })
