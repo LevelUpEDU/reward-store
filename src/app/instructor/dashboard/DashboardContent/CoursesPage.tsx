@@ -3,14 +3,8 @@
 import React, {useState, useEffect} from 'react'
 import CourseCard from '../CourseCard/CourseCard'
 import {useAuth} from '@/app/hooks/useAuth'
-import {getCoursesByInstructor} from '@/db'
-
-type Course = {
-    id: number
-    title: string
-    courseCode: string
-    description: string | null
-}
+import {getCoursesByInstructor} from '@/db/queries/course'
+import type {Course} from '@/types/db'
 
 type CoursesPageProps = {
     setActiveTab: (tab: string, courseId?: number) => void
@@ -25,16 +19,30 @@ const CoursesPage = ({setActiveTab}: CoursesPageProps) => {
     useEffect(() => {
         const fetchCourses = async () => {
             if (!email) return
-            const courses = await getCoursesByInstructor(email)
+
+            try {
+                const coursesData = await getCoursesByInstructor(email)
+                setCourses(coursesData)
+            } catch (err) {
+                setError(err instanceof Error ? err.message : String(err))
+            } finally {
+                setIsLoading(false)
+            }
         }
 
         fetchCourses()
     }, [email])
 
     const handleCourseClick = (courseId: number) => {
-        console.log('Course clicked:', courseId)
-        // Navigate to course detail by setting a special tab
         setActiveTab(`course_detail_${courseId}`)
+    }
+
+    if (isLoading) {
+        return (
+            <div className="page-content">
+                <p>Loading courses...</p>
+            </div>
+        )
     }
 
     if (error) {
@@ -55,7 +63,6 @@ const CoursesPage = ({setActiveTab}: CoursesPageProps) => {
                     + Add Course
                 </button>
             </div>
-
             {courses.length > 0 ?
                 <div className="courses-grid">
                     {courses.map((course) => (
