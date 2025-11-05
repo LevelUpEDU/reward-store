@@ -1,6 +1,8 @@
 'use client'
 
 import {useState} from 'react'
+import {useAuth} from '@/app/hooks/useAuth'
+import {createCourse} from '@/db/queries/course'
 
 type CreateCoursePageProps = {
     setActiveTab: (tab: 'courses') => void
@@ -9,6 +11,7 @@ type CreateCoursePageProps = {
 export default function CreateCoursePage({
     setActiveTab,
 }: CreateCoursePageProps) {
+    const {email} = useAuth()
     const [title, setTitle] = useState('')
     const [description, setDescription] = useState('')
     const [isLoading, setIsLoading] = useState(false)
@@ -16,21 +19,23 @@ export default function CreateCoursePage({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (!email) return
+
         setIsLoading(true)
         setError(null)
 
-        const response = await fetch('/api/courses', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({title, description}),
-        })
+        try {
+            await createCourse({
+                email,
+                title,
+                description: description || undefined,
+            })
 
-        if (response.ok) {
             alert('Course created successfully!')
             setActiveTab('courses')
-        } else {
-            const data = await response.json()
-            setError(data.message || 'Failed to create the course.')
+        } catch (err) {
+            setError(`Failed to create the course: ${err}`)
+        } finally {
             setIsLoading(false)
         }
     }
@@ -39,7 +44,6 @@ export default function CreateCoursePage({
         <div className="page-content">
             <h1 className="page-title">Create a New Course</h1>
             <div className="settings-section">
-                {' '}
                 <form onSubmit={handleSubmit} className="settings-form">
                     <div className="form-group">
                         <label htmlFor="title">Course Title</label>
