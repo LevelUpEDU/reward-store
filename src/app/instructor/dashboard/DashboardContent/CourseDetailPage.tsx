@@ -1,17 +1,10 @@
-// src/app/instructor/DashboardContent/CourseDetailPage.tsx
-
 'use client'
 
 import React, {useState, useEffect} from 'react'
-
-type Quest = {
-    id: number
-    title: string
-    points: number
-    createdDate: string
-    expirationDate?: string
-    status?: string
-}
+import {useAuth} from '@/app/hooks/useAuth'
+import {getCourseById} from '@/db/queries/course'
+import {getQuestsByCourse} from '@/db/queries/quest'
+import type {Quest, Course as DbCourse} from '@/types/db'
 
 type Course = {
     id: number
@@ -31,6 +24,7 @@ export default function CourseDetailPage({
     setActiveTab,
     onBack,
 }: CourseDetailPageProps) {
+    const {email} = useAuth()
     const [course, setCourse] = useState<Course | null>(null)
     const [quests, setQuests] = useState<Quest[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -38,41 +32,28 @@ export default function CourseDetailPage({
 
     useEffect(() => {
         const fetchCourseAndQuests = async () => {
+            if (!email) return
+
             try {
                 setIsLoading(true)
 
-                const courseResponse = await fetch('/api/courses')
-                if (!courseResponse.ok) {
-                    throw new Error('Failed to fetch course')
-                }
-                const courses = await courseResponse.json()
-                const currentCourse = courses.find(
-                    (c: Course) => c.id === courseId
-                )
-
+                const currentCourse = await getCourseById(courseId)
                 if (!currentCourse) {
                     throw new Error('Course not found')
                 }
                 setCourse(currentCourse)
 
-                const questsResponse = await fetch(
-                    `/api/quests/course/${courseId}`
-                )
-                if (questsResponse.ok) {
-                    const questsData = await questsResponse.json()
-                    setQuests(questsData)
-                } else {
-                    setQuests([])
-                }
-            } catch (err: any) {
-                setError(err.message)
+                const questsData = await getQuestsByCourse(courseId)
+                setQuests(questsData)
+            } catch (err) {
+                setError(err instanceof Error ? err.message : String(err))
             } finally {
                 setIsLoading(false)
             }
         }
 
         fetchCourseAndQuests()
-    }, [courseId])
+    }, [courseId, email])
 
     const copyQuestId = (questId: number) => {
         navigator.clipboard
