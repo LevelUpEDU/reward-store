@@ -33,7 +33,7 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
     const {email} = useAuth()
     const [courses, setCourses] = useState<Course[]>([])
     const [quests, setQuests] = useState<Quest[]>([])
-    const [_error, setError] = useState<string | null>(null)
+    const [_error, _setError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -57,7 +57,6 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
                 )
             )
 
-            const allQuestArrays: Quest[][] = Object.values(quests)
             const allQuests = Object.values(quests).flat() as Quest[]
             const mostRecent = allQuests
                 .sort(

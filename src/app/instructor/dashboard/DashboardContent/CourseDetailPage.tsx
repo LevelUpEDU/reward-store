@@ -4,7 +4,7 @@ import React, {useState, useEffect} from 'react'
 import {useAuth} from '@/app/hooks/useAuth'
 import {getCourseById} from '@/db/queries/course'
 import {getQuestsByCourse} from '@/db/queries/quest'
-import type {Quest, Course as DbCourse} from '@/types/db'
+import type {Quest} from '@/types/db'
 
 type Course = {
     id: number

@@ -1,9 +1,8 @@
 import {auth0} from '@/lib/auth0'
 import {type NextRequest, NextResponse} from 'next/server'
-import {db} from '@/db'
 import {student, instructor} from '@/db/schema'
 import {eq} from 'drizzle-orm'
-import {createStudent, createInstructor} from '@/db'
+import {db, createStudent, createInstructor} from '@/db'
 
 type UserRole = 'student' | 'instructor'
 
