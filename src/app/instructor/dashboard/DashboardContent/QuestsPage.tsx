@@ -1,35 +1,27 @@
 'use client'
 
 import React, {useState, useEffect} from 'react'
+import {useAuth} from '@/app/hooks/useAuth'
+import {getQuestsByInstructor} from '@/db/queries/quest'
+import {getSubmissionsByQuest, verifySubmission} from '@/db/queries/submission'
+import type {Quest, Submission} from '@/types/db'
 
-type Quest = {
-    id: number
-    title: string
-    points: number
-    createdDate: string
-    expirationDate?: string
-    courseId: number
+type QuestWithCourse = Quest & {
     course?: {
         title: string
         courseCode: string
     }
 }
 
-type Submission = {
-    id: number
-    studentId: string
-    submissionDate: string
-    status: 'pending' | 'approved' | 'rejected'
-    verifiedBy?: string | null
-    verifiedDate?: string | null
+type SubmissionWithStudent = Submission & {
     student: {
         name: string
         email: string
     }
 }
 
-type QuestWithSubmissions = Quest & {
-    submissions?: Submission[]
+type QuestWithSubmissions = QuestWithCourse & {
+    submissions?: SubmissionWithStudent[]
 }
 
 type QuestsPageProps = {
@@ -37,6 +29,7 @@ type QuestsPageProps = {
 }
 
 const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
+    const {email} = useAuth()
     const [quests, setQuests] = useState<QuestWithSubmissions[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -46,22 +39,20 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
 
     useEffect(() => {
         const fetchQuests = async () => {
+            if (!email) return
+
             try {
-                const response = await fetch('/api/quests/instructor')
-                if (!response.ok) {
-                    throw new Error('Failed to fetch quests')
-                }
-                const data = await response.json()
+                const data = await getQuestsByInstructor(email)
                 setQuests(data)
-            } catch (err: any) {
-                setError(err.message)
+            } catch (err) {
+                setError(err instanceof Error ? err.message : String(err))
             } finally {
                 setIsLoading(false)
             }
         }
 
         fetchQuests()
-    }, [])
+    }, [email])
 
     const copyQuestId = (questId: number) => {
         navigator.clipboard
@@ -74,20 +65,19 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
             })
     }
 
-    const viewSubmissions = async (quest: Quest) => {
+    const viewSubmissions = async (quest: QuestWithCourse) => {
         setLoadingQuestId(quest.id)
         try {
-            const response = await fetch(`/api/quests/${quest.id}/submissions`)
-            if (!response.ok) {
-                throw new Error('Failed to fetch submissions')
-            }
-            const data = await response.json()
+            const submissions = await getSubmissionsByQuest(quest.id)
             setSelectedQuest({
                 ...quest,
-                submissions: data.submissions,
+                submissions: submissions,
             })
-        } catch (err: any) {
-            alert('Failed to load submissions: ' + err.message)
+        } catch (err) {
+            alert(
+                'Failed to load submissions: ' +
+                    (err instanceof Error ? err.message : String(err))
+            )
         } finally {
             setLoadingQuestId(null)
         }
@@ -97,22 +87,10 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
         submissionId: number,
         action: 'approve' | 'reject'
     ) => {
-        if (!selectedQuest) return
+        if (!selectedQuest || !email) return
 
         try {
-            const response = await fetch(
-                `/api/quests/${selectedQuest.id}/submissions/${submissionId}`,
-                {
-                    method: 'PATCH',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({action}),
-                }
-            )
-
-            if (!response.ok) {
-                const data = await response.json()
-                throw new Error(data.message || 'Failed to process submission')
-            }
+            await verifySubmission(submissionId, email, action === 'approve')
 
             setSelectedQuest((prev) => {
                 if (!prev) return null
@@ -133,8 +111,11 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
             })
 
             alert(`Submission ${action}d successfully!`)
-        } catch (err: any) {
-            alert('Failed to process submission: ' + err.message)
+        } catch (err) {
+            alert(
+                'Failed to process submission: ' +
+                    (err instanceof Error ? err.message : String(err))
+            )
         }
     }
 

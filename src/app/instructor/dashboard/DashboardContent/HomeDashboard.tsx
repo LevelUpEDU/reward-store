@@ -2,6 +2,8 @@
 
 import React, {useState, useEffect} from 'react'
 import CourseCard from '../CourseCard/CourseCard'
+import {useAuth} from '@/app/hooks/useAuth'
+import {getCoursesByInstructor, getQuestsByCourse} from '@/db'
 
 type Course = {
     id: number
@@ -28,40 +30,47 @@ type HomeDashboardProps = {
 }
 
 const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
+    const {email} = useAuth()
     const [courses, setCourses] = useState<Course[]>([])
     const [quests, setQuests] = useState<Quest[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-    const [_error, setError] = useState<string | null>(null)
+    const [_error, _setError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchData = async () => {
-            try {
-                // Fetch courses and quests in parallel
-                const [coursesResponse, questsResponse] = await Promise.all([
-                    fetch('/api/courses'),
-                    fetch('/api/quests/instructor'),
-                ])
+            // this will never be true since we are always logged in here
+            if (!email) return
+            const courses = await getCoursesByInstructor(email)
 
-                if (!coursesResponse.ok || !questsResponse.ok) {
-                    throw new Error('Failed to fetch data')
-                }
+            /*
+               returns all quests by course with the structure:
+              {
+                 "Computer Science": [quest1, quest2, quest3],
+                 "Math": [quest1, quest2, quest3]
+              }
+             */
+            const quests = Object.fromEntries(
+                await Promise.all(
+                    courses.map(async (course) => [
+                        course.title,
+                        await getQuestsByCourse(course.id),
+                    ])
+                )
+            )
 
-                const [coursesData, questsData] = await Promise.all([
-                    coursesResponse.json(),
-                    questsResponse.json(),
-                ])
+            const allQuests = Object.values(quests).flat() as Quest[]
+            const mostRecent = allQuests
+                .sort(
+                    (a, b) =>
+                        new Date(b.createdDate).getTime() -
+                        new Date(a.createdDate).getTime()
+                )
+                .slice(0, 4)
 
-                setCourses(coursesData)
-                setQuests(questsData.slice(0, 4)) // Show only recent 4 quests
-            } catch (err: any) {
-                setError(err.message)
-            } finally {
-                setIsLoading(false)
-            }
+            setQuests(mostRecent)
+            setCourses(courses)
         }
-
         fetchData()
-    }, [])
+    }, [email])
 
     const copyQuestId = (questId: number) => {
         navigator.clipboard
@@ -76,27 +85,6 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
 
     const handleCourseClick = (courseId: number) => {
         setActiveTab(`course_detail_${courseId}`)
-    }
-
-    if (isLoading) {
-        return (
-            <div className="dashboard-home">
-                <div className="welcome-banner">
-                    <div className="welcome-content">
-                        <h1 className="welcome-title">Hi, Instructor!</h1>
-                    </div>
-                    <div className="welcome-date">
-                        {new Date().toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                        })}
-                    </div>
-                </div>
-                <p>Loading...</p>
-            </div>
-        )
     }
 
     return (

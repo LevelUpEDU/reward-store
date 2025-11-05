@@ -1,6 +1,9 @@
 'use client'
 
 import {useState, useEffect} from 'react'
+import {useAuth} from '@/app/hooks/useAuth'
+import {getCoursesByInstructor} from '@/db/queries/course'
+import {createQuest} from '@/db/queries/quest'
 
 type CreateQuestPageProps = {
     setActiveTab: (tab: 'quests') => void
@@ -17,6 +20,7 @@ export default function CreateQuestPage({
     setActiveTab,
     preselectedCourseId,
 }: CreateQuestPageProps) {
+    const {email} = useAuth()
     const [formData, setFormData] = useState({
         title: '',
         points: 10,
@@ -28,17 +32,13 @@ export default function CreateQuestPage({
     const [isLoadingCourses, setIsLoadingCourses] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    // Fetch courses on component mount
     useEffect(() => {
         const fetchCourses = async () => {
+            if (!email) return
+
             try {
-                const response = await fetch('/api/courses')
-                if (response.ok) {
-                    const coursesData = await response.json()
-                    setCourses(coursesData)
-                } else {
-                    setError('Failed to load courses')
-                }
+                const coursesData = await getCoursesByInstructor(email)
+                setCourses(coursesData)
             } catch (error) {
                 setError(`${error}`)
             } finally {
@@ -47,7 +47,7 @@ export default function CreateQuestPage({
         }
 
         fetchCourses()
-    }, [])
+    }, [email])
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -61,30 +61,27 @@ export default function CreateQuestPage({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (!email) return
+
         setIsLoading(true)
         setError(null)
 
         try {
-            const response = await fetch('/api/quests', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    title: formData.title,
-                    points: formData.points,
-                    courseId: parseInt(formData.courseId),
-                    expirationDate: formData.expirationDate || null,
-                }),
+            await createQuest({
+                courseId: parseInt(formData.courseId),
+                createdBy: email,
+                title: formData.title,
+                points: formData.points,
+                expirationDate:
+                    formData.expirationDate ?
+                        new Date(formData.expirationDate)
+                    :   undefined,
             })
 
-            if (response.ok) {
-                alert('Quest created successfully!')
-                setActiveTab('quests')
-            } else {
-                const data = await response.json()
-                setError(data.message || 'Failed to create the quest.')
-            }
+            alert('Quest created successfully!')
+            setActiveTab('quests')
         } catch (error) {
-            setError(`An error occurred while creating the quest: ${error} `)
+            setError(`An error occurred while creating the quest: ${error}`)
         } finally {
             setIsLoading(false)
         }

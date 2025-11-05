@@ -2,45 +2,38 @@
 
 import React, {useState, useEffect} from 'react'
 import CourseCard from '../CourseCard/CourseCard'
-
-type Course = {
-    id: number
-    title: string
-    courseCode: string
-    description: string | null
-}
+import {useAuth} from '@/app/hooks/useAuth'
+import {getCoursesByInstructor} from '@/db/queries/course'
+import type {Course} from '@/types/db'
 
 type CoursesPageProps = {
     setActiveTab: (tab: string, courseId?: number) => void
 }
 
 const CoursesPage = ({setActiveTab}: CoursesPageProps) => {
+    const {email} = useAuth()
     const [courses, setCourses] = useState<Course[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchCourses = async () => {
+            if (!email) return
+
             try {
-                const response = await fetch('/api/courses')
-                if (!response.ok) {
-                    throw new Error('Failed to fetch courses')
-                }
-                const data = await response.json()
-                setCourses(data)
-            } catch (err: any) {
-                setError(err.message)
+                const coursesData = await getCoursesByInstructor(email)
+                setCourses(coursesData)
+            } catch (err) {
+                setError(err instanceof Error ? err.message : String(err))
             } finally {
                 setIsLoading(false)
             }
         }
 
         fetchCourses()
-    }, [])
+    }, [email])
 
     const handleCourseClick = (courseId: number) => {
-        console.log('Course clicked:', courseId)
-        // Navigate to course detail by setting a special tab
         setActiveTab(`course_detail_${courseId}`)
     }
 
@@ -70,7 +63,6 @@ const CoursesPage = ({setActiveTab}: CoursesPageProps) => {
                     + Add Course
                 </button>
             </div>
-
             {courses.length > 0 ?
                 <div className="courses-grid">
                     {courses.map((course) => (

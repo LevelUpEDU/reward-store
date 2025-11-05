@@ -2,14 +2,15 @@ import withPWA from 'next-pwa'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    env: {
+        DATABASE_URL: process.env.DATABASE_URL,
+    },
     webpack: (config, {isServer}) => {
         if (isServer) {
-            // Don't bundle Phaser on the server
             config.externals.push('phaser')
         }
         return config
     },
-    // Enable static file serving from public directory
     async headers() {
         return [
             {

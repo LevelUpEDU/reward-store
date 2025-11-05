@@ -1,3 +1,4 @@
+'use server'
 import {db} from '../index'
 import {course, registration} from '../schema'
 import type {Course} from '@/types/db'

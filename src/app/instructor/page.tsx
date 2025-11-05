@@ -3,6 +3,7 @@ import Link from 'next/link'
 import '../styles/home.css'
 
 export default function HomePage() {
+    const returnUrl = encodeURIComponent('http://localhost:8080/instructor')
     return (
         <div className="home-container">
             <div className="hero-section">
@@ -13,16 +14,26 @@ export default function HomePage() {
                         <p className="user-type">Account type: </p>
                         <div className="action-buttons">
                             <Link
-                                href="/instructor/dashboard"
+                                // href="/instructor/dashboard"
+                                href="/auth/login?screen_hint=signup&returnTo=/register?role=instructor"
                                 className="btn btn-primary">
-                                Instructor Dashboard
+                                Instructor Sign-up
+                            </Link>
+                            <Link
+                                href="/auth/login?returnTo=/register?role=instructor"
+                                className="btn btn-primary">
+                                Instructor Sign-in
                             </Link>
                             <Link href="/student" className="btn btn-primary">
                                 Student Dashboard
                             </Link>
-                            <button className="btn btn-outline">
+                            <button
+                                className="btn btn-outline"
+                                onClick={() => {
+                                    window.location.href = `/auth/logout?returnTo=${returnUrl}`
+                                }}>
                                 Sign Out
-                            </button>
+                            </button>{' '}
                         </div>
                     </div>
                 </div>

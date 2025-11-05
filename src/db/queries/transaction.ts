@@ -1,5 +1,5 @@
+'use server'
 import {eq, and, isNotNull} from 'drizzle-orm'
-// Returns all claimed submission IDs for a given user
 export async function getClaimedSubmissionIds(
     email: string
 ): Promise<number[]> {

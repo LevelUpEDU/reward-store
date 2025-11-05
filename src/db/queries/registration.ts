@@ -1,3 +1,4 @@
+'use server'
 import {db} from '../index'
 import {registration} from '../schema'
 import type {Registration} from '@/types/db'

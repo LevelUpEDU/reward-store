@@ -1,37 +1,38 @@
 'use client'
 
 import React, {useState, useEffect} from 'react'
+import {useAuth} from '@/app/hooks/useAuth'
+import {getStudentsByInstructor} from '@/db/queries/student'
 
 type Student = {
     email: string
     name: string
     courseCount: number
-    lastSignin?: string
+    lastSignin?: Date | null
 }
 
 const StudentsPage = () => {
+    const {email} = useAuth()
     const [students, setStudents] = useState<Student[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchStudents = async () => {
+            if (!email) return
+
             try {
-                const response = await fetch('/api/instructor/students')
-                if (!response.ok) {
-                    throw new Error('Failed to fetch students')
-                }
-                const data = await response.json()
+                const data = await getStudentsByInstructor(email)
                 setStudents(data)
-            } catch (err: any) {
-                setError(err.message)
+            } catch (err) {
+                setError(err instanceof Error ? err.message : String(err))
             } finally {
                 setIsLoading(false)
             }
         }
 
         fetchStudents()
-    }, [])
+    }, [email])
 
     if (isLoading) {
         return (

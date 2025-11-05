@@ -19,58 +19,70 @@ function RegisterContent() {
     const [registering, setRegistering] = useState<boolean>(false)
 
     useEffect(() => {
-        // not logged in - redirect to homepage
-        if (!isLoading && !user) {
+        if (isLoading) return
+
+        if (!user) {
             router.push('/')
             return
         }
 
-        if (user && role) {
-            handleRegistration()
+        if (!role) {
+            setError('No role specified')
+            return
         }
-    }, [user, isLoading, role])
 
-    const handleRegistration = async () => {
         if (registering) return
 
-        setRegistering(true)
-        setError('')
+        const handleRegistration = async () => {
+            setRegistering(true)
+            setError('')
 
-        try {
-            const response = await fetch('/api/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    email: user?.email,
-                    name: user?.name,
-                    auth0Id: user?.sub,
-                    role: role || 'student',
-                }),
-            })
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        email: user.email,
+                        name: user.name,
+                        auth0Id: user.sub,
+                        role: role,
+                    }),
+                })
 
-            const data = await response.json()
+                const data = await response.json()
 
-            if (!response.ok) {
-                if (response.status === 409) {
-                    // user already exists... just redirect them
-                    router.push('/game')
-                    return
+                if (!response.ok) {
+                    if (response.status === 409 && role === 'student') {
+                        router.push('/game')
+                        return
+                    } else if (
+                        response.status === 409 &&
+                        role === 'instructor'
+                    ) {
+                        router.push('/instructor/dashboard')
+                        return
+                    }
+                    throw new Error(data.error || 'Registration failed')
                 }
-                throw new Error(data.error || 'Registration failed')
-            }
 
-            // success
-            router.push('/game')
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred')
-            setRegistering(false)
+                const redirectUrl =
+                    role === 'instructor' ? '/instructor/dashboard' : '/game'
+                router.push(redirectUrl)
+            } catch (err) {
+                setError(
+                    err instanceof Error ? err.message : 'An error occurred'
+                )
+                setRegistering(false)
+            }
         }
-    }
+
+        handleRegistration()
+    }, [user, isLoading, role, router, registering])
 
     return (
         <div>
             <div id="ui">
-                <h1>LevelUp EDU</h1>
+                <h1 id="title">LevelUp EDU</h1>
                 <div id="sign-in">
                     {error ?
                         <div style={{textAlign: 'center', color: '#ffffff'}}>

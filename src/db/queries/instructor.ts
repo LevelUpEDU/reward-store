@@ -1,3 +1,4 @@
+'use server'
 import {db} from '../index'
 import {instructor} from '../schema'
 
@@ -8,11 +9,11 @@ import {eq} from 'drizzle-orm'
 export async function createInstructor(
     email: string,
     name: string,
-    password: string
+    auth0Id?: string
 ): Promise<Instructor> {
     const result = await db
         .insert(instructor)
-        .values({email, name, password})
+        .values({email, name, auth0Id: auth0Id ?? null})
         .returning()
 
     return result[0]
