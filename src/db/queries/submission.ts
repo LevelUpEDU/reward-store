@@ -1,3 +1,4 @@
+'use server'
 import {db} from '../index'
 import {submission} from '../schema'
 
