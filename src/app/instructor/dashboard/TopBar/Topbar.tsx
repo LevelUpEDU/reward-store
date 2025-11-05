@@ -16,7 +16,7 @@ const TopBar = ({activeTab, setActiveTab}: TopBarProps) => {
         {id: 'students', label: 'Students'},
     ]
 
-    const handleLogout = () => {}
+    const returnUrl = encodeURIComponent('http://localhost:8080/instructor')
 
     return (
         <header className="topbar">
@@ -46,7 +46,11 @@ const TopBar = ({activeTab, setActiveTab}: TopBarProps) => {
                         onClick={() => setActiveTab('settings')}>
                         Settings
                     </NavItem>
-                    <button className="logout-btn" onClick={handleLogout}>
+                    <button
+                        className="logout-btn"
+                        onClick={() => {
+                            window.location.href = `/auth/logout?returnTo=${returnUrl}`
+                        }}>
                         Logout
                     </button>
                 </div>

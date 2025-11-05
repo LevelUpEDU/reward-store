@@ -3,11 +3,7 @@
 import React, {useState, useEffect} from 'react'
 import CourseCard from '../CourseCard/CourseCard'
 import {useAuth} from '@/app/hooks/useAuth'
-import {
-    getCoursesByInstructor,
-    getInstructorByEmail,
-    getQuestsByCourse,
-} from '@/db'
+import {getCoursesByInstructor, getQuestsByCourse} from '@/db'
 
 type Course = {
     id: number
@@ -42,6 +38,8 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
 
     useEffect(() => {
         const fetchData = async () => {
+            // this will never be true since we are always logged in here
+            if (!email) return
             const courses = await getCoursesByInstructor(email)
 
             /*
