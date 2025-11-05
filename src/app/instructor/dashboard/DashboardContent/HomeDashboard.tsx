@@ -33,7 +33,6 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
     const {email} = useAuth()
     const [courses, setCourses] = useState<Course[]>([])
     const [quests, setQuests] = useState<Quest[]>([])
-    const [isLoading, setIsLoading] = useState(true)
     const [_error, setError] = useState<string | null>(null)
 
     useEffect(() => {
@@ -88,27 +87,6 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
     const handleCourseClick = (courseId: number) => {
         setActiveTab(`course_detail_${courseId}`)
     }
-
-    // if (isLoading) {
-    //     return (
-    //         <div className="dashboard-home">
-    //             <div className="welcome-banner">
-    //                 <div className="welcome-content">
-    //                     <h1 className="welcome-title">Hi, Instructor!</h1>
-    //                 </div>
-    //                 <div className="welcome-date">
-    //                     {new Date().toLocaleDateString('en-US', {
-    //                         weekday: 'long',
-    //                         year: 'numeric',
-    //                         month: 'long',
-    //                         day: 'numeric',
-    //                     })}
-    //                 </div>
-    //             </div>
-    //             <p>Loading...</p>
-    //         </div>
-    //     )
-    // }
 
     return (
         <div className="dashboard-home">
