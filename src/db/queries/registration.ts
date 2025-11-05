@@ -1,7 +1,7 @@
+'use server'
 import {db} from '../index'
-import {registration, student} from '../schema'
-import type {Registration, Student} from '@/types/db'
-import {eq} from 'drizzle-orm'
+import {registration} from '../schema'
+import type {Registration} from '@/types/db'
 
 export async function registerStudent(
     email: string,
@@ -18,16 +18,17 @@ export async function registerStudent(
     return result[0]
 }
 
-export async function getStudentsInCourse(
-    courseId: number
-): Promise<Student[]> {
-    return db
-        .select({
-            email: student.email,
-            name: student.name,
-            lastSignin: student.lastSignin,
-        })
-        .from(registration)
-        .innerJoin(student, eq(registration.studentId, student.email))
-        .where(eq(registration.courseId, courseId))
-}
+// export async function getStudentsInCourse(
+//     courseId: number
+// ): Promise<Student[]> {
+//     return db
+//         .select({
+//             email: student.email,
+//             name: student.name,
+//             auth0Id: student.auth0Id,
+//             lastSignin: student.lastSignin,
+//         })
+//         .from(registration)
+//         .innerJoin(student, eq(registration.studentId, student.email))
+//         .where(eq(registration.courseId, courseId))
+// }

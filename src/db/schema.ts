@@ -35,12 +35,14 @@ export const student = pgTable('student', {
     email: varchar('email').primaryKey(),
     name: varchar('name').notNull(),
     lastSignin: timestamp('last_signin', {mode: 'date'}),
+    auth0Id: varchar('auth0_id').unique(),
 })
 
 export const instructor = pgTable('instructor', {
     email: varchar('email').primaryKey(),
     name: varchar('name').notNull(),
     lastSignin: timestamp('last_signin', {mode: 'date'}),
+    auth0Id: varchar('auth0_id').unique(),
 })
 
 export const course = pgTable('course', {
@@ -48,7 +50,7 @@ export const course = pgTable('course', {
     courseCode: varchar('course_code', {length: 6})
         .notNull()
         .unique()
-        .$defaultFn(() => generateCourseCode()),
+        .$defaultFn(() => generateCourseCode()), //
     title: varchar('title', {length: 63}).notNull(),
     description: text('description'),
     instructorEmail: varchar('instructor_email')
@@ -124,7 +126,7 @@ export const reward = pgTable(
 )
 
 export const redemption = pgTable('redemption', {
-    id: serial('id').primaryKey().unique(),
+    id: serial('id').primaryKey(),
     studentId: varchar('student_id')
         .references(() => student.email)
         .notNull(),

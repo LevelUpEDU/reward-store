@@ -41,6 +41,7 @@
         ]
     },
     "dependencies": {
+        "@auth0/nextjs-auth0": "^4.11.1",
         "@neondatabase/serverless": "^1.0.2",
         "dotenv": "^17.2.3",
         "drizzle-orm": "^0.44.6",

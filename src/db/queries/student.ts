@@ -1,15 +1,20 @@
+'use server'
 import {db} from '../index'
-import {student, transaction} from '../schema'
+import {student, transaction, registration, course} from '../schema'
 
 import type {Student} from '@/types/db'
 
-import {eq, sum} from 'drizzle-orm'
+import {count, eq, sum} from 'drizzle-orm'
 
 export async function createStudent(
     email: string,
-    name: string
+    name: string,
+    auth0Id?: string
 ): Promise<Student> {
-    const result = await db.insert(student).values({email, name}).returning()
+    const result = await db
+        .insert(student)
+        .values({email, name, auth0Id: auth0Id ?? null})
+        .returning()
 
     return result[0]
 }
@@ -33,4 +38,34 @@ export async function getStudentPoints(email: string): Promise<number> {
         .where(eq(transaction.studentId, email))
 
     return Number(result[0]?.total ?? 0)
+}
+
+// Note: this returns a "course count" which is specific to the instructor dashboard
+export async function getStudentsByInstructor(instructorEmail: string): Promise<
+    Array<{
+        email: string
+        name: string
+        courseCount: number
+        lastSignin: Date | null
+    }>
+> {
+    const results = await db
+        .select({
+            email: student.email,
+            name: student.name,
+            lastSignin: student.lastSignin,
+            courseCount: count(registration.courseId),
+        })
+        .from(student)
+        .innerJoin(registration, eq(student.email, registration.studentId))
+        .innerJoin(course, eq(registration.courseId, course.id))
+        .where(eq(course.instructorEmail, instructorEmail))
+        .groupBy(student.email, student.name, student.lastSignin)
+
+    return results.map((r) => ({
+        email: r.email,
+        name: r.name,
+        courseCount: Number(r.courseCount),
+        lastSignin: r.lastSignin,
+    }))
 }

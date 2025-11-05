@@ -1,3 +1,4 @@
+'use server'
 import {db} from '../index'
 import {reward, redemption} from '../schema'
 
@@ -31,7 +32,6 @@ export async function createReward(data: {
     return result[0]
 }
 
-/* use this function for students purchasing - will return null if the reward isn't available */
 export async function getRewardIfAvailable(
     rewardId: number
 ): Promise<Reward | null> {
@@ -39,7 +39,6 @@ export async function getRewardIfAvailable(
     if (!rewardData || !rewardData.active) return null
 
     if (rewardData.quantityLimit !== null) {
-        // query the redemption table to get a full count of prizes
         const redeemed = await db
             .select({count: count()})
             .from(redemption)
@@ -50,7 +49,6 @@ export async function getRewardIfAvailable(
                 )
             )
 
-        // check the final tally of redeemed prizes vs the quantityLimit
         if (Number(redeemed[0].count) >= rewardData.quantityLimit) {
             return null
         }
@@ -58,7 +56,6 @@ export async function getRewardIfAvailable(
     return rewardData
 }
 
-/* use to check which rewards a student can get for a given course */
 export async function getAvailableRewards(courseId: number): Promise<Reward[]> {
     return db
         .select()
@@ -66,12 +63,10 @@ export async function getAvailableRewards(courseId: number): Promise<Reward[]> {
         .where(and(eq(reward.courseId, courseId), eq(reward.active, true)))
 }
 
-/* get list of all rewards for course */
 export async function getRewardsByCourse(courseId: number): Promise<Reward[]> {
     return db.select().from(reward).where(eq(reward.courseId, courseId))
 }
 
-/* returns the reward along with quantity information (for display in a shop) */
 export async function getRewardStatsById(rewardId: number): Promise<{
     reward: Reward
     limit: number | null
@@ -87,7 +82,6 @@ export async function getRewardStatsById(rewardId: number): Promise<{
 
     if (!rewardData[0]) throw new Error('Reward not found')
 
-    // count the redemptions to determine quantity
     const redeemed = await db
         .select({count: count()})
         .from(redemption)
@@ -111,8 +105,6 @@ export async function getRewardStatsById(rewardId: number): Promise<{
     }
 }
 
-/* BE CAREFUL - this function will be expensive
- * meant for populating instructor dashboard with both available and unavailable courses */
 export async function getRewardsByCourseWithStats(courseId: number): Promise<
     Array<{
         reward: Reward
@@ -128,7 +120,6 @@ export async function getRewardsByCourseWithStats(courseId: number): Promise<
         })
         .from(reward)
         .leftJoin(
-            //join with redemption table to get the full count
             redemption,
             and(
                 eq(redemption.rewardId, reward.id),
@@ -143,8 +134,8 @@ export async function getRewardsByCourseWithStats(courseId: number): Promise<
         redeemed: Number(r.redemptionCount),
         available:
             r.reward.quantityLimit === null ?
-                null // unlimited
-            :   r.reward.quantityLimit - Number(r.redemptionCount), //quantity left
+                null
+            :   r.reward.quantityLimit - Number(r.redemptionCount),
         isAvailable:
             r.reward.active &&
             (r.reward.quantityLimit === null ||
@@ -152,7 +143,6 @@ export async function getRewardsByCourseWithStats(courseId: number): Promise<
     }))
 }
 
-/* generic helper function for developers*/
 export async function getRewardById(rewardId: number): Promise<Reward | null> {
     const result = await db
         .select()

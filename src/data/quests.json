@@ -3,17 +3,17 @@
         {
             "title": "learn terminal commands",
             "points": 100,
-            "done": false
+            "done": true
         },
         {
             "title": "create a GitHub repo",
             "points": 50,
-            "done": false
+            "done": true
         },
         {
             "title": "do a pull request",
             "points": 100,
-            "done": false
+            "done": true
         }
     ]
 }

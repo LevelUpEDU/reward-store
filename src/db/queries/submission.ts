@@ -1,9 +1,11 @@
+'use server'
 import {db} from '../index'
-import {submission} from '../schema'
+import {submission, student} from '../schema'
 
 import type {Quest, Submission, Transaction} from '@/types/db'
 
-import {getQuestsByCourse, getQuestById, createTransaction} from '@/db'
+import {getQuestsByCourse, getQuestById} from './quest'
+import {createTransaction} from './transaction'
 
 import {eq} from 'drizzle-orm'
 
@@ -46,6 +48,51 @@ export async function getSubmissionsByStudent(
     return db.select().from(submission).where(eq(submission.studentId, email))
 }
 
+export async function getSubmissionsByQuest(questId: number): Promise<
+    Array<
+        Submission & {
+            student: {
+                name: string
+                email: string
+            }
+        }
+    >
+> {
+    const results = await db
+        .select({
+            id: submission.id,
+            studentId: submission.studentId,
+            questId: submission.questId,
+            submissionDate: submission.submissionDate,
+            status: submission.status,
+            verifiedBy: submission.verifiedBy,
+            verifiedDate: submission.verifiedDate,
+            studentName: student.name,
+            studentEmail: student.email,
+        })
+        .from(submission)
+        .innerJoin(student, eq(submission.studentId, student.email))
+        .where(eq(submission.questId, questId))
+
+    // typescript complains that "studentName" and "studentEmail" don't exist on this type
+    // since SQL returns "student.name" and "student.email"
+    //
+    // this reshapes the structure to account for this
+    return results.map((r) => ({
+        id: r.id,
+        studentId: r.studentId,
+        questId: r.questId,
+        submissionDate: r.submissionDate,
+        status: r.status,
+        verifiedBy: r.verifiedBy,
+        verifiedDate: r.verifiedDate,
+        student: {
+            name: r.studentName,
+            email: r.studentEmail,
+        },
+    }))
+}
+
 export async function verifySubmission(
     submissionId: number,
     instructorEmail: string,
@@ -54,7 +101,6 @@ export async function verifySubmission(
     submission: Submission
     transaction: Transaction | null
 }> {
-    // retrieve the submission and quest details
     const currentSubmission = await getSubmissionById(submissionId)
     if (!currentSubmission) {
         throw new Error('Submission not found')
@@ -62,7 +108,6 @@ export async function verifySubmission(
     const questData = await getQuestById(currentSubmission.questId)
     if (!questData) throw new Error('Quest not found')
 
-    // update the submission status
     const updatedSubmission = await db
         .update(submission)
         .set({
@@ -73,7 +118,6 @@ export async function verifySubmission(
         .where(eq(submission.id, submissionId))
         .returning()
 
-    // only update points if the submission is approved
     let transactionResult = null
     if (approved) {
         transactionResult = await createTransaction({
@@ -95,7 +139,6 @@ export async function getQuestsForStudent(
 ): Promise<Quest[]> {
     const allQuests = await getQuestsByCourse(courseId)
 
-    // get student submissions
     const submissions = await db
         .select()
         .from(submission)
@@ -103,6 +146,5 @@ export async function getQuestsForStudent(
 
     const submittedQuestIds = new Set(submissions.map((s) => s.questId))
 
-    // filter out quests where the student has submitted already
-    return allQuests.filter((q) => !submittedQuestIds.has(q.id))
+    return allQuests.filter((q: Quest) => !submittedQuestIds.has(q.id))
 }
