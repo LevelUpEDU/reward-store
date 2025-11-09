@@ -20,7 +20,6 @@ export class Lobby extends Scene {
     private subScreenVisible = false
     private subScreenTitle?: Phaser.GameObjects.Text
     private subScreenList?: Phaser.GameObjects.Text[]
-    private subScreenBg?: Phaser.GameObjects.Rectangle
 
     // Sub-Screen Background
     private subScreenMap?: Phaser.Tilemaps.Tilemap
@@ -162,16 +161,15 @@ export class Lobby extends Scene {
     }
 
     create(): void {
+        this.cleanUp()
         super.create()
         this.setCameraResolution()
         this.welcomeText()
         this.defineSceneTransitions()
-        // Add rewards map toggle
         this.setupRewardsOverlay()
-        // Add interactive object
         this.setupInteractiveObject()
-        // ---- WAIT FOR THE FONT -------------------------------------------------
-        // `this.cache.bitmapFont.exists` works for both .otf and bitmap fonts.
+
+        // ---- Wait For The Font
         if (!this.cache.bitmapFont.exists('MyCustomFont')) {
             // If for some reason the font didn’t load yet, wait one frame.
             this.time.delayedCall(0, () => this.fontReady())
@@ -180,17 +178,12 @@ export class Lobby extends Scene {
         }
     }
 
-    shutdown(): void {
-        this.upKey?.removeAllListeners()
-        this.downKey?.removeAllListeners()
-        this.enterKey?.removeAllListeners()
-        this.input.keyboard?.removeKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
-        this.input.keyboard?.off('keydown-ESC')
-        this.closeSubScreen()
-        this.subScreenLayer?.destroy()
+    private cleanUp(): void {
+        this.upKey = undefined
+        this.downKey = undefined
+        this.enterKey = undefined
         this.subScreenMap = undefined
-        this.subScreenLayer = undefined
-        super.shutdown?.()
+        this.escKey = undefined
     }
 
     private fontReady(): void {
@@ -222,6 +215,12 @@ export class Lobby extends Scene {
 
     private showRewardsOverlay(): void {
         // background UI
+
+        // DESTROY FIRST
+        if (this.rewardsMap) {
+            this.rewardsMap = undefined
+        }
+
         if (!this.rewardsMap) {
             this.rewardsMap = this.make.tilemap({key: 'rewardsMap'})
 
@@ -254,26 +253,21 @@ export class Lobby extends Scene {
             align: 'left' as const,
         }
 
-        // ---------- create headings (only once) ----------
-        if (this.menuItems.length === 0) {
-            const labels = ['REWARDS', 'ACHIEVEMENTS', 'BADGES']
+        // DESTROY OLD MENU ITEMS
+        this.menuItems.forEach((item) => item.destroy())
+        this.menuItems = []
 
-            labels.forEach((txt, i) => {
-                const pos = this.MENU_POSITIONS[i] || {x: 280, y: 160 + i * 120} // fallback
-                const item = this.add
-                    .text(pos.x, pos.y, txt, normalStyle)
-                    .setScrollFactor(0)
-                this.menuItems.push(item)
-            })
+        // ALWAYS RECREATE
+        const labels = ['REWARDS', 'ACHIEVEMENTS', 'BADGES']
+        labels.forEach((txt, i) => {
+            const pos = this.MENU_POSITIONS[i]
+            const item = this.add
+                .text(pos.x, pos.y, txt, normalStyle)
+                .setScrollFactor(0)
+            this.menuItems.push(item)
+        })
 
-            this.highlightSelected()
-        } else {
-            // already created → just show them
-            this.menuItems.forEach((t) => t.setVisible(true))
-            this.highlightSelected()
-        }
-
-        // ---------- keyboard navigation ----------
+        this.highlightSelected()
         this.setupMenuControls()
     }
 
@@ -351,9 +345,6 @@ export class Lobby extends Scene {
 
             const selected = this.menuItems[this.selectedIndex].text
             this.openSubScreen(selected)
-            console.log('Activated:', selected)
-            // ←←←  put your own logic here  →→→
-            // e.g. open a sub-screen, play a sound, etc.
         }
         this.enterKey.on('down', activate)
         spaceKey.on('down', activate)
@@ -678,7 +669,7 @@ export class Lobby extends Scene {
     private transitionTo(targetSceneKey: string): void {
         this.cameras.main.fadeOut(800, 0, 0, 0)
         this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start(targetSceneKey)
+            this.scene.start(targetSceneKey, {restart: true})
         })
     }
 
@@ -710,13 +701,17 @@ export class Lobby extends Scene {
             console.error('Player or player.body is not defined')
         }
 
-        // Initialize interactKey if not already set
-        if (!this.interactKey) {
-            // Set up the 'E' key
-            this.interactKey = this.input.keyboard!.addKey(
-                Phaser.Input.Keyboard.KeyCodes.E
-            )
+        // DESTROY OLD KEY FIRST
+        if (this.interactKey) {
+            this.interactKey.off('down') // remove listeners
+            this.input.keyboard!.removeKey(this.interactKey)
         }
+
+        // ALWAYS CREATE FRESH
+        // Initialize interactKey if not already set
+        this.interactKey = this.input.keyboard!.addKey(
+            Phaser.Input.Keyboard.KeyCodes.E
+        )
 
         // Remove any existing listeners to prevent duplicates
         this.interactKey.off('down')
