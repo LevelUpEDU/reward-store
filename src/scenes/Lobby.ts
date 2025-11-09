@@ -32,7 +32,8 @@ export class Lobby extends Scene {
     private readonly MENU_POSITIONS = [
         {x: 940, y: 315}, // REWARDS
         {x: 880, y: 425}, // ACHIEVEMENTS
-        {x: 940, y: 540}, // BADGES
+        {x: 945, y: 540}, // BADGES
+        {x: 950, y: 765}, // LOGOUT
     ]
 
     // Sample data for badges and rewards (replace with actual data source)
@@ -258,7 +259,7 @@ export class Lobby extends Scene {
         this.menuItems = []
 
         // ALWAYS RECREATE
-        const labels = ['REWARDS', 'ACHIEVEMENTS', 'BADGES']
+        const labels = ['REWARDS', 'ACHIEVEMENTS', 'BADGES', 'LOGOUT']
         labels.forEach((txt, i) => {
             const pos = this.MENU_POSITIONS[i]
             const item = this.add
@@ -398,6 +399,11 @@ export class Lobby extends Scene {
             .setDepth(1001)
 
         // Content list
+        if (category === 'LOGOUT') {
+            this.handleLogout()
+            return
+        }
+
         const data = this.getDataForCategory(category)
         this.subScreenList = []
 
@@ -727,6 +733,44 @@ export class Lobby extends Scene {
                     this.hideRewardsOverlay()
                 }
             }
+        })
+    }
+
+    private handleLogout(): void {
+        console.log(
+            '%c[LOGOUT] User logged out successfully!',
+            'color: #ff4800; font-size: 20px; font-weight: bold;'
+        )
+
+        // Optional: Visual feedback
+        this.add
+            .text(960, 540, 'Logging out...', {
+                fontFamily: 'CyberPunkFont',
+                fontSize: '48px',
+                color: '#ff4800',
+                backgroundColor: '#000000dd',
+                padding: {left: 20, right: 20, top: 10, bottom: 10},
+            })
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(2000)
+
+        // Close rewards overlay
+        this.rewardsVisible = false
+        this.hideRewardsOverlay()
+
+        // Simulate delay + redirect (or real logout later)
+        this.time.delayedCall(1500, () => {
+            console.log(
+                '%c[REDIRECT] Going back to login screen...',
+                'color: #ffd700; font-size: 16px;'
+            )
+
+            // Example: Transition to Login Scene (replace with your actual scene key)
+            // this.transitionTo('LoginScene') // or 'BootScene', 'MainMenuScene', etc.
+
+            // Or if you want to reload the page (for full logout):
+            // window.location.href = '/login'
         })
     }
 
