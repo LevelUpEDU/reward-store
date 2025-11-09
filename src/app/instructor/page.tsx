@@ -3,7 +3,9 @@ import Link from 'next/link'
 import '../styles/home.css'
 
 export default function HomePage() {
-    const returnUrl = window.location.origin
+    const returnUrl =
+        typeof window !== 'undefined' ? window.location.origin : ''
+
     return (
         <div className="home-container">
             <div className="hero-section">
