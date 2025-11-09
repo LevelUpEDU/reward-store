@@ -737,6 +737,8 @@ export class Lobby extends Scene {
     }
 
     private handleLogout(): void {
+        const returnUrl = window.location.origin
+
         console.log(
             '%c[LOGOUT] User logged out successfully!',
             'color: #ff4800; font-size: 20px; font-weight: bold;'
@@ -766,11 +768,7 @@ export class Lobby extends Scene {
                 'color: #ffd700; font-size: 16px;'
             )
 
-            // Example: Transition to Login Scene (replace with your actual scene key)
-            // this.transitionTo('LoginScene') // or 'BootScene', 'MainMenuScene', etc.
-
-            // Or if you want to reload the page (for full logout):
-            // window.location.href = '/login'
+            window.location.href = `/auth/logout?returnTo=${returnUrl}`
         })
     }
 
