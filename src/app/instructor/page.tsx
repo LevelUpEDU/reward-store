@@ -3,7 +3,7 @@ import Link from 'next/link'
 import '../styles/home.css'
 
 export default function HomePage() {
-    const returnUrl = encodeURIComponent('http://localhost:8080/instructor')
+    const returnUrl = window.location.origin
     return (
         <div className="home-container">
             <div className="hero-section">
@@ -30,7 +30,7 @@ export default function HomePage() {
                             <button
                                 className="btn btn-outline"
                                 onClick={() => {
-                                    window.location.href = `/auth/logout?returnTo=${returnUrl}`
+                                    window.location.href = `/auth/logout?returnTo=${returnUrl}/instructor`
                                 }}>
                                 Sign Out
                             </button>{' '}
