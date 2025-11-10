@@ -9,9 +9,9 @@ const IMAGE_SRC = '/bcit-2.jpg'
 export default function Home() {
     return (
         <div>
-            <div id="ui">
-                <h1 id="title">LevelUp EDU</h1>
-                <div id="sign-in">
+            <div id="student-login-ui">
+                <h1 id="student-login-title">LevelUp EDU</h1>
+                <div id="student-login-sign-in">
                     <div className="auth-container">
                         {/* register */}
                         <div className="auth-section">
