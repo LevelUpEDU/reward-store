@@ -501,45 +501,35 @@ export class Lobby extends Scene {
     }
 
     private showShopBackground(): void {
-        if (!this.shopMap) {
-            // Create the tilemap ONCE
-            this.shopMap = this.make.tilemap({key: 'shopMap'})
-
-            // Add ALL 3 tilesets in EXACT order from shop.json
-            const frameTileset = this.shopMap.addTilesetImage('FrameMap')
-            const buttonLeftTileset =
-                this.shopMap.addTilesetImage('button_yellow_left')
-            const buttonRightTileset = this.shopMap.addTilesetImage(
-                'button_yellow_right'
-            )
-
-            // Guard against missing tilesets
-            if (!frameTileset || !buttonLeftTileset || !buttonRightTileset) {
-                console.error('One or more shop tilesets failed to load!', {
-                    frame: !!frameTileset,
-                    left: !!buttonLeftTileset,
-                    right: !!buttonRightTileset,
-                })
-                return
-            }
-
-            // Create the layer
-            this.shopLayer = this.shopMap.createLayer(
-                'base layer',
-                [frameTileset, buttonLeftTileset, buttonRightTileset],
-                0,
-                0
-            )
-            if (this.shopLayer) {
-                this.shopLayer
-                    .setScrollFactor(0)
-                    .setScale(2.5)
-                    .setPosition(680, 100)
-                    .setDepth(1000)
-            }
-        } else {
+        if (this.shopMap) {
             this.shopLayer?.setVisible(true)
+            return
         }
+
+        this.shopMap = this.make.tilemap({key: 'shopMap'})
+
+        const tilesets = [
+            this.shopMap.addTilesetImage('FrameMap'),
+            this.shopMap.addTilesetImage('button_yellow_left'),
+            this.shopMap.addTilesetImage('button_yellow_right'),
+        ]
+
+        // Type guard + explicit Boolean() = ESLint + TS happy
+        const validTilesets = tilesets.filter(
+            (t): t is Phaser.Tilemaps.Tileset => Boolean(t)
+        )
+
+        if (validTilesets.length !== 3) {
+            console.error('Shop tilesets missing!', tilesets.map(Boolean))
+            return
+        }
+
+        this.shopLayer = this.shopMap
+            .createLayer('base layer', validTilesets)
+            ?.setScrollFactor(0)
+            .setScale(2.5)
+            .setPosition(680, 100)
+            .setDepth(1000)
     }
 
     private renderShopItems(): void {
