@@ -2,7 +2,7 @@
 
 import React, {useState, useEffect} from 'react'
 import {useAuth} from '@/app/hooks/useAuth'
-import {getQuestsByInstructor} from '@/db/queries/quest'
+import {deleteQuest, getQuestsByInstructor} from '@/db/queries/quest'
 import {getSubmissionsByQuest, verifySubmission} from '@/db/queries/submission'
 import type {Quest, Submission} from '@/types/db'
 
@@ -36,6 +36,7 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
     const [selectedQuest, setSelectedQuest] =
         useState<QuestWithSubmissions | null>(null)
     const [loadingQuestId, setLoadingQuestId] = useState<number | null>(null)
+    const [deletingQuestId, setDeletingQuestId] = useState<number | null>(null)
 
     useEffect(() => {
         const fetchQuests = async () => {
@@ -116,6 +117,48 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
                 'Failed to process submission: ' +
                     (err instanceof Error ? err.message : String(err))
             )
+        }
+    }
+
+    const handleEditQuest = (questId: number) => {
+        setActiveTab(`edit_quest_${questId}`)
+    }
+
+    const handleDeleteQuest = async (questId: number) => {
+        if (!email) return
+
+        const confirmDelete =
+            typeof window !== 'undefined' ?
+                window.confirm(
+                    'Are you sure you want to delete this quest? This action cannot be undone.'
+                )
+            :   true
+
+        if (!confirmDelete) return
+
+        setDeletingQuestId(questId)
+
+        try {
+            const success = await deleteQuest(questId, email)
+
+            if (!success) {
+                throw new Error('Unable to delete the quest. Please try again.')
+            }
+
+            setQuests((prev) => prev.filter((quest) => quest.id !== questId))
+
+            if (selectedQuest?.id === questId) {
+                setSelectedQuest(null)
+            }
+
+            alert('Quest deleted successfully.')
+        } catch (err) {
+            alert(
+                'Failed to delete quest: ' +
+                    (err instanceof Error ? err.message : String(err))
+            )
+        } finally {
+            setDeletingQuestId(null)
         }
     }
 
@@ -216,9 +259,18 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
                                         'Loading...'
                                     :   'View Submissions'}
                                 </button>
-                                <button className="edit-quest-btn">Edit</button>
-                                <button className="delete-quest-btn">
-                                    Delete
+                                <button
+                                    className="edit-quest-btn"
+                                    onClick={() => handleEditQuest(quest.id)}>
+                                    Edit
+                                </button>
+                                <button
+                                    className="delete-quest-btn"
+                                    onClick={() => handleDeleteQuest(quest.id)}
+                                    disabled={deletingQuestId === quest.id}>
+                                    {deletingQuestId === quest.id ?
+                                        'Deleting...'
+                                    :   'Delete'}
                                 </button>
                             </div>
                         </div>
