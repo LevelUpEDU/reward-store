@@ -1,6 +1,6 @@
 'use server'
 import {db} from '../index'
-import {course, registration} from '../schema'
+import {course, registration, instructor} from '../schema'
 import type {Course} from '@/types/db'
 import {eq} from 'drizzle-orm'
 
@@ -50,6 +50,27 @@ export async function getCourseById(id: number): Promise<Course | null> {
     return result[0] ?? null
 }
 
+// Get course by course code with instructor name
+export async function getCourseByCode(
+    courseCode: string
+): Promise<(Course & {instructorName: string}) | null> {
+    const result = await db
+        .select({
+            id: course.id,
+            courseCode: course.courseCode,
+            instructorEmail: course.instructorEmail,
+            title: course.title,
+            description: course.description,
+            instructorName: instructor.name,
+        })
+        .from(course)
+        .innerJoin(instructor, eq(course.instructorEmail, instructor.email))
+        .where(eq(course.courseCode, courseCode))
+        .limit(1)
+
+    return result[0] ?? null
+}
+
 export async function getCoursesByInstructor(email: string): Promise<Course[]> {
     return db.select().from(course).where(eq(course.instructorEmail, email))
 }
@@ -65,5 +86,41 @@ export async function getStudentCourses(email: string): Promise<Course[]> {
         })
         .from(registration)
         .innerJoin(course, eq(registration.courseId, course.id))
+        .where(eq(registration.studentId, email))
+}
+
+// Get all courses with instructor name
+export async function getAllCourses(): Promise<
+    Array<Course & {instructorName: string}>
+> {
+    return db
+        .select({
+            id: course.id,
+            courseCode: course.courseCode,
+            instructorEmail: course.instructorEmail,
+            title: course.title,
+            description: course.description,
+            instructorName: instructor.name,
+        })
+        .from(course)
+        .innerJoin(instructor, eq(course.instructorEmail, instructor.email))
+}
+
+// Get student courses with instructor name
+export async function getStudentCoursesWithInstructor(
+    email: string
+): Promise<Array<Course & {instructorName: string}>> {
+    return db
+        .select({
+            id: course.id,
+            courseCode: course.courseCode,
+            instructorEmail: course.instructorEmail,
+            title: course.title,
+            description: course.description,
+            instructorName: instructor.name,
+        })
+        .from(registration)
+        .innerJoin(course, eq(registration.courseId, course.id))
+        .innerJoin(instructor, eq(course.instructorEmail, instructor.email))
         .where(eq(registration.studentId, email))
 }

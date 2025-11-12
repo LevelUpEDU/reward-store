@@ -79,6 +79,18 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
     displayText.setScrollFactor(0)
     elements.push(displayText)
 
+    // Store references for cleanup
+    let currentInput = ''
+
+    const updateDisplay = () => {
+        if (!currentInput) {
+            displayText.setText('---·---')
+        } else {
+            const padded = currentInput.padEnd(6, '-')
+            displayText.setText(padded.slice(0, 3) + '·' + padded.slice(3, 6))
+        }
+    }
+
     // Create keypad grid (matching HTML layout exactly)
     const keypadKeys: {
         bg: Phaser.GameObjects.Rectangle
@@ -187,18 +199,6 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
     closeText.setOrigin(0.5)
     closeText.setScrollFactor(0)
     elements.push(closeText)
-
-    // Store references for cleanup
-    let currentInput = ''
-
-    const updateDisplay = () => {
-        if (!currentInput) {
-            displayText.setText('---·---')
-        } else {
-            const padded = currentInput.padEnd(6, '-')
-            displayText.setText(padded.slice(0, 3) + '·' + padded.slice(3, 6))
-        }
-    }
 
     // Add key functionality
     keypadKeys.forEach((keyData) => {
@@ -343,45 +343,53 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
     // Add keyboard listener
     document.addEventListener('keydown', handleKeyboardInput)
 
+    // Helper function to create close button for popups
+    const createCloseButton = (
+        popup: Phaser.GameObjects.Container,
+        yOffset: number = 0
+    ) => {
+        const closeBtn = scene.add.rectangle(0, yOffset, 150, 50, 0xef4444)
+        closeBtn.setStrokeStyle(2, 0x7f1d1d)
+        closeBtn.setInteractive()
+        closeBtn.setScrollFactor(0)
+        popup.add(closeBtn)
+
+        const closeBtnText = scene.add.text(0, yOffset, 'Close', {
+            fontSize: '24px',
+            color: '#ffffff',
+            align: 'center',
+            fontStyle: 'bold',
+        })
+        closeBtnText.setOrigin(0.5)
+        closeBtnText.setScrollFactor(0)
+        popup.add(closeBtnText)
+
+        closeBtn.on('pointerdown', () => {
+            popup.destroy()
+        })
+        closeBtnText.on('pointerdown', () => {
+            popup.destroy()
+        })
+
+        return closeBtn
+    }
+
     // Enter button functionality
-    const handleEnterPress = () => {
-        if (currentInput.length === 6) {
-            // Show success message
-            const successPopup = scene.add.container(centerX, centerY)
-            successPopup.setScrollFactor(0)
-
-            const successBg = scene.add.rectangle(0, 0, 400, 200, 0x000000, 0.9)
-            successPopup.add(successBg)
-
-            const successText = scene.add.text(
-                0,
-                0,
-                `Course Code: ${currentInput}\nValid!`,
-                {
-                    fontSize: '24px',
-                    color: '#10b981',
-                    align: 'center',
-                }
-            )
-            successText.setOrigin(0.5)
-            successPopup.add(successText)
-
-            // Auto close after 2 seconds
-            scene.time.delayedCall(2000, () => successPopup.destroy())
-        } else {
+    const handleEnterPress = async () => {
+        if (currentInput.length !== 6) {
             // Show error message
             const errorPopup = scene.add.container(centerX, centerY)
             errorPopup.setScrollFactor(0)
 
-            const errorBg = scene.add.rectangle(0, 0, 350, 150, 0x000000, 0.9)
+            const errorBg = scene.add.rectangle(0, 0, 800, 250, 0x000000, 0.9)
             errorPopup.add(errorBg)
 
             const errorText = scene.add.text(
                 0,
-                0,
+                -30,
                 'Please enter all 6 digits',
                 {
-                    fontSize: '20px',
+                    fontSize: '40px',
                     color: '#ef4444',
                     align: 'center',
                 }
@@ -389,8 +397,174 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
             errorText.setOrigin(0.5)
             errorPopup.add(errorText)
 
-            // Auto close after 2 seconds
-            scene.time.delayedCall(2000, () => errorPopup.destroy())
+            createCloseButton(errorPopup, 50)
+            return
+        }
+
+        // Show loading message
+        const loadingPopup = scene.add.container(centerX, centerY)
+        loadingPopup.setScrollFactor(0)
+        const loadingBg = scene.add.rectangle(0, 0, 800, 250, 0x000000, 0.9)
+        loadingPopup.add(loadingBg)
+        const loadingText = scene.add.text(0, 0, 'Verifying course code...', {
+            fontSize: '40px',
+            color: '#ffd700',
+            align: 'center',
+        })
+        loadingText.setOrigin(0.5)
+        loadingPopup.add(loadingText)
+
+        try {
+            // Verify course code via API
+            const response = await fetch(
+                `/api/courses/verify?code=${currentInput}`
+            )
+            const data = await response.json()
+
+            // Destroy loading popup immediately
+            loadingPopup.destroy()
+
+            if (response.ok && data.courseCode) {
+                // Course found - register student and show success
+                try {
+                    const registerResponse = await fetch(
+                        '/api/student/register-course',
+                        {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({courseId: data.id}),
+                        }
+                    )
+
+                    const registerData = await registerResponse.json()
+
+                    // Show success popup
+                    const successPopup = scene.add.container(centerX, centerY)
+                    successPopup.setScrollFactor(0)
+
+                    const successBg = scene.add.rectangle(
+                        0,
+                        0,
+                        900,
+                        450,
+                        0x000000,
+                        0.9
+                    )
+                    successPopup.add(successBg)
+
+                    let successMessage = `✓ Course Found!\n\n${data.title}\nInstructor: ${data.instructorName}\nCode: ${data.courseCode}`
+
+                    if (registerResponse.ok) {
+                        successMessage += '\n\n✅ Successfully registered!'
+                        console.log('✅ Course registered:', data)
+                    } else if (registerResponse.status === 409) {
+                        successMessage +=
+                            '\n\n⚠️ Already registered for this course'
+                        console.log('⚠️ Already registered:', data)
+                    } else {
+                        successMessage += `\n\n⚠️ Registration failed: ${registerData.error || 'Unknown error'}`
+                        console.error('❌ Registration failed:', registerData)
+                    }
+
+                    const successText = scene.add.text(0, -50, successMessage, {
+                        fontSize: '40px',
+                        color: '#10b981',
+                        align: 'center',
+                    })
+                    successText.setOrigin(0.5)
+                    successPopup.add(successText)
+
+                    createCloseButton(successPopup, 120)
+                } catch (registerError) {
+                    // Show error if registration fails
+                    const errorPopup = scene.add.container(centerX, centerY)
+                    errorPopup.setScrollFactor(0)
+
+                    const errorBg = scene.add.rectangle(
+                        0,
+                        0,
+                        800,
+                        250,
+                        0x000000,
+                        0.9
+                    )
+                    errorPopup.add(errorBg)
+
+                    const errorText = scene.add.text(
+                        0,
+                        -30,
+                        'Course found but registration failed\nPlease try again',
+                        {
+                            fontSize: '40px',
+                            color: '#ef4444',
+                            align: 'center',
+                        }
+                    )
+                    errorText.setOrigin(0.5)
+                    errorPopup.add(errorText)
+
+                    console.error('❌ Registration error:', registerError)
+                    createCloseButton(errorPopup, 50)
+                }
+            } else {
+                // Course not found
+                const errorPopup = scene.add.container(centerX, centerY)
+                errorPopup.setScrollFactor(0)
+
+                const errorBg = scene.add.rectangle(
+                    0,
+                    0,
+                    800,
+                    250,
+                    0x000000,
+                    0.9
+                )
+                errorPopup.add(errorBg)
+
+                const errorText = scene.add.text(
+                    0,
+                    -30,
+                    '✕ Invalid Course Code\nPlease try again',
+                    {
+                        fontSize: '40px',
+                        color: '#ef4444',
+                        align: 'center',
+                    }
+                )
+                errorText.setOrigin(0.5)
+                errorPopup.add(errorText)
+
+                console.log('❌ Course not found:', currentInput)
+
+                createCloseButton(errorPopup, 50)
+            }
+        } catch (error) {
+            // Destroy loading popup immediately
+            loadingPopup.destroy()
+
+            // Show error message
+            const errorPopup = scene.add.container(centerX, centerY)
+            errorPopup.setScrollFactor(0)
+
+            const errorBg = scene.add.rectangle(0, 0, 800, 250, 0x000000, 0.9)
+            errorPopup.add(errorBg)
+
+            const errorText = scene.add.text(
+                0,
+                -30,
+                'Error verifying course\nPlease try again',
+                {
+                    fontSize: '40px',
+                    color: '#ef4444',
+                    align: 'center',
+                }
+            )
+            errorText.setOrigin(0.5)
+            errorPopup.add(errorText)
+
+            console.error('❌ Error verifying course:', error)
+
+            createCloseButton(errorPopup, 50)
         }
     }
 
