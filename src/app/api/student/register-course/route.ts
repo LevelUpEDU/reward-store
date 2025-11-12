@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
 
         // Use Auth0 ID (sub) to find student email
         const auth0Id = session.user.sub
-        const studentRecord = await db
+        const studentRecord = await (db as any)
             .select()
             .from(student)
-            .where(eq(student.auth0Id, auth0Id))
+            .where(eq(student.auth0Id, auth0Id) as any)
             .limit(1)
 
         if (studentRecord.length === 0) {
@@ -43,14 +43,14 @@ export async function POST(req: NextRequest) {
         const studentEmail = studentRecord[0].email
 
         // Check if already registered
-        const existing = await db
+        const existing = await (db as any)
             .select()
             .from(registration)
             .where(
                 and(
                     eq(registration.studentId, studentEmail),
                     eq(registration.courseId, courseId)
-                )
+                ) as any
             )
             .limit(1)
 
