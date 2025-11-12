@@ -1,4 +1,6 @@
 import {setupTestDb} from './dbSetup'
+import type {PostgresJsDatabase} from 'drizzle-orm/postgres-js'
+import type * as schema from '@/db/schema'
 import {
     createCourse,
     getAllCourses,
@@ -7,18 +9,13 @@ import {
 } from '@/db/queries/course'
 import {createStudent} from '@/db/queries/student'
 import {createInstructor} from '@/db/queries/instructor'
-import {createRegistration} from '@/db/queries/registration'
-import {db} from '@/db'
+import {registerStudent} from '@/db/queries/registration'
 
 describe('Course Queries', () => {
-    let testDb: typeof db
+    let testDb: PostgresJsDatabase<typeof schema>
 
     beforeAll(async () => {
         testDb = await setupTestDb()
-        // Mock the db import to use test database
-        jest.mock('@/db', () => ({
-            db: testDb,
-        }))
     })
 
     beforeEach(async () => {
@@ -72,7 +69,7 @@ describe('Course Queries', () => {
         })
 
         // Register student for course
-        await createRegistration(studentEmail, course.id)
+        await registerStudent(studentEmail, course.id)
 
         const studentCourses = await getStudentCoursesWithInstructor(studentEmail)
 
