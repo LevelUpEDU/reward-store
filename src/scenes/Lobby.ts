@@ -1,5 +1,6 @@
 import {Scene} from '@/scenes/Scene'
 import type {MapConfig} from '@/types'
+import {PortalManager} from '@/interactions/portal'
 
 export class Lobby extends Scene {
     private rewardsMap?: Phaser.Tilemaps.Tilemap
@@ -37,6 +38,9 @@ export class Lobby extends Scene {
 
     private backText?: Phaser.GameObjects.Text
     private backSelected = false
+
+    // Portal Manager
+    private portalManager?: PortalManager
 
     // Rewards Overlay Menu Position (x/y per item)
     private readonly MENU_POSITIONS = [
@@ -820,29 +824,31 @@ export class Lobby extends Scene {
     }
 
     private defineSceneTransitions(): void {
-        const portals = [
-            {x: 400, y: 400, width: 64, height: 64, target: 'ClassroomScene'},
-        ]
+        // Initialize portal manager
+        this.portalManager = new PortalManager(this)
 
-        portals.forEach((portal) => {
-            const rect = this.add.rectangle(
-                portal.x,
-                portal.y,
-                portal.width,
-                portal.height,
-                0x00ff00,
-                0.3
-            )
-            this.physics.add.existing(rect, true)
-            this.physics.add.overlap(
-                this.player,
-                rect,
-                () => {
-                    this.transitionTo(portal.target)
+        // Create classroom portal with selection options
+        this.portalManager.createPortal({
+            x: 400,
+            y: 400,
+            width: 64,
+            height: 64,
+            color: 0x00ff00,
+            alpha: 0.3,
+            classroomOptions: [
+                {
+                    label: 'Concurrent Programming',
+                    sceneKey: 'ClassroomScene',
                 },
-                undefined,
-                this
-            )
+                {
+                    label: 'ISA',
+                    action: () => {
+                        console.log(
+                            'ISA classroom selected (not implemented yet)'
+                        )
+                    },
+                },
+            ],
         })
 
         // Add hello portal near classroom portal
