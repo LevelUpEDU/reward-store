@@ -217,6 +217,7 @@ export function createQuestUI(
     const VISIBLE_QUESTS = 5
     const questHits: Phaser.GameObjects.Rectangle[] = []
     let downArrow: Phaser.GameObjects.Text | null = null
+    let upArrow: Phaser.GameObjects.Text | null = null
 
     function renderQuestWindow() {
         // Clear existing quest elements
@@ -226,6 +227,10 @@ export function createQuestUI(
         if (downArrow) {
             downArrow.destroy()
             downArrow = null
+        }
+        if (upArrow) {
+            upArrow.destroy()
+            upArrow = null
         }
         questTexts.length = 0
         doneMarks.length = 0
@@ -391,6 +396,20 @@ export function createQuestUI(
                     elements.push(claimBtn)
                 }
             }
+        }
+
+        // Show up arrow if there are more quests above
+        if (windowStart > 0) {
+            const arrowY = startY - 10 // Position above the first quest
+            upArrow = scene.add
+                .text(startX + 40, arrowY, '▲', {
+                    fontSize: '32px',
+                    color: '#fff',
+                    fontFamily: styles.typography.fontFamily,
+                })
+                .setOrigin(0.5, 1) // Anchor at bottom center
+                .setDepth(styles.depths.text + 3)
+            elements.push(upArrow)
         }
 
         // Show down arrow if there are more quests below
