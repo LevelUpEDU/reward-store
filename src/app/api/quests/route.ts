@@ -60,10 +60,17 @@ export async function POST(request: Request) {
     }
 }
 
-export async function GET() {
+// GET: return quests from DB when available, otherwise from the local JSON
+export async function GET(request: Request) {
     try {
+        if (useDb) {
+            const {dbGetQuests} = await import('./helpers')
+            return await dbGetQuests(request)
+        }
+
         // Fallback to file-based data
         // eslint-disable-next-line no-console
+        console.log('[api/quests] falling back to JSON file at', dataPath)
         if (!fs.existsSync(dataPath)) {
             return NextResponse.json({quests: []})
         }
