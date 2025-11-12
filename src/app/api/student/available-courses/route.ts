@@ -2,7 +2,7 @@ import {auth0} from '@/lib/auth0'
 import {NextResponse, type NextRequest} from 'next/server'
 import {getAllCourses, getStudentCourses} from '@/db/queries/course'
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
     try {
         const session = await auth0.getSession()
         if (!session?.user?.email) {
