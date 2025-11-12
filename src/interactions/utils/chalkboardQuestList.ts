@@ -400,9 +400,10 @@ export function createQuestUI(
 
         // Show up arrow if there are more quests above
         if (windowStart > 0) {
-            const arrowY = startY - 10 // Position above the first quest
+            const arrowY = startY - 12 // Position above the first quest
+            const centerX = startX + (doneX - startX) / 2
             upArrow = scene.add
-                .text(startX + 40, arrowY, '▲', {
+                .text(centerX, arrowY, '▲', {
                     fontSize: '32px',
                     color: '#fff',
                     fontFamily: styles.typography.fontFamily,
@@ -414,9 +415,11 @@ export function createQuestUI(
 
         // Show down arrow if there are more quests below
         if (windowStart + VISIBLE_QUESTS < quests.length) {
-            const arrowY = startY + VISIBLE_QUESTS * styles.layout.rowSpacing
+            const arrowY =
+                startY + (VISIBLE_QUESTS - 0.6) * styles.layout.rowSpacing
+            const centerX = startX + (doneX - startX) / 2
             downArrow = scene.add
-                .text(startX + 40, arrowY, '▼', {
+                .text(centerX, arrowY, '▼', {
                     fontSize: '32px',
                     color: '#fff',
                     fontFamily: styles.typography.fontFamily,
