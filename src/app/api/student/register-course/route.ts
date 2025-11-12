@@ -68,9 +68,14 @@ export async function POST(req: NextRequest) {
             success: true,
             message: 'Successfully registered for course',
         })
-    } catch (error: any) {
+    } catch (error: unknown) {
         // Handle duplicate registration error (composite primary key violation)
-        if (error?.code === '23505') {
+        if (
+            error &&
+            typeof error === 'object' &&
+            'code' in error &&
+            error.code === '23505'
+        ) {
             return NextResponse.json(
                 {error: 'Already registered for this course'},
                 {status: 409}
