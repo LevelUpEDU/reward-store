@@ -4,6 +4,7 @@ export interface ClassroomOption {
     label: string
     sceneKey?: string
     action?: () => void
+    courseId?: number
 }
 
 export class ClassroomSelector {
@@ -153,8 +154,11 @@ export class ClassroomSelector {
         this.close()
 
         if (selected.sceneKey) {
-            // Transition to the scene
-            this.scene.scene.start(selected.sceneKey)
+            // Transition to the scene with course data
+            this.scene.scene.start(selected.sceneKey, {
+                courseId: selected.courseId,
+                userEmail: this.scene.getUserEmail(),
+            })
         } else if (selected.action) {
             // Execute custom action
             selected.action()

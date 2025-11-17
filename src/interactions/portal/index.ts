@@ -8,7 +8,8 @@ export interface PortalConfig {
     height: number
     color?: number
     alpha?: number
-    classroomOptions: ClassroomOption[]
+    classroomOptions?: ClassroomOption[]
+    classroomOptionsLoader?: () => Promise<ClassroomOption[]>
 }
 
 export class PortalManager {
@@ -60,7 +61,7 @@ export class PortalManager {
             if (wasInside && !isOverlapping) {
                 this.portalStates.set(rect, false)
                 if (!this.classroomSelector.isVisible()) {
-                    this.classroomSelector.show(config.classroomOptions)
+                    this.showClassroomSelection(config)
                 }
             }
 
@@ -69,6 +70,29 @@ export class PortalManager {
                 this.portalStates.set(rect, false)
             }
         })
+    }
+
+    private async showClassroomSelection(config: PortalConfig): Promise<void> {
+        let options: ClassroomOption[] = []
+
+        if (config.classroomOptions) {
+            options = config.classroomOptions
+        } else if (config.classroomOptionsLoader) {
+            try {
+                options = await config.classroomOptionsLoader()
+            } catch (error) {
+                console.error('Failed to load classroom options:', error)
+                // Show error message or fallback
+                options = [
+                    {
+                        label: 'Error loading courses',
+                        action: () => console.error('Could not load courses'),
+                    },
+                ]
+            }
+        }
+
+        this.classroomSelector.show(options)
     }
 
     public getClassroomSelector(): ClassroomSelector {

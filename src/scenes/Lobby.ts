@@ -827,7 +827,7 @@ export class Lobby extends Scene {
         // Initialize portal manager
         this.portalManager = new PortalManager(this)
 
-        // Create classroom portal with selection options
+        // Create classroom portal with dynamic course loading
         this.portalManager.createPortal({
             x: 400,
             y: 400,
@@ -835,20 +835,56 @@ export class Lobby extends Scene {
             height: 64,
             color: 0x00ff00,
             alpha: 0.3,
-            classroomOptions: [
-                {
-                    label: 'Concurrent Programming',
-                    sceneKey: 'ClassroomScene',
-                },
-                {
-                    label: 'ISA',
-                    action: () => {
-                        console.log(
-                            'ISA classroom selected (not implemented yet)'
-                        )
-                    },
-                },
-            ],
+            classroomOptionsLoader: async () => {
+                const userEmail = this.getUserEmail()
+                if (!userEmail) {
+                    console.error('No user email available')
+                    return [
+                        {
+                            label: 'Error: No user logged in',
+                            action: () => console.error('No user email'),
+                        },
+                    ]
+                }
+
+                try {
+                    const response = await fetch(
+                        `/api/student/courses?email=${encodeURIComponent(userEmail)}`
+                    )
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch courses')
+                    }
+
+                    const data = await response.json()
+                    const courses = data.courses || []
+
+                    if (courses.length === 0) {
+                        return [
+                            {
+                                label: 'No courses enrolled',
+                                action: () =>
+                                    console.log('Student has no courses'),
+                            },
+                        ]
+                    }
+
+                    // Map courses to classroom options
+                    return courses.map((course: any) => ({
+                        label: course.title,
+                        sceneKey: 'ClassroomScene',
+                        courseId: course.id,
+                    }))
+                } catch (error) {
+                    console.error('Error loading courses:', error)
+                    return [
+                        {
+                            label: 'Error loading courses',
+                            action: () =>
+                                console.error('Failed to load courses'),
+                        },
+                    ]
+                }
+            },
         })
 
         // Add hello portal near classroom portal

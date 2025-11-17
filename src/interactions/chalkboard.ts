@@ -74,31 +74,43 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
     // Start loading animation
     const stopLoadingAnimation = createLoadingAnimation(scene, loadingText)
 
-    // Load and display quests (default courseId = 3)
-    // Prefer passing a student identity from env for dev flow
-    // Access process.env only when available (server-side or build-time). Avoid referencing
-    // `process` directly in the browser, which throws "process is not defined" at runtime.
-    let devStudent = 'zion_li@my.bcit.ca'
-    try {
-        if (typeof process !== 'undefined') {
-            const proc = process as unknown as
-                | {env?: Record<string, string | undefined>}
-                | undefined
-            const envEmail = proc?.env?.DEV_STUDENT_EMAIL
-            if (typeof envEmail === 'string' && envEmail.length > 0)
-                devStudent = envEmail
-        }
-    } catch {
-        // ignore - fallback to default email when process is not present in the runtime
-    }
-    // Pass user email to scene for claim button
-    // Define a type for scene with userEmail
-    interface SceneWithUser extends Phaser.Scene {
+    // Get courseId and userEmail from scene or use defaults
+    interface SceneWithCourseData extends Phaser.Scene {
+        courseId?: number
         userEmail?: string
+        getUserEmail?: () => string | undefined
     }
-    ;(scene as SceneWithUser).userEmail = devStudent
 
-    const {course, quests} = await loadQuests(3, devStudent)
+    const sceneWithData = scene as SceneWithCourseData
+
+    // Get courseId from scene or default to 3
+    const courseId = sceneWithData.courseId ?? 3
+
+    // Get user email from scene or getUserEmail method
+    let studentEmail = sceneWithData.userEmail
+    if (!studentEmail && sceneWithData.getUserEmail) {
+        studentEmail = sceneWithData.getUserEmail()
+    }
+
+    // Fallback to default email if still not found
+    if (!studentEmail) {
+        studentEmail = 'zion_li@my.bcit.ca'
+        try {
+            if (typeof process !== 'undefined') {
+                const proc = process as unknown as
+                    | {env?: Record<string, string | undefined>}
+                    | undefined
+                const envEmail = proc?.env?.DEV_STUDENT_EMAIL
+                if (typeof envEmail === 'string' && envEmail.length > 0)
+                    studentEmail = envEmail
+            }
+        } catch {
+            // ignore
+        }
+    }
+
+    console.log('Chalkboard loading quests for:', {courseId, studentEmail})
+    const {course, quests} = await loadQuests(courseId, studentEmail)
     const _doneStates: boolean[] = quests.map((q) => Boolean(q.done))
 
     // Stop loading animation and remove loading text
