@@ -23,8 +23,10 @@ export class ClassroomSelector {
     }
 
     public show(options: ClassroomOption[]): void {
-        // Prevent showing multiple times
-        if (this.visible) return
+        // Clean up any previous state first
+        if (this.visible) {
+            this.close()
+        }
 
         this.visible = true
         this.options = options
@@ -40,6 +42,10 @@ export class ClassroomSelector {
     private createUI(): void {
         const centerX = 960
         const centerY = 540
+
+        // Ensure arrays are clean
+        this.uiElements = []
+        this.optionTexts = []
 
         // Create semi-transparent background overlay
         this.background = this.scene.add.rectangle(
@@ -103,13 +109,18 @@ export class ClassroomSelector {
                 txt.setPadding(10, 5, 10, 5)
             } else {
                 txt.setColor('#ffffff')
-                txt.setBackgroundColor('')
-                txt.setPadding(0)
+                txt.setBackgroundColor('transparent')
+                txt.setPadding(0, 0, 0, 0)
             }
         })
     }
 
     private setupInput(): void {
+        // Remove any existing handler first to prevent stacking
+        if (this.keyboardHandler) {
+            this.scene.input.keyboard!.off('keydown', this.keyboardHandler)
+        }
+
         this.keyboardHandler = (event: KeyboardEvent) => {
             if (!this.visible) return
 
@@ -154,10 +165,17 @@ export class ClassroomSelector {
         this.close()
 
         if (selected.sceneKey) {
+            // Get user email - check if scene has a public method or property
+            let userEmail: string | undefined
+            const sceneWithEmail = this.scene as any
+            if (typeof sceneWithEmail.getUserEmail === 'function') {
+                userEmail = sceneWithEmail.getUserEmail()
+            }
+
             // Transition to the scene with course data
             this.scene.scene.start(selected.sceneKey, {
                 courseId: selected.courseId,
-                userEmail: this.scene.getUserEmail(),
+                userEmail: userEmail,
             })
         } else if (selected.action) {
             // Execute custom action
@@ -166,12 +184,16 @@ export class ClassroomSelector {
     }
 
     public close(): void {
-        if (!this.visible) return
-
         this.visible = false
 
         // Clean up UI elements
-        this.uiElements.forEach((element) => element.destroy())
+        this.uiElements.forEach((element) => {
+            if (element && !element.scene) {
+                // Already destroyed
+                return
+            }
+            element.destroy()
+        })
         this.uiElements = []
         this.optionTexts = []
 
@@ -181,8 +203,10 @@ export class ClassroomSelector {
             this.keyboardHandler = undefined
         }
 
-        // Unblock player movement
-        this.scene.interactionHandler.unblockMovement()
+        // Unblock player movement only if it was blocked
+        if (this.scene.interactionHandler) {
+            this.scene.interactionHandler.unblockMovement()
+        }
     }
 
     public isVisible(): boolean {
