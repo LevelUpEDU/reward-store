@@ -205,7 +205,16 @@ export function mountBoards(options: MountBoardsOptions) {
             state.boardQuestUI.destroyAllElements()
         }
         state.boardQuestUI = null
-        boardElements.forEach((el) => el.destroy())
+        boardElements.forEach((el) => {
+            try {
+                // Check if element still exists before destroying
+                if (el && el.scene) {
+                    el.destroy()
+                }
+            } catch {
+                /* ignore */
+            }
+        })
         boardElements.length = 0
     }
 

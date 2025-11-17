@@ -81,7 +81,7 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
         getUserEmail?: () => string | undefined
     }
 
-    const sceneWithData = scene as SceneWithCourseData
+    const sceneWithData = scene as unknown as SceneWithCourseData
 
     // Get courseId from scene or default to 3
     const courseId = sceneWithData.courseId ?? 3
@@ -188,7 +188,10 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
         try {
             elements.forEach((el) => {
                 try {
-                    el.destroy()
+                    // Check if element still exists and has not been destroyed
+                    if (el && el.scene) {
+                        el.destroy()
+                    }
                 } catch {
                     /* ignore */
                 }
@@ -219,7 +222,7 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
         const refreshQuests = async () => {
             try {
                 const {course: freshCourse, quests: freshQuests} =
-                    await loadQuests(3, devStudent)
+                    await loadQuests(courseId, studentEmail)
 
                 // Update title if course changed
                 if (freshCourse?.title) {
