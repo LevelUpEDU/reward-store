@@ -94,6 +94,25 @@ export class ClassroomSelector {
             txt.setOrigin(0.5)
             txt.setDepth(1001)
             txt.setScrollFactor(0)
+            txt.setInteractive({useHandCursor: true})
+
+            // Mouse hover events
+            txt.on('pointerover', () => {
+                if (this.visible) {
+                    this.selectedIndex = i
+                    this.updateSelection()
+                }
+            })
+
+            // Mouse click event
+            txt.on('pointerdown', () => {
+                if (this.visible) {
+                    this.selectedIndex = i
+                    this.updateSelection()
+                    this.selectOption()
+                }
+            })
+
             this.optionTexts.push(txt)
             this.uiElements.push(txt)
         })
@@ -102,15 +121,18 @@ export class ClassroomSelector {
     }
 
     private updateSelection(): void {
+        // Ensure we only update if we have valid text objects
+        if (!this.optionTexts || this.optionTexts.length === 0) return
+
         this.optionTexts.forEach((txt, i) => {
+            if (!txt || !txt.scene) return // Skip if destroyed
+
             if (i === this.selectedIndex) {
+                // Apply selected style - yellow text only
                 txt.setColor('#ffff00')
-                txt.setBackgroundColor('#333333')
-                txt.setPadding(10, 5, 10, 5)
             } else {
+                // Reset to default - white text
                 txt.setColor('#ffffff')
-                txt.setBackgroundColor('transparent')
-                txt.setPadding(0, 0, 0, 0)
             }
         })
     }
@@ -186,13 +208,22 @@ export class ClassroomSelector {
     public close(): void {
         this.visible = false
 
-        // Clean up UI elements
-        this.uiElements.forEach((element) => {
-            if (element && !element.scene) {
-                // Already destroyed
-                return
+        // Clean up UI elements - remove event listeners first
+        this.optionTexts.forEach((txt) => {
+            if (txt) {
+                txt.removeAllListeners()
+                txt.disableInteractive()
             }
-            element.destroy()
+        })
+
+        this.uiElements.forEach((element) => {
+            if (element) {
+                try {
+                    element.destroy()
+                } catch (e) {
+                    // Already destroyed
+                }
+            }
         })
         this.uiElements = []
         this.optionTexts = []
