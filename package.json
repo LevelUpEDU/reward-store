@@ -39,6 +39,7 @@
         "src/**/*.{ts,tsx,js,jsx,json,css,md}": [
             "prettier --write"
         ]
+        
     },
     "dependencies": {
         "@auth0/nextjs-auth0": "^4.11.1",
