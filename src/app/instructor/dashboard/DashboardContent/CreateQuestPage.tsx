@@ -4,6 +4,7 @@ import {useState, useEffect} from 'react'
 import {useAuth} from '@/app/hooks/useAuth'
 import {getCoursesByInstructor} from '@/db/queries/course'
 import {createQuest, getQuestById, updateQuest} from '@/db/queries/quest'
+import {toast} from 'sonner'
 
 type CreateQuestPageProps = {
     setActiveTab: (tab: string) => void
@@ -143,7 +144,7 @@ export default function CreateQuestPage({
                     )
                 }
 
-                alert('Quest updated successfully!')
+                toast('Quest updated successfully!')
             } else {
                 await createQuest({
                     courseId: parseInt(formData.courseId, 10),
@@ -153,7 +154,8 @@ export default function CreateQuestPage({
                     expirationDate: expirationDateValue,
                 })
 
-                alert('Quest created successfully!')
+                // alert('Quest created successfully!')
+                toast('Quest created successfully!')
             }
 
             setActiveTab('quests')
