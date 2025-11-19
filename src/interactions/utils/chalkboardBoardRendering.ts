@@ -141,11 +141,16 @@ export function renderQuestList(
         state.boardNav = createMenuNavigation({
             scene,
             itemCount: board.quests.length,
+            visibleCount:
+                state.boardQuestUI?.getVisibleCount?.() || board.quests.length,
             onSelectionChange: (i: number) =>
                 state.boardQuestUI && state.boardQuestUI.updateVisuals(i),
             onSelect: (i: number) =>
                 state.boardQuestUI && state.boardQuestUI.toggleDone(i),
             onClose: () => extendedCleanup(),
+            onScrollDown: () =>
+                state.boardQuestUI?.scrollWindowDown?.() || false,
+            onScrollUp: () => state.boardQuestUI?.scrollWindowUp?.() || false,
         })
 
         // Wire navigation to quest UI

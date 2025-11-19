@@ -20,7 +20,16 @@ export class Lobby extends Scene {
     private subScreenVisible = false
     private subScreenTitle?: Phaser.GameObjects.Text
     private subScreenList?: Phaser.GameObjects.Text[]
-    private subScreenBg?: Phaser.GameObjects.Rectangle
+
+    // Shop menu
+    private shopMap?: Phaser.Tilemaps.Tilemap
+    private shopLayer?: Phaser.Tilemaps.TilemapLayer | null
+    private shopVisible = false
+    private shopItems: Phaser.GameObjects.Text[] = []
+    private shopBuyButtons: Phaser.GameObjects.Text[] = []
+    private playerCoins = 1000 // Starting coins
+    private shopList?: string[] // Track shop items for this session
+    private isShop = false // Track if current subscreen is SHOP
 
     // Sub-Screen Background
     private subScreenMap?: Phaser.Tilemaps.Tilemap
@@ -33,18 +42,10 @@ export class Lobby extends Scene {
     private readonly MENU_POSITIONS = [
         {x: 940, y: 315}, // REWARDS
         {x: 880, y: 425}, // ACHIEVEMENTS
-        {x: 940, y: 540}, // BADGES
+        {x: 945, y: 540}, // BADGES
+        {x: 970, y: 650}, // SHOP
+        {x: 950, y: 765}, // LOGOUT
     ]
-
-    // Sample data for badges and rewards (replace with actual data source)
-    private playerData = {
-        badges: ['Math Master', 'Science Star', 'History Hero'], // Example badges
-        rewards: [
-            'Gold Star',
-            'Bonus Points: 500',
-            'Certificate of Excellence',
-        ], // Example rewards
-    }
 
     private static readonly CONFIG: MapConfig = {
         name: 'lobby',
@@ -159,19 +160,33 @@ export class Lobby extends Scene {
             'subScreenMap',
             '/assets/rewards/rewards_subscreen.json'
         )
+
+        // Load Shop Background Map
+        this.load.tilemapTiledJSON('shopMap', '/assets/rewards/shop.json')
+
+        // Shop Background Tilesets:
+        this.load.image('FrameMap', '/assets/tilemaps/FrameMap.png')
+        this.load.spritesheet(
+            'button_yellow_left',
+            '/assets/tilemaps/button_yellow_left.png',
+            {frameWidth: 32, frameHeight: 32}
+        )
+        this.load.image(
+            'button_yellow_right',
+            '/assets/tilemaps/button_yellow_right.png'
+        )
     }
 
     create(): void {
+        this.cleanUp()
         super.create()
         this.setCameraResolution()
         this.welcomeText()
         this.defineSceneTransitions()
-        // Add rewards map toggle
         this.setupRewardsOverlay()
-        // Add interactive object
         this.setupInteractiveObject()
-        // ---- WAIT FOR THE FONT -------------------------------------------------
-        // `this.cache.bitmapFont.exists` works for both .otf and bitmap fonts.
+
+        // ---- Wait For The Font
         if (!this.cache.bitmapFont.exists('MyCustomFont')) {
             // If for some reason the font didn’t load yet, wait one frame.
             this.time.delayedCall(0, () => this.fontReady())
@@ -180,17 +195,12 @@ export class Lobby extends Scene {
         }
     }
 
-    shutdown(): void {
-        this.upKey?.removeAllListeners()
-        this.downKey?.removeAllListeners()
-        this.enterKey?.removeAllListeners()
-        this.input.keyboard?.removeKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
-        this.input.keyboard?.off('keydown-ESC')
-        this.closeSubScreen()
-        this.subScreenLayer?.destroy()
+    private cleanUp(): void {
+        this.upKey = undefined
+        this.downKey = undefined
+        this.enterKey = undefined
         this.subScreenMap = undefined
-        this.subScreenLayer = undefined
-        super.shutdown?.()
+        this.escKey = undefined
     }
 
     private fontReady(): void {
@@ -222,6 +232,12 @@ export class Lobby extends Scene {
 
     private showRewardsOverlay(): void {
         // background UI
+
+        // DESTROY FIRST
+        if (this.rewardsMap) {
+            this.rewardsMap = undefined
+        }
+
         if (!this.rewardsMap) {
             this.rewardsMap = this.make.tilemap({key: 'rewardsMap'})
 
@@ -254,26 +270,21 @@ export class Lobby extends Scene {
             align: 'left' as const,
         }
 
-        // ---------- create headings (only once) ----------
-        if (this.menuItems.length === 0) {
-            const labels = ['REWARDS', 'ACHIEVEMENTS', 'BADGES']
+        // DESTROY OLD MENU ITEMS
+        this.menuItems.forEach((item) => item.destroy())
+        this.menuItems = []
 
-            labels.forEach((txt, i) => {
-                const pos = this.MENU_POSITIONS[i] || {x: 280, y: 160 + i * 120} // fallback
-                const item = this.add
-                    .text(pos.x, pos.y, txt, normalStyle)
-                    .setScrollFactor(0)
-                this.menuItems.push(item)
-            })
+        // ALWAYS RECREATE
+        const labels = ['REWARDS', 'ACHIEVEMENTS', 'BADGES', 'SHOP', 'LOGOUT']
+        labels.forEach((txt, i) => {
+            const pos = this.MENU_POSITIONS[i]
+            const item = this.add
+                .text(pos.x, pos.y, txt, normalStyle)
+                .setScrollFactor(0)
+            this.menuItems.push(item)
+        })
 
-            this.highlightSelected()
-        } else {
-            // already created → just show them
-            this.menuItems.forEach((t) => t.setVisible(true))
-            this.highlightSelected()
-        }
-
-        // ---------- keyboard navigation ----------
+        this.highlightSelected()
         this.setupMenuControls()
     }
 
@@ -351,9 +362,6 @@ export class Lobby extends Scene {
 
             const selected = this.menuItems[this.selectedIndex].text
             this.openSubScreen(selected)
-            console.log('Activated:', selected)
-            // ←←←  put your own logic here  →→→
-            // e.g. open a sub-screen, play a sound, etc.
         }
         this.enterKey.on('down', activate)
         spaceKey.on('down', activate)
@@ -394,6 +402,10 @@ export class Lobby extends Scene {
             this.subScreenLayer?.setVisible(true)
         }
 
+        if (category === 'SHOP') {
+            this.showShopBackground()
+        }
+
         // Title
         this.subScreenTitle = this.add
             .text(900, 250, category, {
@@ -407,30 +419,44 @@ export class Lobby extends Scene {
             .setDepth(1001)
 
         // Content list
-        const data = this.getDataForCategory(category)
-        this.subScreenList = []
+        if (category === 'LOGOUT') {
+            this.handleLogout()
+            return
+        }
 
-        const startY = 350
-        const lineHeight = 60
-        data.forEach((item, i) => {
-            const text = this.add
-                .text(770, startY + i * lineHeight, `• ${item}`, {
-                    fontFamily: 'CyberPunkFont',
-                    fontSize: '28px',
-                    color: '#ffffff',
-                    wordWrap: {width: 1000},
-                })
-                .setScrollFactor(0)
-                .setDepth(1001)
-            this.subScreenList!.push(text)
-        })
+        if (category === 'SHOP') {
+            this.renderShopItems()
+        } else {
+            const data = this.getDataForCategory(category)
+            this.subScreenList = []
+
+            const startY = 350
+            const lineHeight = 60
+            data.forEach((item, i) => {
+                const text = this.add
+                    .text(770, startY + i * lineHeight, `• ${item}`, {
+                        fontFamily: 'CyberPunkFont',
+                        fontSize: '28px',
+                        color: '#ffffff',
+                        wordWrap: {width: 1000},
+                    })
+                    .setScrollFactor(0)
+                    .setDepth(1001)
+                this.subScreenList!.push(text)
+            })
+        }
 
         // ---- ADD BACK BUTTON ----
+        this.isShop = category === 'SHOP'
+
+        const backX = this.isShop ? 1170 : 1015
+        const backColor = this.isShop ? '#00ffff' : '#ffd700' // Cyan for shop, red for others
+
         this.backText = this.add
-            .text(1015, 840, 'BACK', {
+            .text(backX, 840, 'BACK', {
                 fontFamily: 'CyberPunkFont',
                 fontSize: '48px',
-                color: '#ff4800',
+                color: backColor,
                 align: 'center',
             })
             .setScrollFactor(0)
@@ -447,13 +473,13 @@ export class Lobby extends Scene {
         this.backText.on('pointerover', () => {
             this.backText!.setColor('#ffffff')
             this.backText!.setStyle({
-                backgroundColor: '#00000088',
+                backgroundColor: this.isShop ? '#00ffff44' : '#ffd70044',
                 padding: {left: 12, right: 12, top: 4, bottom: 4},
             })
         })
         this.backText.on('pointerout', () => {
             if (!this.backSelected) {
-                this.backText!.setColor('#ffd700')
+                this.backText!.setColor(this.isShop ? '#00ffff' : '#ffd700')
                 this.backText!.setStyle({
                     backgroundColor: undefined,
                     padding: undefined,
@@ -472,6 +498,160 @@ export class Lobby extends Scene {
 
         // ---- RE-ENABLE MENU NAVIGATION WITH BACK SUPPORT ----
         this.setupSubScreenControls()
+    }
+
+    private showShopBackground(): void {
+        if (this.shopMap) {
+            this.shopLayer?.setVisible(true)
+            return
+        }
+
+        this.shopMap = this.make.tilemap({key: 'shopMap'})
+
+        const tilesets = [
+            this.shopMap.addTilesetImage('FrameMap'),
+            this.shopMap.addTilesetImage('button_yellow_left'),
+            this.shopMap.addTilesetImage('button_yellow_right'),
+        ]
+
+        // Type guard + explicit Boolean() = ESLint + TS happy
+        const validTilesets = tilesets.filter(
+            (t): t is Phaser.Tilemaps.Tileset => Boolean(t)
+        )
+
+        if (validTilesets.length !== 3) {
+            console.error('Shop tilesets missing!', tilesets.map(Boolean))
+            return
+        }
+
+        this.shopLayer = this.shopMap
+            .createLayer('base layer', validTilesets)
+            ?.setScrollFactor(0)
+            .setScale(2.5)
+            .setPosition(680, 100)
+            .setDepth(1000)
+    }
+
+    private renderShopItems(): void {
+        this.shopList = [
+            'Energy Drink - 100 coins',
+            'Double XP Boost - 250 coins',
+            'Golden Skin - 500 coins',
+            'Remove Ads - 1000 coins',
+        ]
+
+        const startY = 350
+        const lineHeight = 70
+        this.shopItems = []
+        this.shopBuyButtons = []
+
+        this.shopList.forEach((item, i) => {
+            const yPos = startY + i * lineHeight
+
+            // Shop item text (left side)
+            const itemText = this.add
+                .text(770, yPos, `• ${item}`, {
+                    fontFamily: 'CyberPunkFont',
+                    fontSize: '28px',
+                    color: '#ffffff',
+                    wordWrap: {width: 600}, // Limited width for buttons
+                })
+                .setScrollFactor(0)
+                .setDepth(1001)
+            this.shopItems.push(itemText)
+
+            // Extract price for this item
+            const price = parseInt(item.match(/(\d+)/)?.[1] || '0')
+
+            // Buy button (right side)
+            const buttonText = this.canAfford(price) ? 'BUY' : 'NOT ENOUGH'
+            const buttonColor = this.canAfford(price) ? '#00ff00' : '#ff4444'
+
+            const buyButton = this.add
+                .text(1500, yPos + 10, buttonText, {
+                    // +5 for vertical center
+                    fontFamily: 'CyberPunkFont',
+                    fontSize: '24px',
+                    color: '#ffffff',
+                    backgroundColor: buttonColor + '88',
+                    padding: {left: 15, right: 15, top: 8, bottom: 8},
+                })
+                .setScrollFactor(0)
+                .setDepth(1001)
+                .setOrigin(0.5, 0.5)
+
+            if (this.canAfford(price)) {
+                buyButton.setInteractive({useHandCursor: true})
+                buyButton.on('pointerdown', () => this.buyItem(i, price))
+                buyButton.on('pointerover', () =>
+                    buyButton.setStyle({backgroundColor: '#ffffff44'})
+                )
+                buyButton.on('pointerout', () =>
+                    buyButton.setStyle({backgroundColor: buttonColor + '88'})
+                )
+            }
+
+            this.shopBuyButtons.push(buyButton)
+        })
+
+        // Coins display
+        this.updateCoinsDisplay()
+    }
+
+    private canAfford(price: number): boolean {
+        return this.playerCoins >= price
+    }
+
+    private buyItem(index: number, price: number): void {
+        if (this.playerCoins >= price) {
+            this.playerCoins -= price
+
+            // Update button to "BOUGHT"
+            const button = this.shopBuyButtons[index]
+            button.setText('BOUGHT')
+            button.setStyle({
+                color: '#888888',
+                backgroundColor: '#44444488',
+            })
+            button.removeInteractive() // Disable clicks
+
+            // Real-Time Coins Update
+            this.updateCoinsDisplay()
+
+            // Visual feedback
+            button.setScale(1.2)
+            this.tweens.add({
+                targets: button,
+                scale: 1,
+                duration: 200,
+                yoyo: true,
+            })
+
+            console.log(`Bought: ${this.shopList![index]} (${price} coins)`)
+            console.log(`💰 Coins left: ${this.playerCoins}`)
+        }
+    }
+
+    private updateCoinsDisplay(): void {
+        // Destroy Old Coins Text
+        this.children.list.forEach((child) => {
+            if (
+                child instanceof Phaser.GameObjects.Text &&
+                child.text.includes('Coins:')
+            ) {
+                child.destroy()
+            }
+        })
+
+        // Create New Coins Text with Current playerCoins
+        this.add
+            .text(770, 760, `Coins: ${this.playerCoins}`, {
+                fontFamily: 'CyberPunkFont',
+                fontSize: '32px',
+                color: '#ffd700',
+            })
+            .setScrollFactor(0)
+            .setDepth(1001)
     }
 
     private setupSubScreenControls(): void {
@@ -527,14 +707,18 @@ export class Lobby extends Scene {
 
     private updateBackStyle(): void {
         if (!this.backText) return
+        const selectedColor = '#ffffff'
+        const selectedBg = this.isShop ? '#00ffff88' : '#ff480088'
+        const normalColor = this.isShop ? '#00ffff' : '#ffd700'
+
         if (this.backSelected) {
-            this.backText.setColor('#ffffff')
+            this.backText.setColor(selectedColor)
             this.backText.setStyle({
-                backgroundColor: '#00000088',
+                backgroundColor: selectedBg,
                 padding: {left: 12, right: 12, top: 4, bottom: 4},
             })
         } else {
-            this.backText.setColor('#ffd700')
+            this.backText.setColor(normalColor)
             this.backText.setStyle({
                 backgroundColor: undefined,
                 padding: undefined,
@@ -545,7 +729,11 @@ export class Lobby extends Scene {
     private getDataForCategory(category: string): string[] {
         switch (category) {
             case 'REWARDS':
-                return this.playerData.rewards
+                return [
+                    'Gold Star',
+                    'Bonus Points: 500',
+                    'Certificate of Excellence',
+                ]
             case 'ACHIEVEMENTS':
                 return [
                     'Completed Math Level 1',
@@ -555,7 +743,9 @@ export class Lobby extends Scene {
                     'Attendance Streak: 7 Days',
                 ]
             case 'BADGES':
-                return this.playerData.badges
+                return ['Math Master', 'Science Star', 'History Hero']
+            case 'SHOP':
+                return [] // Empty - handled by renderShopItems()
             default:
                 return ['No data available']
         }
@@ -570,11 +760,31 @@ export class Lobby extends Scene {
         this.subScreenList?.forEach((t) => t.destroy())
         this.backText?.destroy()
 
+        // Shop Cleanup:
+        this.shopItems.forEach((item) => item.destroy())
+        this.shopBuyButtons.forEach((btn) => btn.destroy())
+
+        //Destroy coins text too
+        this.children.list.forEach((child) => {
+            if (
+                child instanceof Phaser.GameObjects.Text &&
+                child.text.includes('Coins:')
+            ) {
+                child.destroy()
+            }
+        })
+
+        this.isShop = false
+        this.shopItems = []
+        this.shopBuyButtons = []
+        this.shopList = undefined
+
         this.subScreenTitle = undefined
         this.subScreenList = undefined
         this.backText = undefined
 
         this.subScreenLayer?.setVisible(false)
+        this.shopLayer?.setVisible(false)
 
         // Re-highlight main menu
         this.highlightSelected()
@@ -678,7 +888,7 @@ export class Lobby extends Scene {
     private transitionTo(targetSceneKey: string): void {
         this.cameras.main.fadeOut(800, 0, 0, 0)
         this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start(targetSceneKey)
+            this.scene.start(targetSceneKey, {restart: true})
         })
     }
 
@@ -710,13 +920,17 @@ export class Lobby extends Scene {
             console.error('Player or player.body is not defined')
         }
 
-        // Initialize interactKey if not already set
-        if (!this.interactKey) {
-            // Set up the 'E' key
-            this.interactKey = this.input.keyboard!.addKey(
-                Phaser.Input.Keyboard.KeyCodes.E
-            )
+        // DESTROY OLD KEY FIRST
+        if (this.interactKey) {
+            this.interactKey.off('down') // remove listeners
+            this.input.keyboard!.removeKey(this.interactKey)
         }
+
+        // ALWAYS CREATE FRESH
+        // Initialize interactKey if not already set
+        this.interactKey = this.input.keyboard!.addKey(
+            Phaser.Input.Keyboard.KeyCodes.E
+        )
 
         // Remove any existing listeners to prevent duplicates
         this.interactKey.off('down')
@@ -732,6 +946,42 @@ export class Lobby extends Scene {
                     this.hideRewardsOverlay()
                 }
             }
+        })
+    }
+
+    private handleLogout(): void {
+        const returnUrl = window.location.origin
+
+        console.log(
+            '%c[LOGOUT] User logged out successfully!',
+            'color: #ff4800; font-size: 20px; font-weight: bold;'
+        )
+
+        // Optional: Visual feedback
+        this.add
+            .text(960, 540, 'Logging out...', {
+                fontFamily: 'CyberPunkFont',
+                fontSize: '48px',
+                color: '#ff4800',
+                backgroundColor: '#000000dd',
+                padding: {left: 20, right: 20, top: 10, bottom: 10},
+            })
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(2000)
+
+        // Close rewards overlay
+        this.rewardsVisible = false
+        this.hideRewardsOverlay()
+
+        // Simulate delay + redirect (or real logout later)
+        this.time.delayedCall(1500, () => {
+            console.log(
+                '%c[REDIRECT] Going back to login screen...',
+                'color: #ffd700; font-size: 16px;'
+            )
+
+            window.location.href = `/auth/logout?returnTo=${returnUrl}`
         })
     }
 

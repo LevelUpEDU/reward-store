@@ -81,9 +81,9 @@ function RegisterContent() {
 
     return (
         <div>
-            <div id="ui">
-                <h1 id="title">LevelUp EDU</h1>
-                <div id="sign-in">
+            <div id="student-login-ui">
+                <h1 id="student-login-title">LevelUp EDU</h1>
+                <div id="student-login-sign-in">
                     {error ?
                         <div style={{textAlign: 'center', color: '#ffffff'}}>
                             <p>{error}</p>
