@@ -5,6 +5,7 @@ import {useAuth} from '@/app/hooks/useAuth'
 import {deleteQuest, getQuestsByInstructor} from '@/db/queries/quest'
 import {getSubmissionsByQuest, verifySubmission} from '@/db/queries/submission'
 import type {Quest, Submission} from '@/types/db'
+import {toast} from 'sonner'
 
 type QuestWithCourse = Quest & {
     course?: {
@@ -129,6 +130,7 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
 
         const confirmDelete =
             typeof window !== 'undefined' ?
+                // It's better to keep window.confirm for security reasons getting user confirmation here(instead of using toast)
                 window.confirm(
                     'Are you sure you want to delete this quest? This action cannot be undone.'
                 )
@@ -151,7 +153,8 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
                 setSelectedQuest(null)
             }
 
-            alert('Quest deleted successfully.')
+            // alert('Quest deleted successfully.')
+            toast('Quest deleted successfully.')
         } catch (err) {
             alert(
                 'Failed to delete quest: ' +
