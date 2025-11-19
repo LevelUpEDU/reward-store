@@ -60,6 +60,9 @@ importers:
       '@types/node':
         specifier: ^20.19.17
         version: 20.19.24
+      '@types/pg':
+        specifier: ^8.15.6
+        version: 8.15.6
       '@types/react':
         specifier: ^19.1.15
         version: 19.2.2
@@ -87,6 +90,15 @@ importers:
       lint-staged:
         specifier: ^16.2.3
         version: 16.2.6
+      pg:
+        specifier: ^8.16.3
+        version: 8.16.3
+      pg-promise:
+        specifier: ^12.3.0
+        version: 12.3.0(pg-query-stream@4.10.3(pg@8.16.3))
+      postgres:
+        specifier: ^3.4.7
+        version: 3.4.7
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
@@ -6750,8 +6762,7 @@ snapshots:
       get-intrinsic: 1.3.0
       is-array-buffer: 3.0.5
 
-  assert-options@0.8.3:
-    optional: true
+  assert-options@0.8.3: {}
 
   ast-types-flow@0.0.8: {}
 
@@ -8819,13 +8830,11 @@ snapshots:
   pg-cloudflare@1.2.7:
     optional: true
 
-  pg-connection-string@2.9.1:
-    optional: true
+  pg-connection-string@2.9.1: {}
 
   pg-cursor@2.15.3(pg@8.16.3):
     dependencies:
       pg: 8.16.3
-    optional: true
 
   pg-int8@1.0.1: {}
 
@@ -8842,13 +8851,11 @@ snapshots:
       pg-promise: 12.3.0(pg-query-stream@4.10.3(pg@8.16.3))
       postgres: 3.4.7
 
-  pg-minify@1.8.0:
-    optional: true
+  pg-minify@1.8.0: {}
 
   pg-pool@3.10.1(pg@8.16.3):
     dependencies:
       pg: 8.16.3
-    optional: true
 
   pg-promise@12.3.0(pg-query-stream@4.10.3(pg@8.16.3)):
     dependencies:
@@ -8859,7 +8866,6 @@ snapshots:
       spex: 4.1.0
     transitivePeerDependencies:
       - pg-native
-    optional: true
 
   pg-protocol@1.10.3: {}
 
@@ -8867,7 +8873,6 @@ snapshots:
     dependencies:
       pg: 8.16.3
       pg-cursor: 2.15.3(pg@8.16.3)
-    optional: true
 
   pg-types@2.2.0:
     dependencies:
@@ -8886,12 +8891,10 @@ snapshots:
       pgpass: 1.0.5
     optionalDependencies:
       pg-cloudflare: 1.2.7
-    optional: true
 
   pgpass@1.0.5:
     dependencies:
       split2: 4.2.0
-    optional: true
 
   pgsql-ast-parser@12.0.1:
     dependencies:
@@ -8944,8 +8947,7 @@ snapshots:
     dependencies:
       xtend: 4.0.2
 
-  postgres@3.4.7:
-    optional: true
+  postgres@3.4.7: {}
 
   prelude-ls@1.2.1: {}
 
@@ -9284,11 +9286,9 @@ snapshots:
 
   sourcemap-codec@1.4.8: {}
 
-  spex@4.1.0:
-    optional: true
+  spex@4.1.0: {}
 
-  split2@4.2.0:
-    optional: true
+  split2@4.2.0: {}
 
   sprintf-js@1.0.3: {}
 
