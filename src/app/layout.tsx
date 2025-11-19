@@ -1,4 +1,5 @@
 import './styles/globals.css'
+import {ToasterProvider} from './Toaster'
 
 export const metadata = {
     title: 'LevelUpEDU',
@@ -8,7 +9,10 @@ export const metadata = {
 export default function RootLayout({children}: {children: React.ReactNode}) {
     return (
         <html lang="en">
-            <body>{children}</body>
+            <body>
+                {children}
+                <ToasterProvider />
+            </body>
         </html>
     )
 }
