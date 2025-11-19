@@ -3,11 +3,13 @@
 import {useState, useEffect} from 'react'
 import {useAuth} from '@/app/hooks/useAuth'
 import {getCoursesByInstructor} from '@/db/queries/course'
-import {createQuest} from '@/db/queries/quest'
+import {createQuest, getQuestById, updateQuest} from '@/db/queries/quest'
+import {toast} from 'sonner'
 
 type CreateQuestPageProps = {
-    setActiveTab: (tab: 'quests') => void
+    setActiveTab: (tab: string) => void
     preselectedCourseId?: number
+    questIdToEdit?: number
 }
 
 type Course = {
@@ -19,6 +21,7 @@ type Course = {
 export default function CreateQuestPage({
     setActiveTab,
     preselectedCourseId,
+    questIdToEdit,
 }: CreateQuestPageProps) {
     const {email} = useAuth()
     const [formData, setFormData] = useState({
@@ -31,6 +34,9 @@ export default function CreateQuestPage({
     const [isLoading, setIsLoading] = useState(false)
     const [isLoadingCourses, setIsLoadingCourses] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [isInitializingQuest, setIsInitializingQuest] = useState(
+        Boolean(questIdToEdit)
+    )
 
     useEffect(() => {
         const fetchCourses = async () => {
@@ -49,6 +55,58 @@ export default function CreateQuestPage({
         fetchCourses()
     }, [email])
 
+    useEffect(() => {
+        if (!questIdToEdit || !email) {
+            setIsInitializingQuest(false)
+            return
+        }
+
+        let isMounted = true
+
+        const loadQuest = async () => {
+            setIsInitializingQuest(true)
+            try {
+                const quest = await getQuestById(questIdToEdit)
+
+                if (!quest) {
+                    throw new Error('Quest not found.')
+                }
+
+                if (!isMounted) return
+
+                const expirationValue =
+                    quest.expirationDate ?
+                        formatDateForInput(new Date(quest.expirationDate))
+                    :   ''
+
+                setFormData({
+                    title: quest.title,
+                    points: quest.points,
+                    courseId: quest.courseId.toString(),
+                    expirationDate: expirationValue,
+                })
+                setError(null)
+            } catch (err) {
+                if (!isMounted) return
+                setError(
+                    err instanceof Error ?
+                        err.message
+                    :   'Failed to load quest details.'
+                )
+            } finally {
+                if (isMounted) {
+                    setIsInitializingQuest(false)
+                }
+            }
+        }
+
+        loadQuest()
+
+        return () => {
+            isMounted = false
+        }
+    }, [questIdToEdit, email])
+
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
     ) => {
@@ -61,35 +119,63 @@ export default function CreateQuestPage({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!email) return
+        if (!email || !formData.courseId) return
 
         setIsLoading(true)
         setError(null)
 
         try {
-            await createQuest({
-                courseId: parseInt(formData.courseId),
-                createdBy: email,
-                title: formData.title,
-                points: formData.points,
-                expirationDate:
-                    formData.expirationDate ?
-                        new Date(formData.expirationDate)
-                    :   undefined,
-            })
+            const expirationDateValue =
+                formData.expirationDate ?
+                    new Date(formData.expirationDate)
+                :   undefined
 
-            alert('Quest created successfully!')
+            if (questIdToEdit) {
+                const updatedQuest = await updateQuest(questIdToEdit, email, {
+                    title: formData.title,
+                    points: formData.points,
+                    courseId: parseInt(formData.courseId, 10),
+                    expirationDate: expirationDateValue ?? null,
+                })
+
+                if (!updatedQuest) {
+                    throw new Error(
+                        'Unable to update quest. Please verify your access.'
+                    )
+                }
+
+                toast('Quest updated successfully!')
+            } else {
+                await createQuest({
+                    courseId: parseInt(formData.courseId, 10),
+                    createdBy: email,
+                    title: formData.title,
+                    points: formData.points,
+                    expirationDate: expirationDateValue,
+                })
+
+                // alert('Quest created successfully!')
+                toast('Quest created successfully!')
+            }
+
             setActiveTab('quests')
         } catch (error) {
-            setError(`An error occurred while creating the quest: ${error}`)
+            setError(
+                `An error occurred while ${
+                    questIdToEdit ? 'updating' : 'creating'
+                } the quest: ${error}`
+            )
         } finally {
             setIsLoading(false)
         }
     }
 
+    const heading = questIdToEdit ? 'Edit Quest' : 'Create a New Quest'
+    const isBusy = isLoading || isInitializingQuest
+
     return (
         <div className="page-content">
-            <h1 className="page-title">Create a New Quest</h1>
+            <h1 className="page-title">{heading}</h1>
             <div className="settings-section">
                 <form onSubmit={handleSubmit} className="settings-form">
                     <div className="form-group">
@@ -102,6 +188,7 @@ export default function CreateQuestPage({
                             onChange={handleChange}
                             placeholder="e.g., Complete the JavaScript Challenge"
                             required
+                            disabled={isBusy}
                         />
                     </div>
 
@@ -115,6 +202,7 @@ export default function CreateQuestPage({
                             onChange={handleChange}
                             min="1"
                             required
+                            disabled={isBusy}
                         />
                     </div>
 
@@ -126,7 +214,7 @@ export default function CreateQuestPage({
                             value={formData.courseId}
                             onChange={handleChange}
                             required
-                            disabled={isLoadingCourses}>
+                            disabled={isLoadingCourses || isBusy}>
                             <option value="">
                                 {isLoadingCourses ?
                                     'Loading courses...'
@@ -160,6 +248,7 @@ export default function CreateQuestPage({
                             type="datetime-local"
                             value={formData.expirationDate}
                             onChange={handleChange}
+                            disabled={isBusy}
                         />
                     </div>
 
@@ -167,12 +256,34 @@ export default function CreateQuestPage({
 
                     <button
                         type="submit"
-                        disabled={isLoading}
+                        disabled={
+                            isBusy ||
+                            !formData.title.trim() ||
+                            !formData.courseId ||
+                            formData.points <= 0
+                        }
                         className="save-btn">
-                        {isLoading ? 'Creating...' : 'Create Quest'}
+                        {questIdToEdit ?
+                            isLoading ?
+                                'Saving...'
+                            :   'Save Changes'
+                        : isLoading ?
+                            'Creating...'
+                        :   'Create Quest'}
                     </button>
                 </form>
             </div>
         </div>
     )
+}
+
+function formatDateForInput(date: Date) {
+    const pad = (value: number) => value.toString().padStart(2, '0')
+    const year = date.getFullYear()
+    const month = pad(date.getMonth() + 1)
+    const day = pad(date.getDate())
+    const hours = pad(date.getHours())
+    const minutes = pad(date.getMinutes())
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`
 }

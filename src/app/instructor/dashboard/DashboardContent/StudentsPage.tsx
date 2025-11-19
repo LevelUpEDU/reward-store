@@ -9,6 +9,7 @@ type Student = {
     name: string
     courseCount: number
     lastSignin?: Date | null
+    totalPoints?: number
 }
 
 const StudentsPage = () => {
@@ -59,6 +60,7 @@ const StudentsPage = () => {
                     <div>Email</div>
                     <div>Registered Courses</div>
                     <div>Last Sign In</div>
+                    <div>Total Points</div>
                 </div>
 
                 {students.length > 0 ?
@@ -74,6 +76,7 @@ const StudentsPage = () => {
                                     ).toLocaleDateString()
                                 :   'Never'}
                             </div>
+                            <div>{student.totalPoints ?? '-'}</div>
                         </div>
                     ))
                 :   <div className="empty-state">

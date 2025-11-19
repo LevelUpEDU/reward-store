@@ -3,6 +3,7 @@
 import {useState} from 'react'
 import {useAuth} from '@/app/hooks/useAuth'
 import {createCourse} from '@/db/queries/course'
+import {toast} from 'sonner'
 
 type CreateCoursePageProps = {
     setActiveTab: (tab: 'courses') => void
@@ -31,7 +32,9 @@ export default function CreateCoursePage({
                 description: description || undefined,
             })
 
-            alert('Course created successfully!')
+            // alert('Course created successfully!')
+            toast('Course created successfully!')
+
             setActiveTab('courses')
         } catch (err) {
             setError(`Failed to create the course: ${err}`)
