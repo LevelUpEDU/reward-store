@@ -7,6 +7,9 @@ export interface MenuNavigationConfig {
     onSelect?: (index: number) => void
     onClose?: () => void
     initialIndex?: number
+    onScrollDown?: () => boolean // Returns true if scrolled
+    onScrollUp?: () => boolean // Returns true if scrolled
+    visibleCount?: number // Number of items visible at once
 }
 
 export interface MenuNavigationControls {
@@ -31,6 +34,9 @@ export function createMenuNavigation(
         onSelect,
         onClose,
         initialIndex = 0,
+        onScrollDown,
+        onScrollUp,
+        visibleCount,
     } = config
 
     let selectedIndex = Phaser.Math.Clamp(initialIndex, 0, itemCount - 1)
@@ -60,10 +66,41 @@ export function createMenuNavigation(
     const moveSelection = (delta: number) => {
         const prev = selectedIndex
         if (itemCount <= 0) return
-        // wrap around
-        const raw = selectedIndex + delta
-        // mod that handles negative numbers
-        selectedIndex = ((raw % itemCount) + itemCount) % itemCount
+
+        // Handle windowed scrolling if callbacks are provided
+        if (visibleCount !== undefined) {
+            if (
+                delta > 0 &&
+                selectedIndex === visibleCount - 1 &&
+                onScrollDown
+            ) {
+                // At bottom of visible window, try to scroll down
+                const scrolled = onScrollDown()
+                if (scrolled) {
+                    // Keep selection at same position in window
+                    if (onSelectionChange) {
+                        onSelectionChange(selectedIndex)
+                    }
+                    return
+                }
+            } else if (delta < 0 && selectedIndex === 0 && onScrollUp) {
+                // At top of visible window, try to scroll up
+                const scrolled = onScrollUp()
+                if (scrolled) {
+                    // Keep selection at same position in window
+                    if (onSelectionChange) {
+                        onSelectionChange(selectedIndex)
+                    }
+                    return
+                }
+            }
+        }
+
+        // Normal navigation within visible items
+        const maxIndex =
+            visibleCount !== undefined ? visibleCount - 1 : itemCount - 1
+        selectedIndex = Phaser.Math.Clamp(selectedIndex + delta, 0, maxIndex)
+
         if (selectedIndex !== prev && onSelectionChange) {
             onSelectionChange(selectedIndex)
         }

@@ -38,6 +38,10 @@ export interface QuestUI {
     toggleDone: (i: number) => void
     navigationSetter?: (nav: MenuNavigationControls) => void
     destroyAllElements?: () => void
+    scrollWindowDown?: () => boolean
+    scrollWindowUp?: () => boolean
+    getWindowStart?: () => number
+    getVisibleCount?: () => number
 }
 
 export type MenuNav = MenuNavigationControls
@@ -72,6 +76,9 @@ export type CreateMenuNavArgs = {
     onSelectionChange?: (i: number) => void
     onSelect?: (i: number) => void
     onClose?: () => void
+    visibleCount?: number
+    onScrollDown?: () => boolean
+    onScrollUp?: () => boolean
 }
 
 export type CreateMenuNavFn = (args: CreateMenuNavArgs) => MenuNav

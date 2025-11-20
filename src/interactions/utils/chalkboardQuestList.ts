@@ -81,10 +81,22 @@ export function createQuestUI(
         navControls = c
     }
 
-    const toggleDone = (index: number) => {
+    const toggleDoneInternal = (index: number) => {
         if (!showDoneColumn) return
         const newVal = !doneStates[index]
-        const mark = doneMarks[index]
+        // Get the relative index in the visible window
+        const relativeIndex = index - windowStart
+        const mark = doneMarks[relativeIndex]
+
+        // If mark doesn't exist (quest not currently visible), we can't show UI feedback
+        if (!mark) {
+            console.warn(
+                '[chalkboardQuestList] Cannot toggle quest not in visible window',
+                {index, windowStart}
+            )
+            return
+        }
+
         if (newVal) {
             if (dialogActive) return
             dialogActive = true
@@ -99,7 +111,7 @@ export function createQuestUI(
             } catch {
                 /* ignore */
             }
-            const cy = startY + index * styles.layout.rowSpacing
+            const cy = startY + relativeIndex * styles.layout.rowSpacing
             const dlg = createConfirmDialog(scene, {
                 title: 'Quest marked as done?',
                 x: startX + (doneX - startX) / 2,
@@ -200,161 +212,226 @@ export function createQuestUI(
 
     const claimedStates: boolean[] = quests.map(() => false)
 
-    quests.forEach((q, i) => {
-        const y = startY + i * styles.layout.rowSpacing
-        const combined = `${i + 1}. ${q.title}   (${q.points}pts)`
-        const qt = scene.add
-            .text(startX, y, combined, {
-                fontSize: styles.typography.questSize,
-                color: styles.colors.questText,
-                fontFamily: styles.typography.fontFamily,
-            })
-            .setOrigin(0, 0.5)
-            .setDepth(styles.depths.text)
-        ellipsizeToFit(
-            qt,
-            combined,
-            doneX - styles.layout.maxTextMargin - startX
-        )
-        questTexts.push(qt)
+    // Windowed quest list - only show 5 quests at a time
+    let windowStart = 0
+    const VISIBLE_QUESTS = 5
+    const questHits: Phaser.GameObjects.Rectangle[] = []
+    let downArrow: Phaser.GameObjects.Text | null = null
+    let upArrow: Phaser.GameObjects.Text | null = null
 
-        const hitWidth = Math.max(doneX + 24 - startX, 120)
-        const hit = scene.add.rectangle(
-            startX + hitWidth / 2,
-            y,
-            hitWidth,
-            styles.layout.rowSpacing * 0.9,
-            0,
-            0
-        )
-        hit.setInteractive({cursor: 'pointer'}).setDepth(
-            styles.depths.background
-        )
+    function renderQuestWindow() {
+        // Clear existing quest elements
+        questTexts.forEach((qt) => qt.destroy())
+        doneMarks.forEach((dm) => dm.destroy())
+        questHits.forEach((hit) => hit.destroy())
+        if (downArrow) {
+            downArrow.destroy()
+            downArrow = null
+        }
+        if (upArrow) {
+            upArrow.destroy()
+            upArrow = null
+        }
+        questTexts.length = 0
+        doneMarks.length = 0
+        questHits.length = 0
 
-        if (showDone) {
-            const tick = scene.add
-                .text(doneX, y, '✓', {
-                    fontSize: `${Math.round(styles.selector.size * 1.6)}px`,
-                    color: styles.colors.tickMark,
+        // Render visible quests
+        const endIndex = Math.min(windowStart + VISIBLE_QUESTS, quests.length)
+        for (let idx = 0; idx < endIndex - windowStart; idx++) {
+            const i = windowStart + idx
+            const q = quests[i]
+            const y = startY + idx * styles.layout.rowSpacing
+            const combined = `${i + 1}. ${q.title}   (${q.points}pts)`
+            const qt = scene.add
+                .text(startX, y, combined, {
+                    fontSize: styles.typography.questSize,
+                    color: styles.colors.questText,
                     fontFamily: styles.typography.fontFamily,
                 })
-                .setOrigin(0.5)
-                .setDepth(styles.depths.tickMark)
-                .setVisible(doneStates[i])
+                .setOrigin(0, 0.5)
+                .setDepth(styles.depths.text)
+            ellipsizeToFit(
+                qt,
+                combined,
+                doneX - styles.layout.maxTextMargin - startX
+            )
+            questTexts.push(qt)
 
-            doneMarks.push(tick)
-            elements.push(qt, hit, tick)
+            const hitWidth = Math.max(doneX + 24 - startX, 120)
+            const hit = scene.add.rectangle(
+                startX + hitWidth / 2,
+                y,
+                hitWidth,
+                styles.layout.rowSpacing * 0.9,
+                0,
+                0
+            )
+            hit.setInteractive({cursor: 'pointer'}).setDepth(
+                styles.depths.background
+            )
+            questHits.push(hit)
 
-            const handleToggleClick = (
-                _pointer: Phaser.Input.Pointer,
-                _localX: number,
-                _localY: number,
-                event: Phaser.Types.Input.EventData
-            ) => {
-                event.stopPropagation()
-                updateVisuals(i)
-                toggleDone(i)
-            }
-            qt.setInteractive({cursor: 'pointer'})
-            qt.on('pointerover', () => {
-                if (!dialogActive) updateVisuals(i)
-            })
-            qt.on('pointerdown', handleToggleClick)
-            hit.on('pointerover', () => {
-                if (!dialogActive) updateVisuals(i)
-            })
-            hit.on('pointerdown', handleToggleClick)
-        } else {
-            elements.push(qt, hit)
-            qt.setInteractive({cursor: 'pointer'})
-            qt.on('pointerover', () => {
-                if (!dialogActive) updateVisuals(i)
-            })
-            const handleSelectClick = (
-                _p: Phaser.Input.Pointer,
-                _lx: number,
-                _ly: number,
-                event: Phaser.Types.Input.EventData
-            ) => {
-                event.stopPropagation()
-                updateVisuals(i)
-            }
-            qt.on('pointerdown', handleSelectClick)
-            hit.on('pointerover', () => {
-                if (!dialogActive) updateVisuals(i)
-            })
-            hit.on('pointerdown', handleSelectClick)
-        }
-
-        // Add claim button or claimed label for Approved board
-        let claimBtn: Phaser.GameObjects.Text | null = null
-        let claimedLabel: Phaser.GameObjects.Text | null = null
-        if (boardName === 'Approved' && q.submissionId && userEmail) {
-            const isClaimed =
-                Array.isArray(claimedSubmissionIds) &&
-                claimedSubmissionIds.includes(q.submissionId)
-            if (isClaimed) {
-                claimedLabel = scene.add
-                    .text(doneX - 72, y, 'Claimed', {
-                        fontSize: styles.typography.questSize,
-                        color: '#bdbdbd',
+            if (showDone) {
+                const tick = scene.add
+                    .text(doneX, y, '✓', {
+                        fontSize: `${Math.round(styles.selector.size * 1.6)}px`,
+                        color: styles.colors.tickMark,
                         fontFamily: styles.typography.fontFamily,
                     })
-                    .setOrigin(0, 0.5)
-                    .setDepth(styles.depths.text + 2)
-                elements.push(claimedLabel)
+                    .setOrigin(0.5)
+                    .setDepth(styles.depths.tickMark)
+                    .setVisible(doneStates[i])
+
+                doneMarks.push(tick)
+                elements.push(qt, hit, tick)
+
+                const handleToggleClick = (
+                    _pointer: Phaser.Input.Pointer,
+                    _localX: number,
+                    _localY: number,
+                    event: Phaser.Types.Input.EventData
+                ) => {
+                    event.stopPropagation()
+                    updateVisuals(idx)
+                    toggleDoneInternal(i)
+                }
+                qt.setInteractive({cursor: 'pointer'})
+                qt.on('pointerover', () => {
+                    if (!dialogActive) updateVisuals(idx)
+                })
+                qt.on('pointerdown', handleToggleClick)
+                hit.on('pointerover', () => {
+                    if (!dialogActive) updateVisuals(idx)
+                })
+                hit.on('pointerdown', handleToggleClick)
             } else {
-                claimBtn = scene.add
-                    .text(doneX - 72, y, 'Claim', {
-                        fontSize: styles.typography.questSize,
-                        color: '#fff',
-                        backgroundColor: '#2e7d32',
-                        fontFamily: styles.typography.fontFamily,
-                        padding: {left: 12, right: 12, top: 2, bottom: 2},
-                    })
-                    .setOrigin(0, 0.5)
-                    .setDepth(styles.depths.text + 2)
-                    .setInteractive({cursor: 'pointer'})
-                claimBtn.on('pointerdown', async () => {
-                    claimBtn?.setText('...')
-                    try {
-                        const res = await fetch('/api/transactions', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                email: userEmail,
-                                points: q.points,
-                                submissionId: q.submissionId,
-                            }),
+                elements.push(qt, hit)
+                qt.setInteractive({cursor: 'pointer'})
+                qt.on('pointerover', () => {
+                    if (!dialogActive) updateVisuals(idx)
+                })
+                const handleSelectClick = (
+                    _p: Phaser.Input.Pointer,
+                    _lx: number,
+                    _ly: number,
+                    event: Phaser.Types.Input.EventData
+                ) => {
+                    event.stopPropagation()
+                    updateVisuals(idx)
+                }
+                qt.on('pointerdown', handleSelectClick)
+                hit.on('pointerover', () => {
+                    if (!dialogActive) updateVisuals(idx)
+                })
+                hit.on('pointerdown', handleSelectClick)
+            }
+
+            // Add claim button or claimed label for Approved board
+            let claimBtn: Phaser.GameObjects.Text | null = null
+            let claimedLabel: Phaser.GameObjects.Text | null = null
+            if (boardName === 'Approved' && q.submissionId && userEmail) {
+                const isClaimed =
+                    Array.isArray(claimedSubmissionIds) &&
+                    claimedSubmissionIds.includes(q.submissionId)
+                if (isClaimed) {
+                    claimedLabel = scene.add
+                        .text(doneX - 72, y, 'Claimed', {
+                            fontSize: styles.typography.questSize,
+                            color: '#bdbdbd',
+                            fontFamily: styles.typography.fontFamily,
                         })
-                        if (res.ok) {
-                            claimedStates[i] = true
-                            claimBtn?.destroy()
-                            claimedLabel = scene.add
-                                .text(doneX - 72, y, 'Claimed', {
-                                    fontSize: styles.typography.questSize,
-                                    color: '#bdbdbd',
-                                    fontFamily: styles.typography.fontFamily,
-                                })
-                                .setOrigin(0, 0.5)
-                                .setDepth(styles.depths.text + 2)
-                            elements.push(claimedLabel)
-                            console.warn(
-                                '[chalkboardQuestList] Claimed label pushed to elements:',
-                                claimedLabel
-                            )
-                            console.warn(elements)
-                        } else {
+                        .setOrigin(0, 0.5)
+                        .setDepth(styles.depths.text + 2)
+                    elements.push(claimedLabel)
+                } else {
+                    claimBtn = scene.add
+                        .text(doneX - 72, y, 'Claim', {
+                            fontSize: styles.typography.questSize,
+                            color: '#fff',
+                            backgroundColor: '#2e7d32',
+                            fontFamily: styles.typography.fontFamily,
+                            padding: {left: 12, right: 12, top: 2, bottom: 2},
+                        })
+                        .setOrigin(0, 0.5)
+                        .setDepth(styles.depths.text + 2)
+                        .setInteractive({cursor: 'pointer'})
+                    claimBtn.on('pointerdown', async () => {
+                        claimBtn?.setText('...')
+                        try {
+                            const res = await fetch('/api/transactions', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    email: userEmail,
+                                    points: q.points,
+                                    submissionId: q.submissionId,
+                                }),
+                            })
+                            if (res.ok) {
+                                claimedStates[i] = true
+                                claimBtn?.destroy()
+                                claimedLabel = scene.add
+                                    .text(doneX - 72, y, 'Claimed', {
+                                        fontSize: styles.typography.questSize,
+                                        color: '#bdbdbd',
+                                        fontFamily:
+                                            styles.typography.fontFamily,
+                                    })
+                                    .setOrigin(0, 0.5)
+                                    .setDepth(styles.depths.text + 2)
+                                elements.push(claimedLabel)
+                                console.warn(
+                                    '[chalkboardQuestList] Claimed label pushed to elements:',
+                                    claimedLabel
+                                )
+                                console.warn(elements)
+                            } else {
+                                claimBtn?.setText('Claim')
+                            }
+                        } catch {
                             claimBtn?.setText('Claim')
                         }
-                    } catch {
-                        claimBtn?.setText('Claim')
-                    }
-                })
-                elements.push(claimBtn)
+                    })
+                    elements.push(claimBtn)
+                }
             }
         }
-    })
+
+        // Show up arrow if there are more quests above
+        if (windowStart > 0) {
+            const arrowY = startY - 12 // Position above the first quest
+            const centerX = startX + (doneX - startX) / 2
+            upArrow = scene.add
+                .text(centerX, arrowY, '▲', {
+                    fontSize: '32px',
+                    color: '#fff',
+                    fontFamily: styles.typography.fontFamily,
+                })
+                .setOrigin(0.5, 1) // Anchor at bottom center
+                .setDepth(styles.depths.text + 3)
+            elements.push(upArrow)
+        }
+
+        // Show down arrow if there are more quests below
+        if (windowStart + VISIBLE_QUESTS < quests.length) {
+            const arrowY =
+                startY + (VISIBLE_QUESTS - 0.6) * styles.layout.rowSpacing
+            const centerX = startX + (doneX - startX) / 2
+            downArrow = scene.add
+                .text(centerX, arrowY, '▼', {
+                    fontSize: '32px',
+                    color: '#fff',
+                    fontFamily: styles.typography.fontFamily,
+                })
+                .setOrigin(0.5, 0)
+                .setDepth(styles.depths.text + 3)
+            elements.push(downArrow)
+        }
+    }
+
+    // Initial render
+    renderQuestWindow()
 
     // Debug: log destruction of all elements
     function destroyAllElements() {
@@ -367,12 +444,50 @@ export function createQuestUI(
         elements.length = 0
     }
 
+    // Scroll window functions for navigation
+    function scrollWindowDown() {
+        if (windowStart + VISIBLE_QUESTS < quests.length) {
+            windowStart++
+            renderQuestWindow()
+            return true
+        }
+        return false
+    }
+
+    function scrollWindowUp() {
+        if (windowStart > 0) {
+            windowStart--
+            renderQuestWindow()
+            return true
+        }
+        return false
+    }
+
+    function getWindowStart() {
+        return windowStart
+    }
+
+    function getVisibleCount() {
+        return Math.min(VISIBLE_QUESTS, quests.length - windowStart)
+    }
+
+    function getAbsoluteIndex(relativeIndex: number): number {
+        return windowStart + relativeIndex
+    }
+
     return {
         elements,
         updateVisuals,
-        toggleDone,
+        toggleDone: (relativeIndex: number) => {
+            const absoluteIndex = getAbsoluteIndex(relativeIndex)
+            toggleDoneInternal(absoluteIndex)
+        },
         navigationSetter: setNavigationControls,
         isDialogActive: () => dialogActive,
         destroyAllElements,
+        scrollWindowDown,
+        scrollWindowUp,
+        getWindowStart,
+        getVisibleCount,
     }
 }
