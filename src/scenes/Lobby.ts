@@ -12,6 +12,7 @@ export class Lobby extends Scene {
         | Phaser.GameObjects.Rectangle
     private escKey?: Phaser.Input.Keyboard.Key
     // private portalCollisionGroup?: Phaser.Physics.Arcade.StaticGroup // DISABLED: Commented out for now
+    private keypadInteractionZone?: Phaser.GameObjects.Rectangle
 
     // Navigation
     private menuItems: Phaser.GameObjects.Text[] = []
@@ -935,28 +936,99 @@ export class Lobby extends Scene {
         helloPortal.setDisplaySize(64, 64)
         helloPortal.setDepth(0) // Behind player so player walks over it
 
-        // Create interaction zone (like chalkboard)
+        // Create interaction zone with padding (like createInteractionFromTiled does)
+        const interactionPadding = 20
         const interactionZone = this.add.rectangle(
             500,
             400,
-            64,
-            64,
+            64 + interactionPadding * 2, // Image size + padding
+            64 + interactionPadding * 2,
             0x00ff00,
-            0
+            0 // Invisible
         )
         this.physics.add.existing(interactionZone, true)
+        interactionZone.setInteractive() // Make it clickable
 
         // Set interaction data (like chalkboard)
         const config = {
             name: 'Course Code Entry',
             type: 'keypad',
-            tooltip: 'Press E to enter course code',
+            tooltip: 'Click to open',
             canInteract: true,
         }
         interactionZone.setData('config', config)
 
-        // Add to interaction group
+        // Add to interaction group - this automatically handles overlap detection
         this.interactionHandler.interactionGroup.add(interactionZone)
+
+        // The interaction handler's overlap might not fire continuously, so add our own
+        // to ensure currentInteractionObject is always set when overlapping
+        this.physics.add.overlap(
+            this.player,
+            interactionZone,
+            () => {
+                // Continuously set currentInteractionObject when overlapping
+                const handler = this.interactionHandler as any
+                // Directly set it and show prompt - don't rely on handleInteraction's check
+                handler.currentInteractionObject = interactionZone
+                handler.showNameTag(
+                    config.name,
+                    interactionZone.x,
+                    interactionZone.y - interactionZone.height / 2 - 30
+                )
+                handler.showInteractionPrompt(
+                    config.tooltip || 'Click to open',
+                    interactionZone.x,
+                    interactionZone.y + interactionZone.height / 2 + 10
+                )
+            },
+            () => {
+                // processCallback - check if still overlapping, clear if not
+                if (this.keypadInteractionZone && this.player) {
+                    const playerBounds = this.player.getBounds()
+                    const zoneBounds = this.keypadInteractionZone.getBounds()
+                    if (
+                        !Phaser.Geom.Rectangle.Overlaps(
+                            playerBounds,
+                            zoneBounds
+                        )
+                    ) {
+                        const handler = this.interactionHandler as any
+                        if (
+                            handler.currentInteractionObject ===
+                            this.keypadInteractionZone
+                        ) {
+                            handler.hideNameTag()
+                        }
+                    }
+                }
+                return true // Always check every frame
+            },
+            this
+        )
+
+        // Store reference for cleanup
+        this.keypadInteractionZone = interactionZone
+
+        // Create collision box for the image itself (so player stops when hitting it)
+        // This is separate from the interaction zone, just like in Classroom
+        if (!this.collisionGroup) {
+            this.collisionGroup = this.physics.add.staticGroup()
+            this.physics.add.collider(this.player, this.collisionGroup)
+        }
+
+        // Create collision box at the image position (64x64, no padding)
+        const collisionRect = this.add.rectangle(
+            500,
+            400,
+            64,
+            64,
+            0xff0000, // red for debug (invisible)
+            0 // invisible
+        )
+        collisionRect.setOrigin(0.5, 0.5)
+        this.physics.add.existing(collisionRect, true)
+        this.collisionGroup.add(collisionRect)
     }
 
     private transitionTo(targetSceneKey: string): void {
