@@ -1,5 +1,6 @@
 import {Scene} from '@/scenes/Scene'
 import type {MapConfig} from '@/types'
+import {createTransaction, getRewardsByCourseWithStats} from '@/db'
 // import {createCollisionBorders} from '@/utils/physics' // DISABLED: Commented out for now
 
 export class Lobby extends Scene {
@@ -32,7 +33,7 @@ export class Lobby extends Scene {
     private shopVisible = false
     private shopItems: Phaser.GameObjects.Text[] = []
     private shopBuyButtons: Phaser.GameObjects.Text[] = []
-    private playerCoins = 1000 // Starting coins
+    private playerCoins = 0 // Starting coins
     private shopList?: string[] // Track shop items for this session
     private isShop = false // Track if current subscreen is SHOP
 
@@ -58,7 +59,7 @@ export class Lobby extends Scene {
         tilesets: [
             {
                 name: 'carpet_spritesheet',
-                imagePath: '/assets/tilemaps/carpet spritesheet.png',
+                imagePath: '/assets/tilemaps/carpet_spritesheet.png',
                 key: 'groundLayer',
             },
             {
@@ -206,6 +207,26 @@ export class Lobby extends Scene {
         this.defineSceneTransitions()
         this.setupRewardsOverlay()
         this.setupInteractiveObject()
+
+        // Fetch coins using the existing reward system
+        const userEmail = this.getUserEmail()
+
+        if (this.rewardPointsUI) {
+            this.rewardPointsUI.fetchAndUpdatePoints(userEmail).then((data) => {
+                this.playerCoins = data.coins ?? data.points ?? 0
+                console.log(
+                    '%cCoins loaded from server:',
+                    'color: gold; font-size: 16px;',
+                    this.playerCoins
+                )
+
+                // If shop is already open, refresh it
+                if (this.subScreenVisible && this.isShop) {
+                    this.updateCoinsDisplay()
+                    this.renderShopItems() // updates BUY buttons
+                }
+            })
+        }
 
         // ---- Wait For The Font
         if (!this.cache.bitmapFont.exists('MyCustomFont')) {
@@ -555,103 +576,193 @@ export class Lobby extends Scene {
             .setDepth(1000)
     }
 
-    private renderShopItems(): void {
-        this.shopList = [
-            'Energy Drink - 100 coins',
-            'Double XP Boost - 250 coins',
-            'Golden Skin - 500 coins',
-            'Remove Ads - 1000 coins',
-        ]
-
-        const startY = 350
-        const lineHeight = 70
+    private async renderShopItems(): Promise<void> {
+        // Clean previous - now destroys EVERYTHING
+        this.shopItems.forEach((i) => i.destroy())
+        this.shopBuyButtons.forEach((b) => b.destroy())
         this.shopItems = []
         this.shopBuyButtons = []
 
-        this.shopList.forEach((item, i) => {
-            const yPos = startY + i * lineHeight
+        const loading = this.add
+            .text(900, 400, 'Loading shop...', {
+                fontFamily: 'CyberPunkFont',
+                fontSize: '36px',
+                color: '#ffd700',
+            })
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1001)
+        this.shopItems.push(loading) // Track loading text too!
 
-            // Shop item text (left side)
-            const itemText = this.add
-                .text(770, yPos, `• ${item}`, {
-                    fontFamily: 'CyberPunkFont',
-                    fontSize: '28px',
-                    color: '#ffffff',
-                    wordWrap: {width: 600}, // Limited width for buttons
-                })
-                .setScrollFactor(0)
-                .setDepth(1001)
-            this.shopItems.push(itemText)
+        try {
+            const rewards = await getRewardsByCourseWithStats(19)
+            const available = rewards.filter((r) => r.isAvailable)
 
-            // Extract price for this item
-            const price = parseInt(item.match(/(\d+)/)?.[1] || '0')
+            loading.destroy()
+            this.shopItems = this.shopItems.filter((t) => t !== loading) // remove loading
 
-            // Buy button (right side)
-            const buttonText = this.canAfford(price) ? 'BUY' : 'NOT ENOUGH'
-            const buttonColor = this.canAfford(price) ? '#00ff00' : '#ff4444'
-
-            const buyButton = this.add
-                .text(1500, yPos + 10, buttonText, {
-                    // +5 for vertical center
-                    fontFamily: 'CyberPunkFont',
-                    fontSize: '24px',
-                    color: '#ffffff',
-                    backgroundColor: buttonColor + '88',
-                    padding: {left: 15, right: 15, top: 8, bottom: 8},
-                })
-                .setScrollFactor(0)
-                .setDepth(1001)
-                .setOrigin(0.5, 0.5)
-
-            if (this.canAfford(price)) {
-                buyButton.setInteractive({useHandCursor: true})
-                buyButton.on('pointerdown', () => this.buyItem(i, price))
-                buyButton.on('pointerover', () =>
-                    buyButton.setStyle({backgroundColor: '#ffffff44'})
-                )
-                buyButton.on('pointerout', () =>
-                    buyButton.setStyle({backgroundColor: buttonColor + '88'})
-                )
+            if (available.length === 0) {
+                const noItems = this.add
+                    .text(900, 400, 'No items in shop yet!', {
+                        fontFamily: 'CyberPunkFont',
+                        fontSize: '32px',
+                        color: '#ff6666',
+                    })
+                    .setOrigin(0.5)
+                    .setScrollFactor(0)
+                    .setDepth(1001)
+                this.shopItems.push(noItems)
+                return
             }
 
-            this.shopBuyButtons.push(buyButton)
-        })
+            available.forEach((entry, i) => {
+                const {reward} = entry
+                const y = 350 + i * 90
 
-        // Coins display
-        this.updateCoinsDisplay()
+                // Track ALL texts in this.shopItems
+                const nameText = this.add
+                    .text(770, y, reward.name, {
+                        fontFamily: 'CyberPunkFont',
+                        fontSize: '32px',
+                        color: '#ffffff',
+                        wordWrap: {width: 650},
+                    })
+                    .setScrollFactor(0)
+                    .setDepth(1001)
+                this.shopItems.push(nameText)
+
+                const costText = this.add
+                    .text(770, y + 35, `${reward.cost} coins`, {
+                        fontFamily: 'CyberPunkFont',
+                        fontSize: '24px',
+                        color: '#ffff00',
+                    })
+                    .setScrollFactor(0)
+                    .setDepth(1001)
+                this.shopItems.push(costText)
+
+                // Stock text (if limited)
+                if (reward.quantityLimit !== null) {
+                    const stockText = this.add
+                        .text(770, y + 60, `Left: ${entry.available}`, {
+                            fontFamily: 'CyberPunkFont',
+                            fontSize: '20px',
+                            color: entry.available! > 3 ? '#88ff88' : '#ff8888',
+                        })
+                        .setScrollFactor(0)
+                        .setDepth(1001)
+                    this.shopItems.push(stockText)
+                }
+
+                // Buy button (already tracked in shopBuyButtons)
+                const canBuy = this.playerCoins >= reward.cost
+                const btn = this.add
+                    .text(1500, y + 25, canBuy ? 'BUY' : 'NOT ENOUGH', {
+                        fontFamily: 'CyberPunkFont',
+                        fontSize: '28px',
+                        color: '#ffffff',
+                        backgroundColor: canBuy ? '#00ff0088' : '#ff444488',
+                        padding: {left: 20, right: 20, top: 10, bottom: 10},
+                    })
+                    .setOrigin(0.5)
+                    .setScrollFactor(0)
+                    .setDepth(1001)
+
+                if (canBuy) {
+                    btn.setInteractive({useHandCursor: true})
+                    btn.on('pointerdown', () =>
+                        this.buyItem(reward.id, reward.cost)
+                    )
+                    btn.on('pointerover', () =>
+                        btn.setStyle({backgroundColor: '#ffffff44'})
+                    )
+                    btn.on('pointerout', () =>
+                        btn.setStyle({backgroundColor: '#00ff0088'})
+                    )
+                }
+
+                this.shopBuyButtons.push(btn)
+            })
+
+            this.updateCoinsDisplay()
+        } catch (err) {
+            console.error('Failed to load shop:', err)
+            loading.setText('Error loading shop').setColor('#ff0000')
+        }
     }
 
     private canAfford(price: number): boolean {
         return this.playerCoins >= price
     }
 
-    private buyItem(index: number, price: number): void {
-        if (this.playerCoins >= price) {
-            this.playerCoins -= price
+    private async buyItem(rewardId: number, price: number): Promise<void> {
+        if (this.playerCoins < price) return
 
-            // Update button to "BOUGHT"
-            const button = this.shopBuyButtons[index]
-            button.setText('BOUGHT')
-            button.setStyle({
-                color: '#888888',
-                backgroundColor: '#44444488',
+        const email = this.getUserEmail()
+        if (!email) {
+            alert('Not logged in!')
+            return
+        }
+
+        // Optimistic update
+        this.playerCoins -= price
+        this.updateCoinsDisplay()
+
+        try {
+            // - Deducts points
+            await createTransaction({
+                email,
+                points: -price,
+                submissionId: 151,
             })
-            button.removeInteractive() // Disable clicks
 
-            // Real-Time Coins Update
-            this.updateCoinsDisplay()
+            // Success feedback
+            const successText = this.add
+                .text(960, 540, 'PURCHASED!', {
+                    fontFamily: 'CyberPunkFont',
+                    fontSize: '56px',
+                    color: '#00ff00',
+                    stroke: '#00ff00',
+                    strokeThickness: 8,
+                })
+                .setOrigin(0.5)
+                .setScrollFactor(0)
+                .setDepth(2000)
+                .setAlpha(0)
 
-            // Visual feedback
-            button.setScale(1.2)
+            // Animate in + fade out
             this.tweens.add({
-                targets: button,
-                scale: 1,
-                duration: 200,
+                targets: successText,
+                alpha: 1,
+                scale: 1.3,
+                y: '+= -50',
+                duration: 400,
+                ease: 'Power2',
                 yoyo: true,
+                hold: 600,
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: successText,
+                        alpha: 0,
+                        y: '-= 100',
+                        duration: 600,
+                        onComplete: () => successText.destroy(),
+                    })
+                },
             })
 
-            console.log(`Bought: ${this.shopList![index]} (${price} coins)`)
-            console.log(`💰 Coins left: ${this.playerCoins}`)
+            // Optional: Flash effect
+            this.cameras.main.flash(300, 0, 255, 0)
+
+            // Refresh shop to update stock counts
+            this.renderShopItems()
+
+            console.log(`Bought reward #${rewardId} for ${price} coins`)
+        } catch (error) {
+            console.error('Purchase failed:', error)
+            this.playerCoins += price
+            this.updateCoinsDisplay()
+            alert('Purchase failed — try again')
         }
     }
 
