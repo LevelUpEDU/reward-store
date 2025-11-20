@@ -103,7 +103,7 @@ export class RewardPointsUI {
     /**
      * Fetch and update points from the API
      */
-    public async fetchAndUpdatePoints(userEmail: string): Promise<void> {
+    public async fetchAndUpdatePoints(userEmail: string): Promise<any> {
         try {
             const response = await fetch(
                 `/api/student/points?email=${encodeURIComponent(userEmail)}`
@@ -111,6 +111,7 @@ export class RewardPointsUI {
             if (response.ok) {
                 const data = await response.json()
                 this.setPoints(data.points || 0)
+                return data
             } else {
                 console.warn(
                     '[RewardPointsUI] Failed to fetch points:',
