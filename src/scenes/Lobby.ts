@@ -1,13 +1,17 @@
 import {Scene} from '@/scenes/Scene'
 import type {MapConfig} from '@/types'
+// import {createCollisionBorders} from '@/utils/physics' // DISABLED: Commented out for now
 
 export class Lobby extends Scene {
     private rewardsMap?: Phaser.Tilemaps.Tilemap
     private rewardsLayer?: Phaser.Tilemaps.TilemapLayer | null
     private rewardsVisible = false
     private interactKey?: Phaser.Input.Keyboard.Key
-    private interactiveObject?: Phaser.GameObjects.Rectangle
+    private interactiveObject?:
+        | Phaser.GameObjects.Image
+        | Phaser.GameObjects.Rectangle
     private escKey?: Phaser.Input.Keyboard.Key
+    // private portalCollisionGroup?: Phaser.Physics.Arcade.StaticGroup // DISABLED: Commented out for now
 
     // Navigation
     private menuItems: Phaser.GameObjects.Text[] = []
@@ -175,6 +179,22 @@ export class Lobby extends Scene {
             'button_yellow_right',
             '/assets/tilemaps/button_yellow_right.png'
         )
+
+        // Load keypad portal image
+        this.load.image(
+            'keypad-portal',
+            '/assets/sprites/classroom/keypad_2.png'
+        )
+
+        // Load reward shop image
+        this.load.image('reward-shop', '/assets/sprites/reward_shop.png')
+
+        // Load portal rings spritesheet (5 frames horizontally, 32x32 each)
+        this.load.spritesheet(
+            'portal-rings',
+            '/assets/sprites/classroom/portalRings2.png',
+            {frameWidth: 32, frameHeight: 32}
+        )
     }
 
     create(): void {
@@ -201,6 +221,8 @@ export class Lobby extends Scene {
         this.enterKey = undefined
         this.subScreenMap = undefined
         this.escKey = undefined
+        // Clear portal collision group - it will be recreated
+        // this.portalCollisionGroup = undefined // DISABLED: Commented out for now
     }
 
     private fontReady(): void {
@@ -825,18 +847,71 @@ export class Lobby extends Scene {
         ]
 
         portals.forEach((portal) => {
-            const rect = this.add.rectangle(
+            // Create animated portal sprite instead of green rectangle
+            const portalSprite = this.add.sprite(
+                portal.x,
+                portal.y,
+                'portal-rings'
+            )
+            portalSprite.setDisplaySize(portal.width, portal.height)
+            portalSprite.setDepth(0) // Behind player so player walks over it
+
+            // Create animation from spritesheet (5 frames)
+            if (!this.anims.exists('portal-spin')) {
+                this.anims.create({
+                    key: 'portal-spin',
+                    frames: this.anims.generateFrameNumbers('portal-rings', {
+                        start: 0,
+                        end: 4,
+                    }),
+                    frameRate: 10, // 10 frames per second for smooth animation
+                    repeat: -1, // Loop forever
+                })
+            }
+            portalSprite.play('portal-spin')
+
+            // Create collision borders (top, left, right - no bottom)
+            // This prevents player from stepping on top or walking through sides
+            // but allows approach from the bottom
+            // DISABLED: Commented out for now as it's not stable yet
+            /*
+            // Use separate collision group for portals to avoid conflicts
+            if (!this.portalCollisionGroup) {
+                this.portalCollisionGroup = this.physics.add.staticGroup()
+                if (this.player && this.player.body) {
+                    this.physics.add.collider(this.player, this.portalCollisionGroup)
+                }
+            }
+            const borders = createCollisionBorders(
+                this,
+                portal.x,
+                portal.y,
+                portal.width,
+                portal.height,
+                10 // border width
+            )
+            // Add borders to collision group
+            borders.forEach((border) => {
+                // Ensure border has physics body before adding to group
+                if (border && border.body && this.portalCollisionGroup) {
+                    this.portalCollisionGroup.add(border)
+                }
+            })
+            */
+
+            // Create invisible interaction zone for overlap detection
+            const interactionZone = this.add.rectangle(
                 portal.x,
                 portal.y,
                 portal.width,
                 portal.height,
                 0x00ff00,
-                0.3
+                0 // Invisible
             )
-            this.physics.add.existing(rect, true)
+            this.physics.add.existing(interactionZone, true)
             this.physics.add.overlap(
                 this.player,
-                rect,
+                interactionZone,
                 () => {
                     this.transitionTo(portal.target)
                 },
@@ -851,15 +926,14 @@ export class Lobby extends Scene {
 
     // Create hello popup portal - using chalkboard interaction system
     private createHelloPortal(): void {
-        const helloPortal = this.add.rectangle(
+        // Create the visual image - keypad portal
+        const helloPortal = this.add.image(
             500, // Close to classroom portal (400)
             400, // Same Y as classroom portal
-            64,
-            64,
-            0xff0000, // RED color to distinguish from classroom portal
-            0.3
+            'keypad-portal'
         )
-        this.physics.add.existing(helloPortal, true)
+        helloPortal.setDisplaySize(64, 64)
+        helloPortal.setDepth(0) // Behind player so player walks over it
 
         // Create interaction zone (like chalkboard)
         const interactionZone = this.add.rectangle(
@@ -893,15 +967,14 @@ export class Lobby extends Scene {
     }
 
     private setupInteractiveObject(): void {
-        // Create a rectangular object (you can replace with a sprite if desired)
-        this.interactiveObject = this.add.rectangle(
+        // Create reward shop image instead of red rectangle
+        this.interactiveObject = this.add.image(
             600, // x position (adjust as needed)
             600, // y position (adjust as needed)
-            64, // width
-            64, // height
-            0xff0000, // red color for visibility
-            0.5 // semi-transparent
+            'reward-shop'
         )
+        this.interactiveObject.setDisplaySize(64, 64)
+        this.interactiveObject.setDepth(0) // Behind player so player walks over it
 
         // Add physics to the object
         this.physics.add.existing(this.interactiveObject, true) // true = static object
