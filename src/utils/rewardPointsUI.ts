@@ -108,18 +108,21 @@ export class RewardPointsUI {
             const response = await fetch(
                 `/api/student/points?email=${encodeURIComponent(userEmail)}`
             )
-            if (response.ok) {
-                const data = await response.json()
-                this.setPoints(data.points || 0)
-                return data
-            } else {
+
+            if (!response.ok) {
                 console.warn(
                     '[RewardPointsUI] Failed to fetch points:',
                     response.statusText
                 )
+                return 0
             }
+
+            const data = await response.json()
+            this.setPoints(data.points || 0)
+            return data
         } catch (error) {
             console.error('[RewardPointsUI] Error fetching points:', error)
+            return 0
         }
     }
 
