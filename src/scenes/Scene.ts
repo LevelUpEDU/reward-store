@@ -323,7 +323,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         }
     }
 
-    protected getUserEmail(): string | undefined {
+    protected getUserEmail(): string {
         // Check if userEmail is set on the scene
         const sceneWithUser = this as unknown as SceneWithUser
         if (sceneWithUser.userEmail) {
@@ -331,7 +331,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         }
 
         // Default student email for development
-        let devStudent = 'zion_li@my.bcit.ca'
+        let devStudent = 'kamal@my.bcit.ca'
 
         // Try to get from environment or process (for development)
         try {
