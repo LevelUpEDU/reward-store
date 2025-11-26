@@ -1,4 +1,13 @@
 {
-    "sprites": ["chair"]
+    "sprites": [
+        "chair",
+        "door",
+        "keypad_2",
+        "podium",
+        "table_horiz",
+        "table_vert",
+        "table_vert2",
+        "stool",
+        "stool2"
+    ]
 }
-

@@ -115,8 +115,8 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.createPlayer()
         this.setCamera()
         this.createCollisions()
-        this.inputHandler = new InputHandler(this, 100)
         this.interactionHandler = new InteractionHandler(this)
+        this.inputHandler = new InputHandler(this, this.getMovementSpeed())
 
         this.createInteractables()
 
@@ -178,11 +178,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         // Add each layer, passing ALL tilesets (Phaser will use only the relevant ones)
         this.mapConfig.layers.forEach((layerConfig, index) => {
             if (allTilesets.length > 0) {
-                const layer = this.map.createLayer(
-                    layerConfig.name,
-                    allTilesets
-                )
-                layer?.setDepth(index)
+                this.map.createLayer(layerConfig.name, allTilesets)
             }
         })
     }
@@ -404,5 +400,9 @@ export class Scene extends Phaser.Scene implements GameScene {
 
         this.inputHandler.update(this.player)
         this.interactionHandler.update()
+    }
+
+    protected getMovementSpeed(): number {
+        return 100
     }
 }

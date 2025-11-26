@@ -27,7 +27,6 @@ export class Classroom extends Scene {
             {name: 'Chairs Left'},
             {name: 'Chairs Right'},
             {name: 'Decorations'},
-            {name: 'Doors'},
         ],
     }
 
@@ -38,7 +37,6 @@ export class Classroom extends Scene {
     create(): void {
         super.create()
         this.setCameraResolution()
-        this.defineSceneTransitions()
     }
 
     private setCameraResolution(): void {
@@ -60,40 +58,5 @@ export class Classroom extends Scene {
         const worldCenterX = this.map.widthInPixels / 2
         const worldCenterY = this.map.heightInPixels / 2
         cam.centerOn(worldCenterX, worldCenterY)
-    }
-
-    private defineSceneTransitions(): void {
-        // Example of transition triggers
-        const portals = [
-            {x: 705, y: 100, width: 64, height: 64, target: 'LobbyScene'},
-        ]
-
-        portals.forEach((portal) => {
-            const rect = this.add.rectangle(
-                portal.x,
-                portal.y,
-                portal.width,
-                portal.height,
-                0x00ff00,
-                0.3
-            )
-            this.physics.add.existing(rect, true)
-            this.physics.add.overlap(
-                this.player,
-                rect,
-                () => {
-                    this.transitionTo(portal.target)
-                },
-                undefined,
-                this
-            )
-        })
-    }
-
-    private transitionTo(targetSceneKey: string): void {
-        this.cameras.main.fadeOut(800, 0, 0, 0)
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start(targetSceneKey)
-        })
     }
 }

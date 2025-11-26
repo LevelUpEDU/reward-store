@@ -80,6 +80,7 @@ export default function GameComponent() {
                 render: {
                     pixelArt: true,
                     antialias: false,
+                    roundPixels: true,
                 },
                 scale: {
                     mode: Phaser.Scale.FIT,
