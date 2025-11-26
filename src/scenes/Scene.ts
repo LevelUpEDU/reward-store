@@ -10,6 +10,7 @@ import {addPulseEffect} from '@/utils/sprites'
 import {InputHandler} from '@/utils/inputHandler'
 import {InteractionHandler} from '@/interactions/interactionHandler'
 import {RewardPointsUI} from '@/utils/rewardPointsUI'
+import {UIManager} from '@/utils/uiManager'
 import '@/interactions'
 
 interface SpriteManifest {
@@ -36,6 +37,7 @@ export class Scene extends Phaser.Scene implements GameScene {
 
     // UI components
     protected rewardPointsUI?: RewardPointsUI
+    public uiManager!: UIManager
 
     // input objects
     public cursors!: Phaser.Types.Input.Keyboard.CursorKeys
@@ -108,6 +110,36 @@ export class Scene extends Phaser.Scene implements GameScene {
                     .setFilter(Phaser.Textures.FilterMode.NEAREST)
             })
         })
+
+        // menu assets
+        this.load.font(
+            'CyberPunkFont',
+            '/assets/fonts/CyberpunkCraftpixPixel.otf'
+        )
+
+        // Menu tilemap backgrounds
+        this.load.tilemapTiledJSON('rewardsMap', '/assets/rewards/rewards.json')
+        this.load.image(
+            'Interface windows',
+            '/assets/tilemaps/Interface windows.png'
+        )
+        this.load.tilemapTiledJSON(
+            'subScreenMap',
+            '/assets/rewards/rewards_subscreen.json'
+        )
+        this.load.tilemapTiledJSON('shopMap', '/assets/rewards/shop.json')
+
+        // Shop tilesets
+        this.load.image('FrameMap', '/assets/tilemaps/FrameMap.png')
+        this.load.spritesheet(
+            'button_yellow_left',
+            '/assets/tilemaps/button_yellow_left.png',
+            {frameWidth: 32, frameHeight: 32}
+        )
+        this.load.image(
+            'button_yellow_right',
+            '/assets/tilemaps/button_yellow_right.png'
+        )
     }
 
     create(): void {
@@ -123,6 +155,8 @@ export class Scene extends Phaser.Scene implements GameScene {
 
         this.setupInput()
         this.setupRewardPointsUI()
+        this.uiManager = new UIManager(this)
+        this.uiManager.initialize()
         this.setupUICamera()
     }
 
@@ -279,6 +313,10 @@ export class Scene extends Phaser.Scene implements GameScene {
         }
     }
 
+    public getInputHandler(): InputHandler {
+        return this.inputHandler
+    }
+
     protected setupInput(): void {
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             const shouldMove =
@@ -364,34 +402,13 @@ export class Scene extends Phaser.Scene implements GameScene {
         })
     }
 
-    protected getUserEmail(): string {
-        // Check if userEmail is set on the scene
-        const sceneWithUser = this as unknown as SceneWithUser
-        if (sceneWithUser.userEmail) {
-            return sceneWithUser.userEmail
+    public getUserEmail(): string {
+        const email = this.game.registry.get('userEmail')
+        if (email) {
+            return email
         }
 
-        // Default student email for development
-        let devStudent = 'kamal@my.bcit.ca'
-
-        // Try to get from environment or process (for development)
-        try {
-            if (typeof process !== 'undefined') {
-                const proc = process as unknown as
-                    | {env?: Record<string, string | undefined>}
-                    | undefined
-                const envEmail =
-                    proc?.env?.DEV_STUDENT_EMAIL ||
-                    proc?.env?.NEXT_PUBLIC_DEV_STUDENT_EMAIL
-                if (typeof envEmail === 'string' && envEmail.length > 0) {
-                    devStudent = envEmail
-                }
-            }
-        } catch {
-            // ignore
-        }
-
-        return devStudent
+        return 'dev@example.com'
     }
 
     /**
@@ -420,6 +437,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.anims.remove('walk_up')
         this.anims.remove('walk_left')
         this.anims.remove('walk_down')
+        this.uiManager?.destroy()
     }
 
     update(): void {

@@ -1,6 +1,7 @@
 'use client'
 
 import {useEffect, useRef, useState} from 'react'
+import {useAuth} from '@/app/hooks/useAuth'
 import styles from './GameComponent.module.css'
 
 /*
@@ -54,6 +55,7 @@ export default function GameComponent() {
     const gameRef = useRef<HTMLDivElement>(null)
 
     const [isClient, setIsClient] = useState(false)
+    const {email, isLoading} = useAuth()
 
     // sets the client to true once component mounts in browser
     // only runs client side
@@ -62,7 +64,7 @@ export default function GameComponent() {
     }, [])
 
     useEffect(() => {
-        if (!isClient || !gameRef.current) return // don't try to render unless the DOM is ready
+        if (!isClient || !gameRef.current || isLoading) return // wait for DOM and auth info to populate
 
         let gameInstance: Phaser.Game | null = null
 
@@ -97,6 +99,12 @@ export default function GameComponent() {
                     },
                 },
                 scene: [Lobby, Classroom],
+                callbacks: {
+                    preBoot: (game: Phaser.Game) => {
+                        // store email in game registry so all scenes can access it
+                        game.registry.set('userEmail', email)
+                    },
+                },
             }
 
             gameInstance = new Phaser.Game(config)
@@ -110,9 +118,9 @@ export default function GameComponent() {
                 gameInstance.destroy(true) // destroy the game and free memory
             }
         }
-    }, [isClient]) // runs when isClient changes
+    }, [isClient, isLoading, email]) // runs when isClient changes
 
-    if (!isClient) {
+    if (!isClient || isLoading) {
         return null
     }
 
