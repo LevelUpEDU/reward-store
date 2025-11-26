@@ -176,21 +176,28 @@ export class Scene extends Phaser.Scene implements GameScene {
         })
 
         // Add each layer, passing ALL tilesets (Phaser will use only the relevant ones)
-        this.mapConfig.layers.forEach((layerConfig) => {
+        this.mapConfig.layers.forEach((layerConfig, index) => {
             if (allTilesets.length > 0) {
-                this.map.createLayer(layerConfig.name, allTilesets)
-                // layer?.setScale(0.5)
+                const layer = this.map.createLayer(
+                    layerConfig.name,
+                    allTilesets
+                )
+                layer?.setDepth(index)
             }
         })
     }
 
-    protected createPlayer(): void {
+    protected createPlayer(
+        x: number = 400,
+        y: number = 300,
+        scale: number = 2
+    ): void {
         // Check if animations for 'bob' already exist
         if (!this.anims.exists('walk_right')) {
             this.anims.createFromAseprite('bob')
         }
-        this.player = this.physics.add.sprite(400, 300, 'bob')
-        this.player.setScale(2)
+        this.player = this.physics.add.sprite(x, y, 'bob')
+        this.player.setScale(scale)
     }
 
     protected createCollisions(): void {
@@ -229,14 +236,19 @@ export class Scene extends Phaser.Scene implements GameScene {
                 if (sprite) {
                     sprite.setInteractive()
 
-                    const pulseColor =
-                        obj.properties?.pulseColor ?
-                            parseInt(
-                                obj.properties.pulseColor.replace('#', '0x')
-                            )
-                        :   undefined
+                    const shouldPulse = obj.properties?.pulseColor ?? true
 
-                    addPulseEffect(this, sprite, pulseColor)
+                    if (shouldPulse) {
+                        const pulseColor =
+                            obj.properties?.pulseColor ?
+                                parseInt(
+                                    obj.properties.pulseColor.replace('#', '0x')
+                                )
+                            :   undefined
+
+                        addPulseEffect(this, sprite, pulseColor)
+                    }
+
                     this.interactionHandler.createInteractionFromTiled(
                         obj,
                         sprite
@@ -302,11 +314,11 @@ export class Scene extends Phaser.Scene implements GameScene {
         })
     }
 
-    protected setCamera(): void {
+    protected setCamera(scale: number = 1): void {
         const camera = this.cameras.main
         camera.startFollow(this.player, true, 0.1, 0.1) // smooth follow
         camera.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
-        // camera.setZoom(1) // adjust zoom for how close/far you want it
+        camera.setZoom(scale) // adjust zoom for how close/far you want it
         camera.roundPixels = true // keeps pixel art crisp
     }
 
