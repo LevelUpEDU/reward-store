@@ -112,18 +112,18 @@ function InstallPrompt() {
         return () => window.removeEventListener('beforeinstallprompt', handler)
     }, [])
 
-    const handleInstallClick = async () => {
-        if (!deferredPrompt) {
-            return
-        }
+    // const handleInstallClick = async () => {
+    //     if (!deferredPrompt) {
+    //         return
+    //     }
 
-        deferredPrompt.prompt()
-        const {outcome} = await deferredPrompt.userChoice
+    //     deferredPrompt.prompt()
+    //     const {outcome} = await deferredPrompt.userChoice
 
-        if (outcome === 'accepted') {
-            setDeferredPrompt(null)
-        }
-    }
+    //     if (outcome === 'accepted') {
+    //         setDeferredPrompt(null)
+    //     }
+    // }
 
     if (isStandalone || (!deferredPrompt && !isIOS) || !showPrompt) {
         return null
@@ -131,13 +131,7 @@ function InstallPrompt() {
 
     return (
         <div style={styles.promptContainer}>
-            {!isIOS && deferredPrompt && (
-                <button
-                    onClick={handleInstallClick}
-                    style={styles.installButton}>
-                    Install App
-                </button>
-            )}
+            {!isIOS && deferredPrompt && <></>}
             {isIOS && (
                 <div style={styles.iosInstructions}>
                     <button

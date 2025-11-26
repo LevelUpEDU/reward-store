@@ -1,15 +1,21 @@
-import {getStudentCourses} from '@/db/queries/course'
+import {auth0} from '@/lib/auth0'
 import {NextResponse, type NextRequest} from 'next/server'
+import {getStudentCoursesWithInstructor} from '@/db/queries/course'
 
-export async function GET(req: NextRequest) {
-    const email = req.nextUrl.searchParams.get('email')
-    if (!email) {
-        return NextResponse.json({error: 'Missing email'}, {status: 400})
-    }
-
+export async function GET(_req: NextRequest) {
     try {
-        const courses = await getStudentCourses(email)
-        return NextResponse.json({courses})
+        const session = await auth0.getSession()
+        if (!session?.user?.email) {
+            return NextResponse.json(
+                {error: 'Not authenticated'},
+                {status: 401}
+            )
+        }
+
+        const courses = await getStudentCoursesWithInstructor(
+            session.user.email
+        )
+        return NextResponse.json(courses)
     } catch (err) {
         return NextResponse.json({error: (err as Error).message}, {status: 500})
     }

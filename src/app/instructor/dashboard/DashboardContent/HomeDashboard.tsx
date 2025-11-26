@@ -30,7 +30,7 @@ type HomeDashboardProps = {
 }
 
 const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
-    const {email} = useAuth()
+    const {email, user} = useAuth()
     const [courses, setCourses] = useState<Course[]>([])
     const [quests, setQuests] = useState<Quest[]>([])
     const [_error, _setError] = useState<string | null>(null)
@@ -87,11 +87,17 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
         setActiveTab(`course_detail_${courseId}`)
     }
 
+    const displayName =
+        user?.name && !user.name.includes('@') ? user.name
+        : user?.nickname && !user.nickname.includes('@') ? user.nickname
+        : user?.given_name && !user.given_name.includes('@') ? user.given_name
+        : 'Instructor'
+
     return (
         <div className="dashboard-home">
             <div className="welcome-banner">
                 <div className="welcome-content">
-                    <h1 className="welcome-title">Hi, Instructor!</h1>
+                    <h1 className="welcome-title">Hi, {displayName}!</h1>
                 </div>
                 <div className="welcome-date">
                     {new Date().toLocaleDateString('en-US', {

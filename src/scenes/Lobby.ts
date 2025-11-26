@@ -1,14 +1,19 @@
 import {Scene} from '@/scenes/Scene'
 import type {MapConfig} from '@/types'
 import {PortalManager} from '@/interactions/portal'
+import {createTransaction, getRewardsByCourseWithStats} from '@/db'
 
 export class Lobby extends Scene {
     private rewardsMap?: Phaser.Tilemaps.Tilemap
     private rewardsLayer?: Phaser.Tilemaps.TilemapLayer | null
     private rewardsVisible = false
     private interactKey?: Phaser.Input.Keyboard.Key
-    private interactiveObject?: Phaser.GameObjects.Rectangle
+    private interactiveObject?:
+        | Phaser.GameObjects.Image
+        | Phaser.GameObjects.Rectangle
     private escKey?: Phaser.Input.Keyboard.Key
+    // private portalCollisionGroup?: Phaser.Physics.Arcade.StaticGroup // DISABLED: Commented out for now
+    private keypadInteractionZone?: Phaser.GameObjects.Rectangle
 
     // Navigation
     private menuItems: Phaser.GameObjects.Text[] = []
@@ -28,7 +33,7 @@ export class Lobby extends Scene {
     private shopVisible = false
     private shopItems: Phaser.GameObjects.Text[] = []
     private shopBuyButtons: Phaser.GameObjects.Text[] = []
-    private playerCoins = 1000 // Starting coins
+    private playerCoins = 0 // Starting coins
     private shopList?: string[] // Track shop items for this session
     private isShop = false // Track if current subscreen is SHOP
 
@@ -53,94 +58,51 @@ export class Lobby extends Scene {
 
     private static readonly CONFIG: MapConfig = {
         name: 'lobby',
-        tilemapPath: '/api/maps/lobby',
+        tilemapPath: '/api/maps/lobby3',
         tilesets: [
             {
                 name: 'carpet_spritesheet',
-                imagePath: '/assets/tilemaps/carpet spritesheet.png',
-                key: 'groundLayer',
+                imagePath: '/assets/tilemaps/carpet_spritesheet.png',
+                key: 'carpet_spritesheet',
             },
             {
                 name: 'CGS_Urban_A5',
                 imagePath: '/assets/tilemaps/CGS_Urban_A5.png',
-                key: 'wallsLayer-2',
+                key: 'CGS_Urban_A5',
+            },
+            {
+                name: 'Room_Builder_free_32x32',
+                imagePath: '/assets/tilemaps/Room_Builder_free_32x32.png',
+                key: 'Room_Builder_free_32x32',
             },
             {
                 name: 'Classroom Second Spritesheet 5',
                 imagePath:
                     '/assets/tilemaps/Classroom Second Spritesheet 5.png',
-                key: 'furnitureLayer-2',
+                key: 'Classroom Second Spritesheet 5',
+                // @ts-expect-error -- Custom property needed for sprite slicing
+                frameWidth: 32,
+                frameHeight: 32,
             },
-            {
-                name: 'Room_Builder_free_32x32',
-                imagePath: '/assets/tilemaps/Room_Builder_free_32x32.png',
-                key: 'wallsLayer',
-            },
-            {
-                name: 'Art Room Spritesheet 3',
-                imagePath: '/assets/tilemaps/Art Room Spritesheet 3.png',
-                key: 'furnitureLayer',
-            },
-            {
-                name: 'Cafeteria First Spritesheet 1',
-                imagePath: '/assets/tilemaps/Cafeteria First Spritesheet 1.png',
-                key: 'extraLayer2',
-            },
-            {
-                name: 'Cafeteria First Spritesheet 3',
-                imagePath: '/assets/tilemaps/Cafeteria First Spritesheet 3.png',
-                key: 'extraLayer4',
-            },
-            {
-                name: 'chckerboard spritesheet',
-                imagePath: '/assets/tilemaps/chckerboard spritesheet.png',
-                key: 'extraLayer6',
-            },
-            {
-                name: 'Chemistry Lab First Spritesheet 8',
-                imagePath:
-                    '/assets/tilemaps/Chemistry Lab First Spritesheet 8.png',
-                key: 'propsLayer',
-            },
-            {
-                name: 'Chemistry Lab Second Spritesheet 8',
-                imagePath:
-                    '/assets/tilemaps/Chemistry Lab Second Spritesheet 8.png',
-                key: 'extraLayer3',
-            },
-            {
-                name: 'Classroom Props Second Spritesheet 4',
-                imagePath:
-                    '/assets/tilemaps/Classroom Props Second Spritesheet 4.png',
-                key: 'propsLayer-2',
-            },
-            {
-                name: 'Computer Room Spritesheet 5',
-                imagePath: '/assets/tilemaps/Computer Room Spritesheet 5.png',
-                key: 'furnitureLayer-3',
-            },
-            {
-                name: 'Principal Office Second Spritesheet 5',
-                imagePath:
-                    '/assets/tilemaps/Principal Office Second Spritesheet 5.png',
-                key: 'extraLayer5',
-            },
-            {
-                name: 'strokespritesheet20133',
-                imagePath: '/assets/tilemaps/strokespritesheet20133.png',
-                key: 'extraLayer1',
-            },
+            // 'Objects' is a Collection of Images in Tiled, handled manually in preload/create
+            // We don't load it as a standard tileset here because it has no single image source
         ],
         layers: [
-            {name: 'ground', tilesetKey: 'groundLayer'},
-            {name: 'walls', tilesetKey: 'wallsLayer'},
-            {name: 'furniture', tilesetKey: 'furnitureLayer'},
-            {name: 'props', tilesetKey: 'propsLayer'},
+            {name: 'ground', tilesetKey: 'carpet_spritesheet'},
+            {name: 'walls', tilesetKey: 'Room_Builder_free_32x32'},
+            // Note: In lobby3.json, 'furniture' and 'props' are TileLayers that use tilesets
+            {name: 'furniture', tilesetKey: 'Classroom Second Spritesheet 5'},
+            {name: 'props', tilesetKey: 'Classroom Second Spritesheet 5'},
         ],
     }
 
     constructor() {
         super('LobbyScene', Lobby.CONFIG)
+    }
+
+    init(): void {
+        // Fix resolution immediately upon entering the scene
+        this.setCameraResolution()
     }
 
     preload(): void {
@@ -151,6 +113,19 @@ export class Lobby extends Scene {
             'CyberPunkFont',
             '/assets/fonts/CyberpunkCraftpixPixel.otf'
         )
+
+        // --- Load Furniture Images (for the 'Objects' tileset in Tiled) ---
+        // These keys must match what we use in createVisualObjects logic below
+        this.load.image('podium', '/assets/podium.png')
+        this.load.image('small_table', '/assets/small_table.png')
+        this.load.image('vending_machine', '/assets/vending_machine.png')
+        this.load.image('cactus', '/assets/cactus.png')
+        this.load.image('table', '/assets/table.png')
+        this.load.image('chair', '/assets/chair.png')
+        this.load.image('stool', '/assets/stool.png')
+        this.load.image('fire_extinguisher', '/assets/fire_extinguisher.png')
+        this.load.image('big_table', '/assets/big_table.png')
+        this.load.image('big_stool', '/assets/big_stool.png')
 
         // Load the rewards map and its tileset
         this.load.tilemapTiledJSON('rewardsMap', '/assets/rewards/rewards.json')
@@ -179,16 +154,61 @@ export class Lobby extends Scene {
             'button_yellow_right',
             '/assets/tilemaps/button_yellow_right.png'
         )
+
+        // Load keypad portal image
+        this.load.image(
+            'keypad-portal',
+            '/assets/sprites/classroom/keypad_2.png'
+        )
+
+        // Load reward shop image
+        this.load.image('reward-shop', '/assets/sprites/reward_shop.png')
+
+        // Load portal rings spritesheet (5 frames horizontally, 32x32 each)
+        this.load.spritesheet(
+            'portal-rings',
+            '/assets/sprites/classroom/portalRings2.png',
+            {frameWidth: 32, frameHeight: 32}
+        )
     }
 
     create(): void {
         this.cleanUp()
         super.create()
-        this.setCameraResolution()
+        // this.setCameraResolution()
         this.welcomeText()
         this.defineSceneTransitions()
         this.setupRewardsOverlay()
         this.setupInteractiveObject()
+
+        // (Since Scene.ts generic handler is best for standard tilesets, and Objects collection requires specific mapping)
+        this.spawnCustomFurniture()
+
+        // Re-register collision here because spawnCustomFurniture ran AFTER super.create()
+        // We add the newly created furniture colliders to the physics system
+        if (this.customColliders.length > 0) {
+            this.physics.add.collider(this.player, this.customColliders)
+        }
+
+        // Fetch coins using the existing reward system
+        const userEmail = this.getUserEmail()
+
+        if (this.rewardPointsUI) {
+            this.rewardPointsUI.fetchAndUpdatePoints(userEmail).then((data) => {
+                this.playerCoins = data.coins ?? data.points ?? 0
+                console.log(
+                    '%cCoins loaded from server:',
+                    'color: gold; font-size: 16px;',
+                    this.playerCoins
+                )
+
+                // If shop is already open, refresh it
+                if (this.subScreenVisible && this.isShop) {
+                    this.updateCoinsDisplay()
+                    this.renderShopItems() // updates BUY buttons
+                }
+            })
+        }
 
         // ---- Wait For The Font
         if (!this.cache.bitmapFont.exists('MyCustomFont')) {
@@ -199,12 +219,123 @@ export class Lobby extends Scene {
         }
     }
 
+    update(): void {
+        // If any menu is open, freeze the player and stop updates
+        if (this.rewardsVisible || this.subScreenVisible) {
+            if (this.player && this.player.body) {
+                // Stop physics movement immediately
+                this.player.body.velocity.set(0, 0)
+
+                // Optional: Stop walk animation if you want them to freeze in place
+                // this.player.stop()
+            }
+            return // Skip the super.update() call which handles WASD input
+        }
+
+        // If menus are closed, run standard game loop
+        super.update()
+    }
+
+    shutdown(): void {
+        // Clean up listeners
+        if (this.upKey) this.input.keyboard?.removeKey(this.upKey)
+        if (this.downKey) this.input.keyboard?.removeKey(this.downKey)
+        if (this.enterKey) this.input.keyboard?.removeKey(this.enterKey)
+        if (this.escKey) this.input.keyboard?.removeKey(this.escKey)
+        if (this.interactKey) this.input.keyboard?.removeKey(this.interactKey)
+
+        // Force remove the specific tileset texture to reload it clean next time
+        this.textures.remove('Classroom Second Spritesheet 5')
+
+        // Call parent shutdown
+        super.shutdown()
+    }
+
+    // Helper to spawn items from the 'Objects' tileset in lobby3.json
+    private spawnCustomFurniture(): void {
+        const objectLayer = this.map.getObjectLayer('object')
+        if (!objectLayer) return
+
+        const furnitureMap: {[key: number]: string} = {
+            0: 'podium',
+            1: 'small_table',
+            2: 'vending_machine',
+            3: 'cactus',
+            4: 'table',
+            5: 'chair',
+            6: 'stool',
+            7: 'fire_extinguisher',
+            8: 'big_table',
+            9: 'big_stool',
+        }
+        const objectsTilesetFirstGid = 2216
+
+        objectLayer.objects.forEach((obj) => {
+            if (obj.gid === undefined) return
+
+            if (
+                obj.gid >= objectsTilesetFirstGid &&
+                obj.gid < objectsTilesetFirstGid + 100
+            ) {
+                const relativeId = obj.gid - objectsTilesetFirstGid
+                const textureKey = furnitureMap[relativeId]
+
+                if (textureKey && this.textures.exists(textureKey)) {
+                    const sprite = this.add.image(obj.x!, obj.y!, textureKey)
+
+                    if (sprite) {
+                        sprite.setOrigin(0, 1)
+                        if (obj.width && obj.height)
+                            sprite.setDisplaySize(obj.width, obj.height)
+                        sprite.setDepth(sprite.y)
+
+                        // Collision
+                        const width = obj.width || sprite.width
+                        const height = obj.height || sprite.height
+                        const collisionHeight = height * 0.3
+
+                        const centerX = obj.x! + width / 2
+                        const centerY = obj.y! - collisionHeight / 2
+
+                        const collider = this.add.rectangle(
+                            centerX,
+                            centerY,
+                            width,
+                            collisionHeight,
+                            0x000000,
+                            0
+                        )
+
+                        this.physics.add.existing(collider, true)
+
+                        // Add to array instead of Group
+                        this.customColliders.push(collider)
+                    }
+                }
+            }
+        })
+    }
+
     private cleanUp(): void {
         this.upKey = undefined
         this.downKey = undefined
         this.enterKey = undefined
-        this.subScreenMap = undefined
         this.escKey = undefined
+
+        // Reset ALL map references, not just subScreenMap
+        this.subScreenMap = undefined
+        this.subScreenLayer = undefined
+        this.shopMap = undefined
+        this.shopLayer = undefined
+        this.rewardsMap = undefined
+        this.rewardsLayer = undefined
+
+        // Clear lists
+        this.menuItems = []
+        this.shopItems = []
+        this.shopBuyButtons = []
+        // Clear portal collision group - it will be recreated
+        // this.portalCollisionGroup = undefined // DISABLED: Commented out for now
     }
 
     private fontReady(): void {
@@ -259,8 +390,8 @@ export class Lobby extends Scene {
             )
             this.rewardsLayer!.setScrollFactor(0)
                 .setScale(2.5)
-                // .setAlpha(0.9)
                 .setPosition(700, 100)
+                .setDepth(10000) // High depth ensures it covers furniture
         } else {
             this.rewardsLayer?.setVisible(true)
         }
@@ -285,6 +416,7 @@ export class Lobby extends Scene {
             const item = this.add
                 .text(pos.x, pos.y, txt, normalStyle)
                 .setScrollFactor(0)
+                .setDepth(10001) // Text above the background
             this.menuItems.push(item)
         })
 
@@ -376,6 +508,12 @@ export class Lobby extends Scene {
         this.subScreenVisible = true
         this.backSelected = false // reset
 
+        // Hide main menu text
+        this.menuItems.forEach((item) => item.setVisible(false))
+
+        // Hide the main menu background so it doesn't overlap
+        this.rewardsLayer?.setVisible(false)
+
         // ---- SUB-SCREEN BACKGROUND MAP ----
         if (!this.subScreenMap) {
             // Create the tilemap ONCE
@@ -399,7 +537,7 @@ export class Lobby extends Scene {
                     .setScrollFactor(0)
                     .setScale(2.5) // same as main overlay
                     .setPosition(700, 120) // same position as main overlay
-                    .setDepth(1000) // behind text
+                    .setDepth(10000) // behind text
             }
         } else {
             // Already created, just show it
@@ -420,7 +558,7 @@ export class Lobby extends Scene {
                 align: 'center',
             })
             .setScrollFactor(0)
-            .setDepth(1001)
+            .setDepth(10001)
 
         // Content list
         if (category === 'LOGOUT') {
@@ -445,7 +583,7 @@ export class Lobby extends Scene {
                         wordWrap: {width: 1000},
                     })
                     .setScrollFactor(0)
-                    .setDepth(1001)
+                    .setDepth(10001)
                 this.subScreenList!.push(text)
             })
         }
@@ -464,7 +602,7 @@ export class Lobby extends Scene {
                 align: 'center',
             })
             .setScrollFactor(0)
-            .setDepth(1001)
+            .setDepth(10001)
             .setOrigin(0.5, 0)
             .setInteractive({useHandCursor: true})
 
@@ -533,106 +671,196 @@ export class Lobby extends Scene {
             ?.setScrollFactor(0)
             .setScale(2.5)
             .setPosition(680, 100)
-            .setDepth(1000)
+            .setDepth(10000)
     }
 
-    private renderShopItems(): void {
-        this.shopList = [
-            'Energy Drink - 100 coins',
-            'Double XP Boost - 250 coins',
-            'Golden Skin - 500 coins',
-            'Remove Ads - 1000 coins',
-        ]
-
-        const startY = 350
-        const lineHeight = 70
+    private async renderShopItems(): Promise<void> {
+        // Clean previous - now destroys EVERYTHING
+        this.shopItems.forEach((i) => i.destroy())
+        this.shopBuyButtons.forEach((b) => b.destroy())
         this.shopItems = []
         this.shopBuyButtons = []
 
-        this.shopList.forEach((item, i) => {
-            const yPos = startY + i * lineHeight
+        const loading = this.add
+            .text(900, 400, 'Loading shop...', {
+                fontFamily: 'CyberPunkFont',
+                fontSize: '36px',
+                color: '#ffd700',
+            })
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(10001)
+        this.shopItems.push(loading) // Track loading text too!
 
-            // Shop item text (left side)
-            const itemText = this.add
-                .text(770, yPos, `• ${item}`, {
-                    fontFamily: 'CyberPunkFont',
-                    fontSize: '28px',
-                    color: '#ffffff',
-                    wordWrap: {width: 600}, // Limited width for buttons
-                })
-                .setScrollFactor(0)
-                .setDepth(1001)
-            this.shopItems.push(itemText)
+        try {
+            const rewards = await getRewardsByCourseWithStats(19)
+            const available = rewards.filter((r) => r.isAvailable)
 
-            // Extract price for this item
-            const price = parseInt(item.match(/(\d+)/)?.[1] || '0')
+            loading.destroy()
+            this.shopItems = this.shopItems.filter((t) => t !== loading) // remove loading
 
-            // Buy button (right side)
-            const buttonText = this.canAfford(price) ? 'BUY' : 'NOT ENOUGH'
-            const buttonColor = this.canAfford(price) ? '#00ff00' : '#ff4444'
-
-            const buyButton = this.add
-                .text(1500, yPos + 10, buttonText, {
-                    // +5 for vertical center
-                    fontFamily: 'CyberPunkFont',
-                    fontSize: '24px',
-                    color: '#ffffff',
-                    backgroundColor: buttonColor + '88',
-                    padding: {left: 15, right: 15, top: 8, bottom: 8},
-                })
-                .setScrollFactor(0)
-                .setDepth(1001)
-                .setOrigin(0.5, 0.5)
-
-            if (this.canAfford(price)) {
-                buyButton.setInteractive({useHandCursor: true})
-                buyButton.on('pointerdown', () => this.buyItem(i, price))
-                buyButton.on('pointerover', () =>
-                    buyButton.setStyle({backgroundColor: '#ffffff44'})
-                )
-                buyButton.on('pointerout', () =>
-                    buyButton.setStyle({backgroundColor: buttonColor + '88'})
-                )
+            if (available.length === 0) {
+                const noItems = this.add
+                    .text(900, 400, 'No items in shop yet!', {
+                        fontFamily: 'CyberPunkFont',
+                        fontSize: '32px',
+                        color: '#ff6666',
+                    })
+                    .setOrigin(0.5)
+                    .setScrollFactor(0)
+                    .setDepth(10001)
+                this.shopItems.push(noItems)
+                return
             }
 
-            this.shopBuyButtons.push(buyButton)
-        })
+            available.forEach((entry, i) => {
+                const {reward} = entry
+                const y = 350 + i * 90
 
-        // Coins display
-        this.updateCoinsDisplay()
+                // Track ALL texts in this.shopItems
+                const nameText = this.add
+                    .text(770, y, reward.name, {
+                        fontFamily: 'CyberPunkFont',
+                        fontSize: '32px',
+                        color: '#ffffff',
+                        wordWrap: {width: 650},
+                    })
+                    .setScrollFactor(0)
+                    .setDepth(10001)
+                this.shopItems.push(nameText)
+
+                const costText = this.add
+                    .text(770, y + 35, `${reward.cost} coins`, {
+                        fontFamily: 'CyberPunkFont',
+                        fontSize: '24px',
+                        color: '#ffff00',
+                    })
+                    .setScrollFactor(0)
+                    .setDepth(10001)
+                this.shopItems.push(costText)
+
+                // Stock text (if limited)
+                if (reward.quantityLimit !== null) {
+                    const stockText = this.add
+                        .text(770, y + 60, `Left: ${entry.available}`, {
+                            fontFamily: 'CyberPunkFont',
+                            fontSize: '20px',
+                            color: entry.available! > 3 ? '#88ff88' : '#ff8888',
+                        })
+                        .setScrollFactor(0)
+                        .setDepth(10001)
+                    this.shopItems.push(stockText)
+                }
+
+                // Buy button (already tracked in shopBuyButtons)
+                const canBuy = this.playerCoins >= reward.cost
+                const btn = this.add
+                    .text(1500, y + 25, canBuy ? 'BUY' : 'NOT ENOUGH', {
+                        fontFamily: 'CyberPunkFont',
+                        fontSize: '28px',
+                        color: '#ffffff',
+                        backgroundColor: canBuy ? '#00ff0088' : '#ff444488',
+                        padding: {left: 20, right: 20, top: 10, bottom: 10},
+                    })
+                    .setOrigin(0.5)
+                    .setScrollFactor(0)
+                    .setDepth(10001)
+
+                if (canBuy) {
+                    btn.setInteractive({useHandCursor: true})
+                    btn.on('pointerdown', () =>
+                        this.buyItem(reward.id, reward.cost)
+                    )
+                    btn.on('pointerover', () =>
+                        btn.setStyle({backgroundColor: '#ffffff44'})
+                    )
+                    btn.on('pointerout', () =>
+                        btn.setStyle({backgroundColor: '#00ff0088'})
+                    )
+                }
+
+                this.shopBuyButtons.push(btn)
+            })
+
+            this.updateCoinsDisplay()
+        } catch (err) {
+            console.error('Failed to load shop:', err)
+            loading.setText('Error loading shop').setColor('#ff0000')
+        }
     }
 
     private canAfford(price: number): boolean {
         return this.playerCoins >= price
     }
 
-    private buyItem(index: number, price: number): void {
-        if (this.playerCoins >= price) {
-            this.playerCoins -= price
+    private async buyItem(rewardId: number, price: number): Promise<void> {
+        if (this.playerCoins < price) return
 
-            // Update button to "BOUGHT"
-            const button = this.shopBuyButtons[index]
-            button.setText('BOUGHT')
-            button.setStyle({
-                color: '#888888',
-                backgroundColor: '#44444488',
+        const email = this.getUserEmail()
+        if (!email) {
+            alert('Not logged in!')
+            return
+        }
+
+        // Optimistic update
+        this.playerCoins -= price
+        this.updateCoinsDisplay()
+
+        try {
+            // - Deducts points
+            await createTransaction({
+                email,
+                points: -price,
+                submissionId: 151,
             })
-            button.removeInteractive() // Disable clicks
 
-            // Real-Time Coins Update
-            this.updateCoinsDisplay()
+            // Success feedback
+            const successText = this.add
+                .text(960, 540, 'PURCHASED!', {
+                    fontFamily: 'CyberPunkFont',
+                    fontSize: '56px',
+                    color: '#00ff00',
+                    stroke: '#00ff00',
+                    strokeThickness: 8,
+                })
+                .setOrigin(0.5)
+                .setScrollFactor(0)
+                .setDepth(2000)
+                .setAlpha(0)
 
-            // Visual feedback
-            button.setScale(1.2)
+            // Animate in + fade out
             this.tweens.add({
-                targets: button,
-                scale: 1,
-                duration: 200,
+                targets: successText,
+                alpha: 1,
+                scale: 1.3,
+                y: '+= -50',
+                duration: 400,
+                ease: 'Power2',
                 yoyo: true,
+                hold: 600,
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: successText,
+                        alpha: 0,
+                        y: '-= 100',
+                        duration: 600,
+                        onComplete: () => successText.destroy(),
+                    })
+                },
             })
 
-            console.log(`Bought: ${this.shopList![index]} (${price} coins)`)
-            console.log(`💰 Coins left: ${this.playerCoins}`)
+            // Optional: Flash effect
+            this.cameras.main.flash(300, 0, 255, 0)
+
+            // Refresh shop to update stock counts
+            this.renderShopItems()
+
+            console.log(`Bought reward #${rewardId} for ${price} coins`)
+        } catch (error) {
+            console.error('Purchase failed:', error)
+            this.playerCoins += price
+            this.updateCoinsDisplay()
+            alert('Purchase failed — try again')
         }
     }
 
@@ -655,7 +883,7 @@ export class Lobby extends Scene {
                 color: '#ffd700',
             })
             .setScrollFactor(0)
-            .setDepth(1001)
+            .setDepth(10001) // FIX
     }
 
     private setupSubScreenControls(): void {
@@ -790,6 +1018,12 @@ export class Lobby extends Scene {
         this.subScreenLayer?.setVisible(false)
         this.shopLayer?.setVisible(false)
 
+        // Show the main menu text again
+        this.menuItems.forEach((item) => item.setVisible(true))
+
+        // Show the main menu background again
+        this.rewardsLayer?.setVisible(true)
+
         // Re-highlight main menu
         this.highlightSelected()
 
@@ -809,15 +1043,20 @@ export class Lobby extends Scene {
         cam.setViewport(0, 0, lobbyWidth, lobbyHeight)
 
         // Zoom OUT to see more of the map
-        cam.setZoom(0.8) // 0.5 = zoomed out, 1 = normal, 2 = zoomed in
-        cam.startFollow(this.player, true, 0.1, 0.1) // smooth follow
+        // cam.setZoom(0.8)
+
+        // FIX: Only start following if the player has been created
+        // (This prevents the crash when called from init())
+        if (this.player) {
+            cam.startFollow(this.player, true, 0.1, 0.1)
+        }
     }
 
     private welcomeText(): void {
         // Example: Add custom text or interactions
-        const text = this.add.text(1000, 100, 'Welcome to the Lobby!\nKD', {
+        const text = this.add.text(600, 100, 'Welcome to the Lobby!\nKD', {
             fontFamily: 'CyberPunkFont',
-            fontSize: '60px',
+            fontSize: '50px',
             color: '#fff',
         })
         text.setScrollFactor(1)
@@ -893,15 +1132,14 @@ export class Lobby extends Scene {
 
     // Create hello popup portal - using chalkboard interaction system
     private createHelloPortal(): void {
-        const helloPortal = this.add.rectangle(
+        // Create the visual image - keypad portal
+        const helloPortal = this.add.image(
             500, // Close to classroom portal (400)
             400, // Same Y as classroom portal
-            64,
-            64,
-            0xff0000, // RED color to distinguish from classroom portal
-            0.3
+            'keypad-portal'
         )
-        this.physics.add.existing(helloPortal, true)
+        helloPortal.setDisplaySize(64, 64)
+        helloPortal.setDepth(0) // Behind player so player walks over it
 
         // Create interaction zone (like chalkboard)
         const interactionZone = this.add.rectangle(
@@ -910,7 +1148,7 @@ export class Lobby extends Scene {
             64,
             64,
             0x00ff00,
-            0
+            0 // Invisible
         )
         this.physics.add.existing(interactionZone, true)
 
@@ -935,15 +1173,14 @@ export class Lobby extends Scene {
     }
 
     private setupInteractiveObject(): void {
-        // Create a rectangular object (you can replace with a sprite if desired)
-        this.interactiveObject = this.add.rectangle(
-            600, // x position (adjust as needed)
-            600, // y position (adjust as needed)
-            64, // width
-            64, // height
-            0xff0000, // red color for visibility
-            0.5 // semi-transparent
+        // Create reward shop image instead of red rectangle
+        this.interactiveObject = this.add.image(
+            300, // x position (adjust as needed)
+            290, // y position (adjust as needed)
+            'reward-shop'
         )
+        this.interactiveObject.setDisplaySize(64, 64)
+        this.interactiveObject.setDepth(0) // Behind player so player walks over it
 
         // Add physics to the object
         this.physics.add.existing(this.interactiveObject, true) // true = static object
@@ -1010,7 +1247,7 @@ export class Lobby extends Scene {
             })
             .setOrigin(0.5)
             .setScrollFactor(0)
-            .setDepth(2000)
+            .setDepth(20000)
 
         // Close rewards overlay
         this.rewardsVisible = false

@@ -4,7 +4,9 @@ import {quest, course} from '../schema'
 
 import type {Quest} from '@/types/db'
 
-import {eq} from 'drizzle-orm'
+import {and, eq} from 'drizzle-orm'
+
+type QuestUpdate = typeof quest.$inferInsert
 
 export async function createQuest(data: {
     courseId: number
@@ -81,4 +83,57 @@ export async function getQuestsByInstructor(instructorEmail: string): Promise<
             courseCode: r.courseCode,
         },
     }))
+}
+
+export async function updateQuest(
+    questId: number,
+    instructorEmail: string,
+    updates: {
+        title?: string
+        points?: number
+        courseId?: number
+        expirationDate?: Date | null
+    }
+): Promise<Quest | null> {
+    const updateData: Partial<QuestUpdate> = {}
+
+    if (typeof updates.title === 'string') {
+        updateData.title = updates.title
+    }
+
+    if (typeof updates.points === 'number') {
+        updateData.points = updates.points
+    }
+
+    if (typeof updates.courseId === 'number') {
+        updateData.courseId = updates.courseId
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'expirationDate')) {
+        updateData.expirationDate = updates.expirationDate ?? null
+    }
+
+    if (Object.keys(updateData).length === 0) {
+        return getQuestById(questId)
+    }
+
+    const result = await db
+        .update(quest)
+        .set(updateData)
+        .where(and(eq(quest.id, questId), eq(quest.createdBy, instructorEmail)))
+        .returning()
+
+    return result[0] ?? null
+}
+
+export async function deleteQuest(
+    questId: number,
+    instructorEmail: string
+): Promise<boolean> {
+    const result = await db
+        .delete(quest)
+        .where(and(eq(quest.id, questId), eq(quest.createdBy, instructorEmail)))
+        .returning({id: quest.id})
+
+    return result.length > 0
 }

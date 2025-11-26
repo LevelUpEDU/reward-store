@@ -30,3 +30,35 @@ export async function getInstructorByEmail(
 
     return result[0] ?? null
 }
+
+type InstructorUpdate = {
+    name?: string
+    lastSignin?: Date | null
+}
+
+export async function updateInstructorProfile(
+    email: string,
+    updates: InstructorUpdate
+): Promise<Instructor | null> {
+    const data: Partial<Instructor> = {}
+
+    if (typeof updates.name === 'string') {
+        data.name = updates.name
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'lastSignin')) {
+        data.lastSignin = updates.lastSignin ?? null
+    }
+
+    if (Object.keys(data).length === 0) {
+        return getInstructorByEmail(email)
+    }
+
+    const result = await db
+        .update(instructor)
+        .set(data)
+        .where(eq(instructor.email, email))
+        .returning()
+
+    return result[0] ?? null
+}

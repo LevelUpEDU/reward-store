@@ -19,6 +19,20 @@ const DashboardContent = ({
     setActiveTab,
     selectedCourseId,
 }: DashboardContentProps) => {
+    if (activeTab.startsWith('edit_quest_')) {
+        const questId = parseInt(activeTab.replace('edit_quest_', ''), 10)
+
+        if (!Number.isNaN(questId)) {
+            return (
+                <CreateQuestPage
+                    setActiveTab={setActiveTab}
+                    preselectedCourseId={selectedCourseId}
+                    questIdToEdit={questId}
+                />
+            )
+        }
+    }
+
     if (activeTab.startsWith('course_detail_')) {
         const courseId = parseInt(activeTab.replace('course_detail_', ''))
         return (
