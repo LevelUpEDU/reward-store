@@ -113,6 +113,7 @@ export class Scene extends Phaser.Scene implements GameScene {
     create(): void {
         this.createMap()
         this.createPlayer()
+        this.setupRewardPointsUI()
         this.setCamera()
         this.createCollisions()
         this.interactionHandler = new InteractionHandler(this)
@@ -122,6 +123,7 @@ export class Scene extends Phaser.Scene implements GameScene {
 
         this.setupInput()
         this.setupRewardPointsUI()
+        this.setupUICamera()
     }
 
     /* for adding images - images are stored in /public/assets/sprites/{sceneName}/
@@ -176,7 +178,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         })
 
         // Add each layer, passing ALL tilesets (Phaser will use only the relevant ones)
-        this.mapConfig.layers.forEach((layerConfig, index) => {
+        this.mapConfig.layers.forEach((layerConfig) => {
             if (allTilesets.length > 0) {
                 this.map.createLayer(layerConfig.name, allTilesets)
             }
@@ -329,6 +331,37 @@ export class Scene extends Phaser.Scene implements GameScene {
             // If no user email, show 0 points
             this.rewardPointsUI.setPoints(0)
         }
+    }
+    protected setupUICamera(): void {
+        const uiCam = this.cameras.add(0, 0, 1920, 1080)
+        uiCam.setScroll(0, 0)
+        uiCam.setZoom(1)
+        uiCam.setName('uiCamera')
+
+        // ui camera
+        uiCam.ignore(this.player)
+
+        // ignore tilemap layers, sprites, interactables, collision groups
+        // and any prompts from interactable objects
+        this.map.layers.forEach((layer) => {
+            if (layer.tilemapLayer) {
+                uiCam.ignore(layer.tilemapLayer)
+            }
+        })
+        if (this.interactionHandler) {
+            uiCam.ignore(this.interactionHandler.getUIElements())
+        }
+        if (this.collisionGroup) {
+            uiCam.ignore(this.collisionGroup.getChildren())
+        }
+        if (this.interactionHandler?.interactionGroup) {
+            uiCam.ignore(this.interactionHandler.interactionGroup.getChildren())
+        }
+        this.children.list.forEach((child) => {
+            if (child instanceof Phaser.GameObjects.Image) {
+                uiCam.ignore(child)
+            }
+        })
     }
 
     protected getUserEmail(): string {

@@ -75,6 +75,10 @@ export class InteractionHandler {
     public unblockMovement(): void {
         this.isInterfaceOpen = false
     }
+    // return the tooltip and name prompt
+    public getUIElements(): Phaser.GameObjects.GameObject[] {
+        return [this.nameTagText, this.interactionPrompt]
+    }
 
     public isMovementBlocked(): boolean {
         return this.isInterfaceOpen

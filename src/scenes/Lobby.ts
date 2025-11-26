@@ -27,12 +27,7 @@ export class Lobby extends Scene {
                 key: 'walls',
             },
         ],
-        layers: [
-            {name: 'ground'},
-            {name: 'props'},
-            {name: 'furniture'},
-            {name: 'walls'},
-        ],
+        layers: [{name: 'ground'}, {name: 'props'}, {name: 'walls'}],
     }
 
     constructor() {
@@ -43,10 +38,9 @@ export class Lobby extends Scene {
         super.create()
         this.setCamera()
         this.interactionHandler.updateScale()
-        //this.defineSceneTransitions()
     }
     protected createPlayer(): void {
-        super.createPlayer(1500, 1500, 7)
+        super.createPlayer(200, 1150, 7)
     }
 
     protected setCamera(): void {
