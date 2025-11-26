@@ -32,15 +32,13 @@ export class MenuOverlay {
 
     // Menu position config (relative to screen)
     private readonly MENU_POSITIONS = [
-        {x: 240, y: 115}, // REWARDS
-        {x: 180, y: 225}, // ACHIEVEMENTS
-        {x: 245, y: 340}, // BADGES
-        {x: 270, y: 450}, // SHOP
-        {x: 250, y: 560}, // RESUME
-        {x: 250, y: 665}, // LOGOUT
+        {x: 870, y: 315}, // REWARDS
+        {x: 870, y: 425}, // ACHIEVEMENTS
+        {x: 870, y: 540}, // BADGES
+        {x: 870, y: 650}, // SHOP
+        {x: 870, y: 760}, // LOGOUT
     ]
 
-    // Menu configuration
     private readonly MENU_OPTIONS: MenuItem[] = [
         {label: 'REWARDS', action: () => this.openSubScreen('REWARDS')},
         {
@@ -49,9 +47,8 @@ export class MenuOverlay {
         },
         {label: 'BADGES', action: () => this.openSubScreen('BADGES')},
         {label: 'SHOP', action: () => this.openShop()},
-        {label: 'RESUME', action: () => this.scene.uiManager?.closeMenu()},
         {label: 'LOGOUT', action: () => this.handleLogout()},
-    ]
+    ] // Menu configuration
 
     // Styles - using CyberPunk font
     private readonly NORMAL_STYLE = {
@@ -143,6 +140,23 @@ export class MenuOverlay {
         this.container.setScrollFactor(0)
         this.container.setDepth(1000)
 
+        // Create full-screen background to catch clicks outside menu
+        const clickOutside = this.scene.add.rectangle(
+            960,
+            540,
+            1920,
+            1080,
+            0x000000,
+            0.3
+        )
+        clickOutside.setScrollFactor(0)
+        clickOutside.setInteractive()
+        clickOutside.setDepth(998)
+        clickOutside.on('pointerdown', () => {
+            this.scene.uiManager?.closeMenu()
+        })
+        this.container.add(clickOutside)
+
         // Create tilemap background
         this.createMenuBackground()
 
@@ -159,7 +173,6 @@ export class MenuOverlay {
             item.setScrollFactor(0)
             item.setInteractive({useHandCursor: true})
 
-            // Mouse interaction
             item.on('pointerover', () => {
                 this.selectedIndex = i
                 this.updateHighlight()
@@ -174,7 +187,7 @@ export class MenuOverlay {
 
         this.updateHighlight()
 
-        // Make sure main camera ignores menu, UI camera sees it
+        // Main camera ignores all menu elements
         this.scene.cameras.main.ignore(this.container)
         if (this.rewardsLayer) {
             this.scene.cameras.main.ignore(this.rewardsLayer)
@@ -214,7 +227,7 @@ export class MenuOverlay {
         if (this.rewardsLayer) {
             this.rewardsLayer.setScrollFactor(0)
             this.rewardsLayer.setScale(2.5)
-            this.rewardsLayer.setPosition(0, 0)
+            this.rewardsLayer.setPosition(700, 100)
             this.rewardsLayer.setDepth(999)
         }
     }
@@ -244,6 +257,11 @@ export class MenuOverlay {
         if (this.subScreenVisible) return
         this.subScreenVisible = true
 
+        this.menuItems.forEach((item) => item.setVisible(false))
+        if (this.rewardsLayer) {
+            this.rewardsLayer.setVisible(false)
+        }
+
         this.subScreenContainer = this.scene.add.container(0, 0)
         this.subScreenContainer.setScrollFactor(0)
         this.subScreenContainer.setDepth(1001)
@@ -252,12 +270,15 @@ export class MenuOverlay {
         this.createSubScreenBackground()
 
         // Title
-        const title = this.scene.add.text(200, 50, category, {
+        const titleX = category === 'ACHIEVEMENTS' ? 130 : 200
+        const title = this.scene.add.text(titleX, 60, category, {
             fontFamily: 'CyberPunkFont, Arial',
             fontSize: '48px',
             color: '#ffd700',
             fontStyle: 'bold',
         })
+        title.setScrollFactor(0)
+        this.subScreenContainer.add(title)
         title.setScrollFactor(0)
         this.subScreenContainer.add(title)
 
@@ -281,9 +302,10 @@ export class MenuOverlay {
             text.setScrollFactor(0)
             this.subScreenContainer!.add(text)
         })
+        // Title - check if it's ACHIEVEMENTS and adjust x
 
         // Back button
-        const backBtn = this.scene.add.text(215, 640, 'BACK', {
+        const backBtn = this.scene.add.text(310, 760, 'BACK', {
             fontFamily: 'CyberPunkFont, Arial',
             fontSize: '48px',
             color: '#ffd700',
@@ -365,6 +387,10 @@ export class MenuOverlay {
 
         this.subScreenContainer?.destroy()
         this.subScreenContainer = null
+        this.menuItems.forEach((item) => item.setVisible(true))
+        if (this.rewardsLayer) {
+            this.rewardsLayer.setVisible(true)
+        }
     }
 
     private getDataForCategory(category: string): string[] {

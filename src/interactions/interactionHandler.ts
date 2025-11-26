@@ -169,6 +169,12 @@ export class InteractionHandler {
     private handleInteractionInput(): void {
         if (!this.currentInteractionObject) return
 
+        // ignore if the menu/shop are open
+        if (
+            this.scene.uiManager?.isOpen() ||
+            this.scene.uiManager?.isShopVisible()
+        )
+            return
         const config = this.getConfigFromObject(this.currentInteractionObject)
         if (config?.canInteract) {
             this.performInteraction(config.type)

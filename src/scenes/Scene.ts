@@ -36,7 +36,7 @@ export class Scene extends Phaser.Scene implements GameScene {
     public player!: Phaser.Physics.Arcade.Sprite
 
     // UI components
-    protected rewardPointsUI?: RewardPointsUI
+    public rewardPointsUI?: RewardPointsUI
     public uiManager!: UIManager
 
     // input objects

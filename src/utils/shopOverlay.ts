@@ -134,7 +134,7 @@ export class ShopOverlay {
         this.selectedIndex = 0
 
         // Block movement while shop is open
-        this.scene.inputHandler.blockMovement()
+        this.scene.getInputHandler().blockMovement()
 
         // Create tilemap background first
         this.createShopBackground()
@@ -186,7 +186,10 @@ export class ShopOverlay {
         closeBtn.setOrigin(0.5)
         closeBtn.setScrollFactor(0)
         closeBtn.setInteractive({useHandCursor: true})
-        closeBtn.on('pointerdown', () => this.hide())
+        closeBtn.on('pointerdown', () => {
+            this.scene.uiManager?.closeShop()
+            this.scene.uiManager?.openMenu()
+        })
         closeBtn.on('pointerover', () => {
             closeBtn.setColor('#ffffff')
             closeBtn.setStyle({
@@ -243,11 +246,11 @@ export class ShopOverlay {
         }
     }
 
-    public hide(): void {
+    public hide(returnToMenu: boolean = false): void {
         if (!this.isVisible) return
         this.isVisible = false
 
-        this.scene.inputHandler.unblockMovement()
+        this.scene.getInputHandler().unblockMovement()
 
         // Clean up tilemap
         if (this.shopLayer) {
@@ -257,6 +260,10 @@ export class ShopOverlay {
         if (this.shopMap) {
             this.shopMap.destroy()
             this.shopMap = undefined
+        }
+
+        if (returnToMenu) {
+            this.scene.uiManager?.openMenu()
         }
 
         this.container?.destroy()

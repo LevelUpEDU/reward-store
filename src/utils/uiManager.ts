@@ -45,6 +45,7 @@ export class UIManager {
         if (this.isMenuOpen || !this.menuOverlay) return
         // dont open menu if shop is open
         if (this.isShopOpen) return
+        if (this.scene.interactionHandler.isMovementBlocked()) return
 
         this.isMenuOpen = true
         this.scene.getInputHandler().blockMovement()
