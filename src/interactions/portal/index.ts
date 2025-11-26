@@ -38,7 +38,7 @@ export class PortalManager {
         this.portalStates.set(rect, false)
 
         // Called while player is overlapping with portal
-        const overlapCollider = this.scene.physics.add.overlap(
+        this.scene.physics.add.overlap(
             this.scene.player,
             rect,
             () => {

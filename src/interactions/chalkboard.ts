@@ -109,7 +109,7 @@ interactionRegistry.register('chalkboard', async (scene, _data?) => {
         }
     }
 
-    console.log('Chalkboard loading quests for:', {courseId, studentEmail})
+    console.error('Chalkboard loading quests for:', {courseId, studentEmail})
     const {course, quests} = await loadQuests(courseId, studentEmail)
     const _doneStates: boolean[] = quests.map((q) => Boolean(q.done))
 

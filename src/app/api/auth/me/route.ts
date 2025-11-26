@@ -1,7 +1,7 @@
 import {auth0} from '@/lib/auth0'
 import {type NextRequest, NextResponse} from 'next/server'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
     try {
         const session = await auth0.getSession()
 

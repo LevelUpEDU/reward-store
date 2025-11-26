@@ -189,7 +189,7 @@ export class ClassroomSelector {
         if (selected.sceneKey) {
             // Get user email - check if scene has a public method or property
             let userEmail: string | undefined
-            const sceneWithEmail = this.scene as any
+            const sceneWithEmail = this.scene as {getUserEmail?: () => string}
             if (typeof sceneWithEmail.getUserEmail === 'function') {
                 userEmail = sceneWithEmail.getUserEmail()
             }
@@ -220,7 +220,7 @@ export class ClassroomSelector {
             if (element) {
                 try {
                     element.destroy()
-                } catch (e) {
+                } catch {
                     // Already destroyed
                 }
             }

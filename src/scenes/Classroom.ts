@@ -42,7 +42,7 @@ export class Classroom extends Scene {
         if (data) {
             this.courseId = data.courseId
             this.userEmail = data.userEmail
-            console.log('Classroom initialized with:', data)
+            console.error('Classroom initialized with:', data)
         }
     }
 
