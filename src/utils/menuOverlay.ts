@@ -124,7 +124,11 @@ export class MenuOverlay {
             if (i === this.selectedIndex) {
                 item.setStyle(this.SELECTED_STYLE)
             } else {
-                item.setStyle(this.NORMAL_STYLE)
+                item.setStyle({
+                    ...this.NORMAL_STYLE,
+                    backgroundColor: undefined,
+                    padding: undefined,
+                })
             }
         })
     }
