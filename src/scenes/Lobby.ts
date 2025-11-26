@@ -1,7 +1,6 @@
 import {Scene} from '@/scenes/Scene'
 import type {MapConfig} from '@/types'
 import {createTransaction, getRewardsByCourseWithStats} from '@/db'
-import {createCollisionBox} from '@/utils/physics'
 
 export class Lobby extends Scene {
     private rewardsMap?: Phaser.Tilemaps.Tilemap
@@ -77,9 +76,8 @@ export class Lobby extends Scene {
                 imagePath:
                     '/assets/tilemaps/Classroom Second Spritesheet 5.png',
                 key: 'Classroom Second Spritesheet 5',
-                // @ts-ignore - Ignore TS error if MapConfig interface doesn't support these properties yet
+                // @ts-expect-error -- Custom property needed for sprite slicing
                 frameWidth: 32,
-                // @ts-ignore
                 frameHeight: 32,
             },
             // 'Objects' is a Collection of Images in Tiled, handled manually in preload/create
