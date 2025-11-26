@@ -131,13 +131,7 @@ function InstallPrompt() {
 
     return (
         <div style={styles.promptContainer}>
-            {!isIOS && deferredPrompt && (
-                <button
-                    onClick={handleInstallClick}
-                    style={styles.installButton}>
-                    Install App
-                </button>
-            )}
+            {!isIOS && deferredPrompt && <></>}
             {isIOS && (
                 <div style={styles.iosInstructions}>
                     <button
