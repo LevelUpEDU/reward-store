@@ -35,6 +35,15 @@ export class Classroom extends Scene {
         super('ClassroomScene', Classroom.CONFIG)
     }
 
+    init(): void {
+        // Resize screen immediately
+        const targetWidth = 800
+        const targetHeight = 600
+        this.scale.resize(targetWidth, targetHeight)
+        this.scale.displaySize.setAspectRatio(targetWidth / targetHeight)
+        this.scale.refresh()
+    }
+
     create(): void {
         super.create()
         this.setCameraResolution()
@@ -45,18 +54,16 @@ export class Classroom extends Scene {
         const targetWidth = 800
         const targetHeight = 600
 
-        // Resize Phaser canvas
-        this.scale.resize(targetWidth, targetHeight)
+        // Resize logic is now in init(), but we keep viewport/centering here
+        // because they depend on the map being loaded.
 
-        // Center the canvas in the browser window
-        this.scale.displaySize.setAspectRatio(targetWidth / targetHeight)
-        this.scale.refresh()
-
-        // Adjust camera to match new size
         const cam = this.cameras.main
         cam.setViewport(0, 0, targetWidth, targetHeight)
 
-        // Optional: center camera on classroom map
+        cam.setZoom(1)
+
+        // Center camera on classroom map
+        // (This works safely here because create() runs after map load)
         const worldCenterX = this.map.widthInPixels / 2
         const worldCenterY = this.map.heightInPixels / 2
         cam.centerOn(worldCenterX, worldCenterY)
