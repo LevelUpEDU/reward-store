@@ -121,7 +121,10 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.createInteractables()
 
         this.setupInput()
-        this.setupRewardPointsUI()
+        // Call setupRewardPointsUI asynchronously
+        this.setupRewardPointsUI().catch((err) => {
+            console.error('Error setting up reward points UI:', err)
+        })
     }
 
     /* for adding images - images are stored in /public/assets/sprites/{sceneName}/
@@ -310,11 +313,11 @@ export class Scene extends Phaser.Scene implements GameScene {
         camera.roundPixels = true // keeps pixel art crisp
     }
 
-    protected setupRewardPointsUI(): void {
+    protected async setupRewardPointsUI(): Promise<void> {
         this.rewardPointsUI = new RewardPointsUI(this)
 
         // Try to get user email and fetch points
-        const userEmail = this.getUserEmail()
+        const userEmail = await this.getUserEmail()
         if (userEmail) {
             this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
         } else {
@@ -323,34 +326,27 @@ export class Scene extends Phaser.Scene implements GameScene {
         }
     }
 
-    protected getUserEmail(): string | undefined {
-        // Check if userEmail is set on the scene
+    protected async getUserEmail(): Promise<string | undefined> {
+        try {
+            // Fetch user email from Auth0 /api/auth/me endpoint
+            const res = await fetch('/api/auth/me')
+            if (res.ok) {
+                const data = await res.json()
+                if (data?.email) {
+                    return data.email
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to fetch user email from Auth0:', err)
+        }
+
+        // Fallback: Check if userEmail is set on the scene
         const sceneWithUser = this as unknown as SceneWithUser
         if (sceneWithUser.userEmail) {
             return sceneWithUser.userEmail
         }
 
-        // Default student email for development
-        let devStudent = 'zion_li@my.bcit.ca'
-
-        // Try to get from environment or process (for development)
-        try {
-            if (typeof process !== 'undefined') {
-                const proc = process as unknown as
-                    | {env?: Record<string, string | undefined>}
-                    | undefined
-                const envEmail =
-                    proc?.env?.DEV_STUDENT_EMAIL ||
-                    proc?.env?.NEXT_PUBLIC_DEV_STUDENT_EMAIL
-                if (typeof envEmail === 'string' && envEmail.length > 0) {
-                    devStudent = envEmail
-                }
-            }
-        } catch {
-            // ignore
-        }
-
-        return devStudent
+        return undefined
     }
 
     /**
@@ -367,7 +363,7 @@ export class Scene extends Phaser.Scene implements GameScene {
      * Refresh the reward points from the API
      */
     public async refreshRewardPoints(): Promise<void> {
-        const userEmail = this.getUserEmail()
+        const userEmail = await this.getUserEmail()
         if (userEmail && this.rewardPointsUI) {
             await this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
         }

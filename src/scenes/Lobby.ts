@@ -836,7 +836,7 @@ export class Lobby extends Scene {
             color: 0x00ff00,
             alpha: 0.3,
             classroomOptionsLoader: async () => {
-                const userEmail = this.getUserEmail()
+                const userEmail = await this.getUserEmail()
                 if (!userEmail) {
                     console.error('No user email available')
                     return [
