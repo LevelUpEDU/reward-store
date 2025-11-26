@@ -44,7 +44,7 @@ export class Classroom extends Scene {
             this.userEmail = data.userEmail
             console.error('Classroom initialized with:', data)
         }
-      
+
         // Resize screen immediately
         const targetWidth = 800
         const targetHeight = 600
