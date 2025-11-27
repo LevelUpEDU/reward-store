@@ -41,31 +41,11 @@ export class Classroom extends Scene {
         if (data) {
             this.courseId = data.courseId
             this.userEmail = data.userEmail
-            console.error('Classroom initialized with:', data)
         }
-
-        // Resize screen immediately
-        const targetWidth = 800
-        const targetHeight = 600
-        this.scale.resize(targetWidth, targetHeight)
-        this.scale.displaySize.setAspectRatio(targetWidth / targetHeight)
-        this.scale.refresh()
     }
 
-    create(): void {
-        super.create()
-        this.setResolution()
-        this.setCamera()
-    }
     protected createPlayer(): void {
         super.createPlayer(670, 120, 2)
-    }
-
-    private setResolution(): void {
-        const cam = this.cameras.main
-        const worldCenterX = this.map.widthInPixels / 2
-        const worldCenterY = this.map.heightInPixels / 2
-        cam.centerOn(worldCenterX, worldCenterY)
     }
 
     protected setCamera(): void {
