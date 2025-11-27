@@ -437,9 +437,6 @@ export class Scene extends Phaser.Scene implements GameScene {
             return sceneWithUser.userEmail
         }
 
-        // Default student email for development
-        let devStudent = 'kamal@my.bcit.ca'
-
         // Try to get from environment or process (for development)
         try {
             // Fetch user email from Auth0 /api/auth/me endpoint
@@ -452,12 +449,6 @@ export class Scene extends Phaser.Scene implements GameScene {
             }
         } catch (err) {
             console.warn('Failed to fetch user email from Auth0:', err)
-        }
-
-        // Fallback: Check if userEmail is set on the scene
-        const sceneWithUser = this as unknown as SceneWithUser
-        if (sceneWithUser.userEmail) {
-            return sceneWithUser.userEmail
         }
 
         return undefined
