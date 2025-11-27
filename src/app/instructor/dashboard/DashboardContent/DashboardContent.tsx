@@ -3,6 +3,7 @@ import HomeDashboard from './HomeDashboard'
 import CoursesPage from './CoursesPage'
 import QuestsPage from './QuestsPage'
 import StudentsPage from './StudentsPage'
+import RewardsPage from './RewardsPage'
 import SettingsPage from './SettingsPage'
 import CreateCoursePage from './CreateCoursePage'
 import CreateQuestPage from './CreateQuestPage'
@@ -53,6 +54,8 @@ const DashboardContent = ({
             return <QuestsPage setActiveTab={setActiveTab} />
         case 'students':
             return <StudentsPage />
+        case 'rewards':
+            return <RewardsPage />
         case 'settings':
             return <SettingsPage />
         case 'create_course':

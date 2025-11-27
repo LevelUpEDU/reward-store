@@ -13,6 +13,7 @@ const TopBar = ({activeTab, setActiveTab}: TopBarProps) => {
         {id: 'home', label: 'Home'},
         {id: 'courses', label: 'Courses'},
         {id: 'quests', label: 'Quests'},
+        {id: 'rewards', label: 'Rewards'},
         {id: 'students', label: 'Students'},
     ]
 
