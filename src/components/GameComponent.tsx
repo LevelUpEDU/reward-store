@@ -53,7 +53,6 @@ import styles from './GameComponent.module.css'
 export default function GameComponent() {
     // create a placeholder reference, the div won't exist just yet
     const gameRef = useRef<HTMLDivElement>(null)
-
     const [isClient, setIsClient] = useState(false)
     const {email, isLoading} = useAuth()
 
@@ -71,7 +70,8 @@ export default function GameComponent() {
         const initGame = async () => {
             const Phaser = await import('phaser')
 
-            // default scene to load
+            // let phaser know upfront about the existing scenes
+            // Add any additional scenes here !
             const {Lobby} = await import('@/scenes/Lobby')
             const {Classroom} = await import('@/scenes/Classroom')
 

@@ -3,8 +3,11 @@ import {interactionRegistry} from './interactionRegistry'
 interactionRegistry.register('keypad', async (scene, _data?) => {
     scene.interactionHandler.blockMovement()
 
+    // FIX 1: Define a high depth constant
+    const UI_DEPTH = 20000
+
     // Scale factor - change this number to adjust size (1.0 = original, 2.0 = 2x, etc.)
-    const SCALE = 2.0
+    const SCALE = 1.0
 
     const {width: screenWidth, height: screenHeight} = scene.scale
     const centerX = screenWidth / 2
@@ -200,6 +203,11 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
     closeText.setScrollFactor(0)
     elements.push(closeText)
 
+    // FIX 2: Apply depth to all main UI elements created so far
+    elements.forEach((el) => {
+        ;(el as Phaser.GameObjects.Image).setDepth(UI_DEPTH)
+    })
+
     // Add key functionality
     keypadKeys.forEach((keyData) => {
         const handleKeyPress = () => {
@@ -380,6 +388,7 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
             // Show error message
             const errorPopup = scene.add.container(centerX, centerY)
             errorPopup.setScrollFactor(0)
+            errorPopup.setDepth(UI_DEPTH + 1) // FIX 3: Add depth here
 
             const errorBg = scene.add.rectangle(0, 0, 800, 250, 0x000000, 0.9)
             errorPopup.add(errorBg)
@@ -404,6 +413,7 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
         // Show loading message
         const loadingPopup = scene.add.container(centerX, centerY)
         loadingPopup.setScrollFactor(0)
+        loadingPopup.setDepth(UI_DEPTH + 1) // FIX 4: Add depth here
         const loadingBg = scene.add.rectangle(0, 0, 800, 250, 0x000000, 0.9)
         loadingPopup.add(loadingBg)
         const loadingText = scene.add.text(0, 0, 'Verifying course code...', {
@@ -441,6 +451,7 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
                     // Show success popup
                     const successPopup = scene.add.container(centerX, centerY)
                     successPopup.setScrollFactor(0)
+                    successPopup.setDepth(UI_DEPTH + 1) // FIX 5: Add depth here
 
                     const successBg = scene.add.rectangle(
                         0,
@@ -479,6 +490,7 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
                     // Show error if registration fails
                     const errorPopup = scene.add.container(centerX, centerY)
                     errorPopup.setScrollFactor(0)
+                    errorPopup.setDepth(UI_DEPTH + 1) // FIX 6: Add depth here
 
                     const errorBg = scene.add.rectangle(
                         0,
@@ -510,6 +522,7 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
                 // Course not found
                 const errorPopup = scene.add.container(centerX, centerY)
                 errorPopup.setScrollFactor(0)
+                errorPopup.setDepth(UI_DEPTH + 1) // FIX 7: Add depth here
 
                 const errorBg = scene.add.rectangle(
                     0,
@@ -545,6 +558,7 @@ interactionRegistry.register('keypad', async (scene, _data?) => {
             // Show error message
             const errorPopup = scene.add.container(centerX, centerY)
             errorPopup.setScrollFactor(0)
+            errorPopup.setDepth(UI_DEPTH + 1) // FIX 8: Add depth here
 
             const errorBg = scene.add.rectangle(0, 0, 800, 250, 0x000000, 0.9)
             errorPopup.add(errorBg)

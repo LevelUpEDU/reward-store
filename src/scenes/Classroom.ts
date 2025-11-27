@@ -2,6 +2,9 @@ import {Scene} from './Scene'
 import type {MapConfig} from '@/types'
 
 export class Classroom extends Scene {
+    public courseId?: number
+    public userEmail?: string
+
     private static readonly CONFIG: MapConfig = {
         name: 'classroom',
         tilemapPath: '/api/maps/classroom',
@@ -32,6 +35,21 @@ export class Classroom extends Scene {
 
     constructor() {
         super('ClassroomScene', Classroom.CONFIG)
+    }
+
+    init(data?: {courseId?: number; userEmail?: string}): void {
+        if (data) {
+            this.courseId = data.courseId
+            this.userEmail = data.userEmail
+            console.error('Classroom initialized with:', data)
+        }
+
+        // Resize screen immediately
+        const targetWidth = 800
+        const targetHeight = 600
+        this.scale.resize(targetWidth, targetHeight)
+        this.scale.displaySize.setAspectRatio(targetWidth / targetHeight)
+        this.scale.refresh()
     }
 
     create(): void {

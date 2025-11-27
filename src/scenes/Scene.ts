@@ -17,11 +17,6 @@ interface SpriteManifest {
     sprites: string[]
 }
 
-// Define a type for scene with user data
-interface SceneWithUser extends Phaser.Scene {
-    userEmail?: string
-}
-
 export class Scene extends Phaser.Scene implements GameScene {
     protected sceneName: string
 
@@ -30,6 +25,8 @@ export class Scene extends Phaser.Scene implements GameScene {
     protected mapConfig: MapConfig
     protected spriteObjects: Set<string> = new Set()
     public collisionGroup!: Phaser.Physics.Arcade.StaticGroup
+    // Array to hold custom collision objects (bypassing the buggy Group)
+    protected customColliders: Phaser.GameObjects.GameObject[] = []
 
     protected inputHandler!: InputHandler
     public interactionHandler!: InteractionHandler
@@ -84,13 +81,23 @@ export class Scene extends Phaser.Scene implements GameScene {
             }
         })
 
-        // tilesets
+        // UPDATED TILESET LOADING LOOP
         this.mapConfig.tilesets.forEach((tileset) => {
-            this.load.image(tileset.key, tileset.imagePath)
+            // Check if frame dimensions are provided in the config
+            // We cast to 'any' here to avoid TypeScript errors if MapConfig interface isn't updated yet
+            const ts = tileset as any
+
+            if (ts.frameWidth && ts.frameHeight) {
+                this.load.spritesheet(tileset.key, tileset.imagePath, {
+                    frameWidth: ts.frameWidth,
+                    frameHeight: ts.frameHeight,
+                })
+            } else {
+                this.load.image(tileset.key, tileset.imagePath)
+            }
         })
 
         // tilemap
-        // this.load.tilemapTiledJSON('map', this.mapConfig.tilemapPath)
         this.load.tilemapTiledJSON(this.sceneName, this.mapConfig.tilemapPath)
 
         // player
@@ -105,9 +112,10 @@ export class Scene extends Phaser.Scene implements GameScene {
 
         this.load.on('complete', () => {
             this.mapConfig.tilesets.forEach((tileset) => {
-                this.textures
-                    .get(tileset.key)
-                    .setFilter(Phaser.Textures.FilterMode.NEAREST)
+                const tex = this.textures.get(tileset.key)
+                if (tex) {
+                    tex.setFilter(Phaser.Textures.FilterMode.NEAREST)
+                }
             })
         })
 
@@ -151,9 +159,17 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.interactionHandler = new InteractionHandler(this)
         this.inputHandler = new InputHandler(this, this.getMovementSpeed())
 
+        // Handle specific object layers from Tiled (like 'object' in lobby3.json)
+        this.createTiledObjects('object')
+
+        // Handle logical interactables (like legacy setup)
         this.createInteractables()
 
         this.setupInput()
+        // Call setupRewardPointsUI asynchronously
+        this.setupRewardPointsUI().catch((err) => {
+            console.error('Error setting up reward points UI:', err)
+        })
         this.setupRewardPointsUI()
         this.uiManager = new UIManager(this)
         this.uiManager.initialize()
@@ -162,11 +178,11 @@ export class Scene extends Phaser.Scene implements GameScene {
 
     /* for adding images - images are stored in /public/assets/sprites/{sceneName}/
      * **must** be added to the manifest.json file in that folder - ie for "chalkboard.png":
-     *    {
-     *      "sprites": [
-     *        "chalkboard"
-     *      ]
-     *    }
+     * {
+     * "sprites": [
+     * "chalkboard"
+     * ]
+     * }
      */
     protected addSpriteToScene(
         obj: TiledObject
@@ -217,6 +233,15 @@ export class Scene extends Phaser.Scene implements GameScene {
                 this.map.createLayer(layerConfig.name, allTilesets)
             }
         })
+
+        // 2. SET PHYSICS WORLD BOUNDS TO MATCH MAP
+        // This stops the player from walking "outside the frame"
+        this.physics.world.setBounds(
+            0,
+            0,
+            this.map.widthInPixels,
+            this.map.heightInPixels
+        )
     }
 
     protected createPlayer(
@@ -238,7 +263,8 @@ export class Scene extends Phaser.Scene implements GameScene {
         ) as TiledObjectLayer | null
 
         if (collisionLayer) {
-            this.collisionGroup = this.physics.add.staticGroup()
+            // We use the customColliders array instead of collisionGroup
+            // to avoid the StaticGroup.add() crash with Rectangles
 
             collisionLayer.objects.forEach((obj) => {
                 if (obj.width > 0 && obj.height > 0 && obj.visible) {
@@ -249,14 +275,86 @@ export class Scene extends Phaser.Scene implements GameScene {
                         obj.width,
                         obj.height
                     )
-                    this.collisionGroup.add(collisionRect)
+
+                    // Ensure physics is enabled
+                    if (!collisionRect.body) {
+                        this.physics.add.existing(collisionRect, true)
+                    }
+
+                    // Add to safe array instead of Group
+                    this.customColliders.push(collisionRect)
                 }
             })
 
-            this.physics.add.collider(this.player, this.collisionGroup)
+            // Note: We don't need to call physics.add.collider here because
+            // the Scene.create() method already does this:
+            // this.physics.add.collider(this.player, this.customColliders)
         }
     }
 
+    /**
+     * Handles visual objects defined in Tiled Object Layers (e.g. furniture with GIDs)
+     */
+    // Updated createTiledObjects using customColliders (Safe Mode)
+    protected createTiledObjects(layerName: string): void {
+        const objectLayer = this.map.getObjectLayer(
+            layerName
+        ) as TiledObjectLayer | null
+        if (!objectLayer) return
+
+        objectLayer.objects.forEach((obj) => {
+            if (obj.gid === undefined) return
+            if (obj.gid >= 2216) return // Skip furniture (handled in Lobby)
+
+            const tileset = this.map.tilesets.find(
+                (t) => obj.gid! >= t.firstgid && obj.gid! < t.firstgid + t.total
+            )
+
+            if (!tileset) return
+
+            if (tileset.image && this.textures.exists(tileset.name)) {
+                try {
+                    const relativeId = obj.gid - tileset.firstgid
+                    const sprite = this.add.sprite(
+                        obj.x!,
+                        obj.y!,
+                        tileset.name,
+                        relativeId
+                    )
+
+                    if (sprite) {
+                        sprite.setOrigin(0, 1)
+                        if (obj.width && obj.height)
+                            sprite.setDisplaySize(obj.width, obj.height)
+                        sprite.setDepth(sprite.y)
+
+                        // Collision Box
+                        const width = obj.width || sprite.width
+                        const height = obj.height || sprite.height
+                        const collisionHeight = height * 0.3
+                        const collisionY = obj.y! - collisionHeight / 2
+                        const collisionX = obj.x! + width / 2
+
+                        const collider = this.add.rectangle(
+                            collisionX,
+                            collisionY,
+                            width,
+                            collisionHeight,
+                            0x000000,
+                            0
+                        )
+
+                        this.physics.add.existing(collider, true)
+                        this.customColliders.push(collider)
+                    }
+                } catch (err) {
+                    console.warn(`Failed object GID ${obj.gid}`, err)
+                }
+            }
+        })
+    }
+
+    // Updated createInteractables using customColliders (Safe Mode)
     protected createInteractables(): void {
         const interactableLayer = this.map.getObjectLayer(
             'Interactable'
@@ -285,18 +383,10 @@ export class Scene extends Phaser.Scene implements GameScene {
                         obj,
                         sprite
                     )
+
                     const isPassable = obj.properties?.passable ?? true
 
                     if (!isPassable) {
-                        if (!this.collisionGroup) {
-                            this.collisionGroup = this.physics.add.staticGroup()
-                            this.physics.add.collider(
-                                this.player,
-                                this.collisionGroup
-                            )
-                        }
-
-                        // create a rect overtop of the object and use it to create a collision box
                         const bounds = sprite.getBounds()
                         const collisionRect = createCollisionBox(
                             this,
@@ -305,8 +395,10 @@ export class Scene extends Phaser.Scene implements GameScene {
                             bounds.width,
                             bounds.height
                         )
-
-                        this.collisionGroup.add(collisionRect)
+                        if (!collisionRect.body) {
+                            this.physics.add.existing(collisionRect, true)
+                        }
+                        this.customColliders.push(collisionRect)
                     }
                 }
             })
@@ -358,7 +450,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         camera.roundPixels = true // keeps pixel art crisp
     }
 
-    protected setupRewardPointsUI(): void {
+    protected async setupRewardPointsUI(): Promise<void> {
         this.rewardPointsUI = new RewardPointsUI(this)
 
         // Try to get user email and fetch points

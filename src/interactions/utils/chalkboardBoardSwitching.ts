@@ -186,7 +186,10 @@ export function createShowBoard(context: ShowBoardContext) {
         if (Array.isArray(state.boardElements)) {
             state.boardElements.forEach((el) => {
                 try {
-                    el.destroy()
+                    // Check if element still exists and has not been destroyed
+                    if (el && el.scene) {
+                        el.destroy()
+                    }
                 } catch {}
             })
             state.boardElements.length = 0
@@ -227,7 +230,7 @@ export function createShowBoard(context: ShowBoardContext) {
                 elements
             )
         } else {
-            // Render Done column label only for Available board (double-check)
+            // Render Done column label only for Available board
             if (board.name === 'Available' && showDone) {
                 renderDoneLabel(
                     scene,
