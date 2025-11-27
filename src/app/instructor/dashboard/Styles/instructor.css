@@ -62,8 +62,8 @@ body {
 }
 
 .topbar-container {
-    max-width: 1920px;
-    margin: 0 auto;
+    /* max-width: 1920px;
+    margin: 0 auto; */
     height: 100%;
     display: flex;
     align-items: center;
@@ -189,7 +189,7 @@ body {
 /* ===== Main Content ===== */
 .main-content {
     flex: 1;
-    padding: var(--spacing-xl);
+    /* padding: var(--spacing-xl); */
     max-width: 1400px;
     width: 100%;
     margin: 0 auto;
@@ -201,7 +201,7 @@ body {
     padding: var(--spacing-xl);
     /* max-width: 1400px; */
     width: 100%;
-    /* margin: 0 auto; */
+    margin: 0 auto;
     overflow-x: hidden;
     overflow-y: auto;
 }
@@ -824,18 +824,14 @@ body {
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-group select {
     padding: var(--spacing-sm) var(--spacing-md);
     border: 1px solid #d1d5db;
     border-radius: var(--radius-md);
     font-size: 1rem;
     font-family: inherit;
     transition: border-color 200ms;
-}
-
-.form-group textarea {
-    min-height: 140px;
-    resize: vertical;
 }
 
 .form-group input:focus,
@@ -846,12 +842,14 @@ body {
 
 .form-group input::placeholder {
     color: var(--color-text-light);
-    font-size: 1.5rem;
+    font-size: 1rem;
+    font-family: inherit;
 }
 
 .form-group textarea::placeholder {
     color: var(--color-text-light);
     font-size: 1rem;
+    font-family: inherit;
 }
 
 .save-btn {
