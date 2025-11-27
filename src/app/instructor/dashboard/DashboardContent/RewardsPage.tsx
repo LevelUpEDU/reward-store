@@ -67,7 +67,7 @@ const RewardsPage = () => {
         setError(null)
 
         try {
-            const newReward = await createReward({
+            await createReward({
                 courseId: parseInt(formData.courseId),
                 name: formData.name,
                 description: formData.description || undefined,
