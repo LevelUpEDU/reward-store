@@ -1,0 +1,62 @@
+{
+    "activeFile": "Lobby2.tmx",
+    "expandedProjectPaths": [
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "Lobby2.tmx": {
+            "scale": 0.75,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 1355.3333333333333,
+                "y": 1409.333333333333
+            }
+        },
+        "Lobby2.tmx#Carpet": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#Classroom Props Second Spritesheet 4": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#Classroom Second Spritesheet 5": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#Office_Furniture1": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#Office_Furniture2": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#Office_Furniture3": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#Office_Furniture4": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#Office_Furniture5": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#Props_1": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#Props_2": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#Room_Builder_free_32x32": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#Walls": {
+            "scaleInDock": 1
+        },
+        "Lobby2.tmx#strokespritesheet20133": {
+            "scaleInDock": 1
+        }
+    },
+    "openFiles": [
+        "Lobby2.tmx"
+    ],
+    "project": "LevelUpEDU.tiled-project",
+    "recentFiles": [
+        "Lobby2.tmx"
+    ]
+}
