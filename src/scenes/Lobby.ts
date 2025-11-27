@@ -4,7 +4,7 @@ import type {MapConfig} from '@/types'
 export class Lobby extends Scene {
     private static readonly CONFIG: MapConfig = {
         name: 'lobby',
-        tilemapPath: '/api/maps/lobby3',
+        tilemapPath: '/api/maps/lobby',
         tilesets: [
             {
                 name: 'Carpet',
@@ -26,8 +26,6 @@ export class Lobby extends Scene {
                 imagePath: '/assets/tilemaps/walls-extruded.png',
                 key: 'walls',
             },
-            // 'Objects' is a Collection of Images in Tiled, handled manually in preload/create
-            // We don't load it as a standard tileset here because it has no single image source
         ],
         layers: [{name: 'ground'}, {name: 'props'}, {name: 'walls'}],
     }

@@ -153,27 +153,28 @@ export class Scene extends Phaser.Scene implements GameScene {
     create(): void {
         this.createMap()
         this.createPlayer()
-        this.setupRewardPointsUI()
         this.setCamera()
-        this.createCollisions()
         this.interactionHandler = new InteractionHandler(this)
         this.inputHandler = new InputHandler(this, this.getMovementSpeed())
 
-        // Handle specific object layers from Tiled (like 'object' in lobby3.json)
         this.createTiledObjects('object')
 
-        // Handle logical interactables (like legacy setup)
         this.createInteractables()
+        if (this.customColliders.length > 0) {
+            this.physics.add.collider(this.player, this.customColliders)
+        }
 
         this.setupInput()
-        // Call setupRewardPointsUI asynchronously
+
         this.setupRewardPointsUI().catch((err) => {
             console.error('Error setting up reward points UI:', err)
         })
-        this.setupRewardPointsUI()
+
+        this.createCollisions()
         this.uiManager = new UIManager(this)
         this.uiManager.initialize()
         this.setupUICamera()
+        this.setupMobileMenuButton()
     }
 
     /* for adding images - images are stored in /public/assets/sprites/{sceneName}/
@@ -263,8 +264,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         ) as TiledObjectLayer | null
 
         if (collisionLayer) {
-            // We use the customColliders array instead of collisionGroup
-            // to avoid the StaticGroup.add() crash with Rectangles
+            this.collisionGroup = this.physics.add.staticGroup()
 
             collisionLayer.objects.forEach((obj) => {
                 if (obj.width > 0 && obj.height > 0 && obj.visible) {
@@ -275,20 +275,11 @@ export class Scene extends Phaser.Scene implements GameScene {
                         obj.width,
                         obj.height
                     )
-
-                    // Ensure physics is enabled
-                    if (!collisionRect.body) {
-                        this.physics.add.existing(collisionRect, true)
-                    }
-
-                    // Add to safe array instead of Group
-                    this.customColliders.push(collisionRect)
+                    this.collisionGroup.add(collisionRect)
                 }
             })
 
-            // Note: We don't need to call physics.add.collider here because
-            // the Scene.create() method already does this:
-            // this.physics.add.collider(this.player, this.customColliders)
+            this.physics.add.collider(this.player, this.collisionGroup)
         }
     }
 
@@ -461,6 +452,27 @@ export class Scene extends Phaser.Scene implements GameScene {
             // If no user email, show 0 points
             this.rewardPointsUI.setPoints(0)
         }
+    }
+    // add a hamburger menu on mobile to open the menu
+    protected setupMobileMenuButton(): void {
+        // check touch capability before adding this menu
+        if (!this.sys.game.device.input.touch) return
+
+        const menuButton = this.add.text(20, 20, '☰', {
+            fontSize: '48px',
+            color: '#ffffff',
+            backgroundColor: '#00000088',
+            padding: {x: 12, y: 8},
+        })
+        menuButton.setScrollFactor(0)
+        menuButton.setDepth(1000)
+        menuButton.setInteractive({useHandCursor: true})
+        menuButton.on('pointerdown', () => {
+            this.uiManager?.toggleMenu()
+        })
+
+        // main camera should ignore this button
+        this.cameras.main.ignore(menuButton)
     }
     protected setupUICamera(): void {
         const uiCam = this.cameras.add(0, 0, 1920, 1080)
