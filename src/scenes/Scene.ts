@@ -16,11 +16,6 @@ interface SpriteManifest {
     sprites: string[]
 }
 
-// Define a type for scene with user data
-interface SceneWithUser extends Phaser.Scene {
-    userEmail?: string
-}
-
 export class Scene extends Phaser.Scene implements GameScene {
     protected sceneName: string
 
@@ -138,6 +133,10 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.createInteractables()
 
         this.setupInput()
+        // Call setupRewardPointsUI asynchronously
+        this.setupRewardPointsUI().catch((err) => {
+            console.error('Error setting up reward points UI:', err)
+        })
         this.setupRewardPointsUI()
 
         // 1. REGISTER CUSTOM COLLIDERS (Walls, Furniture, etc)
@@ -413,7 +412,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         camera.roundPixels = true // keeps pixel art crisp
     }
 
-    protected setupRewardPointsUI(): void {
+    protected async setupRewardPointsUI(): Promise<void> {
         this.rewardPointsUI = new RewardPointsUI(this)
 
         // Try to get user email and fetch points
@@ -426,34 +425,15 @@ export class Scene extends Phaser.Scene implements GameScene {
         }
     }
 
-    protected getUserEmail(): string {
-        // Check if userEmail is set on the scene
-        const sceneWithUser = this as unknown as SceneWithUser
-        if (sceneWithUser.userEmail) {
-            return sceneWithUser.userEmail
+    public getUserEmail(): string {
+        // get email from game registry (set by React component)
+        const email = this.game.registry.get('userEmail')
+        if (email) {
+            return email
         }
 
-        // Default student email for development
-        let devStudent = 'kamal@my.bcit.ca'
-
-        // Try to get from environment or process (for development)
-        try {
-            if (typeof process !== 'undefined') {
-                const proc = process as unknown as
-                    | {env?: Record<string, string | undefined>}
-                    | undefined
-                const envEmail =
-                    proc?.env?.DEV_STUDENT_EMAIL ||
-                    proc?.env?.NEXT_PUBLIC_DEV_STUDENT_EMAIL
-                if (typeof envEmail === 'string' && envEmail.length > 0) {
-                    devStudent = envEmail
-                }
-            }
-        } catch {
-            // ignore
-        }
-
-        return devStudent
+        // for development only
+        return 'kamal@my.bcit.ca'
     }
 
     /**

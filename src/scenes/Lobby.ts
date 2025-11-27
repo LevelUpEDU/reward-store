@@ -1,5 +1,6 @@
 import {Scene} from '@/scenes/Scene'
 import type {MapConfig} from '@/types'
+import {PortalManager} from '@/interactions/portal'
 import {createTransaction, getRewardsByCourseWithStats} from '@/db'
 
 export class Lobby extends Scene {
@@ -42,6 +43,9 @@ export class Lobby extends Scene {
 
     private backText?: Phaser.GameObjects.Text
     private backSelected = false
+
+    // Portal Manager
+    private portalManager?: PortalManager
 
     // Rewards Overlay Menu Position (x/y per item)
     private readonly MENU_POSITIONS = [
@@ -1059,53 +1063,67 @@ export class Lobby extends Scene {
     }
 
     private defineSceneTransitions(): void {
-        const portals = [
-            {x: 100, y: 290, width: 64, height: 64, target: 'ClassroomScene'},
-        ]
+        // Initialize portal manager
+        this.portalManager = new PortalManager(this)
 
-        portals.forEach((portal) => {
-            // Create animated portal sprite instead of green rectangle
-            const portalSprite = this.add.sprite(
-                portal.x,
-                portal.y,
-                'portal-rings'
-            )
-            portalSprite.setDisplaySize(portal.width, portal.height)
-            portalSprite.setDepth(0) // Behind player so player walks over it
+        // Create classroom portal with dynamic course loading
+        this.portalManager.createPortal({
+            x: 400,
+            y: 400,
+            width: 64,
+            height: 64,
+            color: 0x00ff00,
+            alpha: 0.3,
+            classroomOptionsLoader: async () => {
+                const userEmail = await this.getUserEmail()
+                if (!userEmail) {
+                    console.error('No user email available')
+                    return [
+                        {
+                            label: 'Error: No user logged in',
+                            action: () => console.error('No user email'),
+                        },
+                    ]
+                }
 
-            // Create animation from spritesheet (5 frames)
-            if (!this.anims.exists('portal-spin')) {
-                this.anims.create({
-                    key: 'portal-spin',
-                    frames: this.anims.generateFrameNumbers('portal-rings', {
-                        start: 0,
-                        end: 4,
-                    }),
-                    frameRate: 10, // 10 frames per second for smooth animation
-                    repeat: -1, // Loop forever
-                })
-            }
-            portalSprite.play('portal-spin')
+                try {
+                    const response = await fetch(
+                        `/api/student/courses?email=${encodeURIComponent(userEmail)}`
+                    )
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch courses')
+                    }
 
-            // Create invisible interaction zone for overlap detection
-            const interactionZone = this.add.rectangle(
-                portal.x,
-                portal.y,
-                portal.width,
-                portal.height,
-                0x00ff00,
-                0 // Invisible
-            )
-            this.physics.add.existing(interactionZone, true)
-            this.physics.add.overlap(
-                this.player,
-                interactionZone,
-                () => {
-                    this.transitionTo(portal.target)
-                },
-                undefined,
-                this
-            )
+                    const data = await response.json()
+                    const courses = data.courses || []
+
+                    if (courses.length === 0) {
+                        return [
+                            {
+                                label: 'No courses enrolled',
+                                action: () =>
+                                    console.log('Student has no courses'),
+                            },
+                        ]
+                    }
+
+                    // Map courses to classroom options
+                    return courses.map((course: any) => ({
+                        label: course.title,
+                        sceneKey: 'ClassroomScene',
+                        courseId: course.id,
+                    }))
+                } catch (error) {
+                    console.error('Error loading courses:', error)
+                    return [
+                        {
+                            label: 'Error loading courses',
+                            action: () =>
+                                console.error('Failed to load courses'),
+                        },
+                    ]
+                }
+            },
         })
 
         // Add hello portal near classroom portal

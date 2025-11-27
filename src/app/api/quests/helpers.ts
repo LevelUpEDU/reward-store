@@ -7,9 +7,9 @@ export async function dbGetQuests(request: Request) {
     // dynamic imports to avoid loading DB code in environments without DATABASE_URL
     const {getQuestsByCourse} = await import('@/db/queries/quest')
     const {getCourseById} = await import('@/db/queries/course')
-    const cid = 3
-    const rows = await getQuestsByCourse(cid)
     const url = new URL(request.url)
+    const cid = parseInt(url.searchParams.get('courseId') ?? '3')
+    const rows = await getQuestsByCourse(cid)
     const studentEmail =
         url.searchParams.get('studentEmail') ??
         process.env.DEV_STUDENT_EMAIL ??
