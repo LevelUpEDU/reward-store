@@ -16,11 +16,6 @@ interface SpriteManifest {
     sprites: string[]
 }
 
-// Define a type for scene with user data
-interface SceneWithUser extends Phaser.Scene {
-    userEmail?: string
-}
-
 export class Scene extends Phaser.Scene implements GameScene {
     protected sceneName: string
 
@@ -421,7 +416,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.rewardPointsUI = new RewardPointsUI(this)
 
         // Try to get user email and fetch points
-        const userEmail = await this.getUserEmail()
+        const userEmail = this.getUserEmail()
         if (userEmail) {
             this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
         } else {
@@ -430,28 +425,15 @@ export class Scene extends Phaser.Scene implements GameScene {
         }
     }
 
-    protected async getUserEmail(): Promise<string | undefined> {
-        // Check if userEmail is set on the scene
-        const sceneWithUser = this as unknown as SceneWithUser
-        if (sceneWithUser.userEmail) {
-            return sceneWithUser.userEmail
+    public getUserEmail(): string {
+        // get email from game registry (set by React component)
+        const email = this.game.registry.get('userEmail')
+        if (email) {
+            return email
         }
 
-        // Try to get from environment or process (for development)
-        try {
-            // Fetch user email from Auth0 /api/auth/me endpoint
-            const res = await fetch('/api/auth/me')
-            if (res.ok) {
-                const data = await res.json()
-                if (data?.email) {
-                    return data.email
-                }
-            }
-        } catch (err) {
-            console.warn('Failed to fetch user email from Auth0:', err)
-        }
-
-        return undefined
+        // for development only
+        return 'kamal@my.bcit.ca'
     }
 
     /**
@@ -468,7 +450,7 @@ export class Scene extends Phaser.Scene implements GameScene {
      * Refresh the reward points from the API
      */
     public async refreshRewardPoints(): Promise<void> {
-        const userEmail = await this.getUserEmail()
+        const userEmail = this.getUserEmail()
         if (userEmail && this.rewardPointsUI) {
             await this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
         }

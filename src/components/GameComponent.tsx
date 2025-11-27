@@ -1,6 +1,7 @@
 'use client'
 
 import {useEffect, useRef, useState} from 'react'
+import {useAuth} from '@/app/hooks/useAuth'
 import styles from './GameComponent.module.css'
 
 /*
@@ -52,8 +53,9 @@ import styles from './GameComponent.module.css'
 export default function GameComponent() {
     // create a placeholder reference, the div won't exist just yet
     const gameRef = useRef<HTMLDivElement>(null)
-
     const [isClient, setIsClient] = useState(false)
+
+    const {email, isLoading} = useAuth()
 
     // sets the client to true once component mounts in browser
     // only runs client side
@@ -62,14 +64,16 @@ export default function GameComponent() {
     }, [])
 
     useEffect(() => {
-        if (!isClient || !gameRef.current) return // don't try to render unless the DOM is ready
+        // don't start until DOM is ready and we have the auth info
+        if (!isClient || !gameRef.current || isLoading) return
 
         let gameInstance: Phaser.Game | null = null
 
         const initGame = async () => {
             const Phaser = await import('phaser')
 
-            // default scene to load
+            // let phaser know upfront about the existing scenes
+            // Add any additional scenes here !
             const {Lobby} = await import('@/scenes/Lobby')
             const {Classroom} = await import('@/scenes/Classroom')
 
@@ -96,6 +100,12 @@ export default function GameComponent() {
                     },
                 },
                 scene: [Lobby, Classroom],
+                callbacks: {
+                    preBoot: (game: Phaser.Game) => {
+                        // stores the email so all scenes can access it
+                        game.registry.set('userEmail', email)
+                    },
+                },
             }
 
             gameInstance = new Phaser.Game(config)
@@ -109,9 +119,9 @@ export default function GameComponent() {
                 gameInstance.destroy(true) // destroy the game and free memory
             }
         }
-    }, [isClient]) // runs when isClient changes
+    }, [isClient, isLoading, email]) // runs when isClient changes
 
-    if (!isClient) {
+    if (!isClient || isLoading) {
         return null
     }
 

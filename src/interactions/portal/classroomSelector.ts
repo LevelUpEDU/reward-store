@@ -188,11 +188,7 @@ export class ClassroomSelector {
 
         if (selected.sceneKey) {
             // Get user email - check if scene has a public method or property
-            let userEmail: string | undefined
-            const sceneWithEmail = this.scene as {getUserEmail?: () => string}
-            if (typeof sceneWithEmail.getUserEmail === 'function') {
-                userEmail = sceneWithEmail.getUserEmail()
-            }
+            const userEmail = this.scene.getUserEmail()
 
             // Transition to the scene with course data
             this.scene.scene.start(selected.sceneKey, {
