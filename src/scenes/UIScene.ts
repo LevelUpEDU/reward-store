@@ -18,8 +18,8 @@ export class UIScene extends Phaser.Scene {
 
     create(data: {worldScene: Scene}): void {
         // fools typescript through double casting, probably not great >:(
-        this.rewardPointsUI = new RewardPointsUI(this as unknown as Scene)
-        this.uiManager = new UIManager(this as unknown as Scene)
+        this.rewardPointsUI = new RewardPointsUI(this)
+        this.uiManager = new UIManager(this)
 
         // gets the currently active scene
         if (data && data.worldScene) {
