@@ -1,4 +1,11 @@
 import type {UIScene} from '@/scenes/UIScene'
+import {
+    UI_COLORS,
+    UI_DEPTH,
+    UI_TEXT_STYLES,
+    createHoverHandlers,
+    clearTextStyle,
+} from './uiStyles'
 
 interface MenuItem {
     label: string
@@ -11,6 +18,7 @@ interface MenuItem {
 export class MenuOverlay {
     private scene: UIScene
     private container: Phaser.GameObjects.Container | null = null
+    private dimOverlay: Phaser.GameObjects.Rectangle | null = null
     private menuItems: Phaser.GameObjects.Text[] = []
     private selectedIndex: number = 0
     private isVisible: boolean = false
@@ -51,22 +59,6 @@ export class MenuOverlay {
         {label: 'SHOP', action: () => this.openShop()},
         {label: 'LOGOUT', action: () => this.handleLogout()},
     ] // Menu configuration
-
-    // Styles - using CyberPunk font
-    private readonly NORMAL_STYLE = {
-        fontFamily: 'CyberPunkFont, Arial',
-        fontSize: '36px',
-        color: '#ffd700',
-        fontStyle: 'bold',
-    }
-
-    private readonly SELECTED_STYLE = {
-        fontFamily: 'CyberPunkFont, Arial',
-        fontSize: '36px',
-        color: '#ffffff',
-        backgroundColor: '#00000088',
-        padding: {left: 12, right: 12, top: 4, bottom: 4},
-    }
 
     constructor(scene: UIScene) {
         this.scene = scene
@@ -129,13 +121,9 @@ export class MenuOverlay {
     private updateHighlight(): void {
         this.menuItems.forEach((item, i) => {
             if (i === this.selectedIndex) {
-                item.setStyle(this.SELECTED_STYLE)
+                item.setStyle(UI_TEXT_STYLES.menuItemSelected)
             } else {
-                item.setStyle({
-                    ...this.NORMAL_STYLE,
-                    backgroundColor: undefined,
-                    padding: undefined,
-                })
+                clearTextStyle(item, UI_TEXT_STYLES.menuItem)
             }
         })
     }
@@ -145,27 +133,12 @@ export class MenuOverlay {
         this.isVisible = true
         this.selectedIndex = 0
 
+        this.createDimOverlay()
+
         // Create container for all menu elements
         this.container = this.scene.add.container(0, 0)
         this.container.setScrollFactor(0)
-        this.container.setDepth(1000)
-
-        // Create full-screen background to catch clicks outside menu
-        const clickOutside = this.scene.add.rectangle(
-            960,
-            540,
-            1920,
-            1080,
-            0x000000,
-            0.3
-        )
-        clickOutside.setScrollFactor(0)
-        clickOutside.setInteractive()
-        clickOutside.setDepth(998)
-        clickOutside.on('pointerdown', () => {
-            this.scene.uiManager?.closeMenu()
-        })
-        this.container.add(clickOutside)
+        this.container.setDepth(UI_DEPTH.menuContent)
 
         // Create tilemap background
         this.createMenuBackground()
@@ -178,7 +151,7 @@ export class MenuOverlay {
                 pos.x,
                 pos.y,
                 option.label,
-                this.NORMAL_STYLE
+                UI_TEXT_STYLES.menuItem
             )
             item.setScrollFactor(0)
             item.setInteractive({useHandCursor: true})
@@ -196,6 +169,23 @@ export class MenuOverlay {
         })
 
         this.updateHighlight()
+    }
+
+    private createDimOverlay(): void {
+        this.dimOverlay = this.scene.add.rectangle(
+            960,
+            540,
+            1920,
+            1080,
+            UI_COLORS.dimOverlay,
+            UI_COLORS.dimOverlayAlpha
+        )
+        this.dimOverlay.setScrollFactor(0)
+        this.dimOverlay.setInteractive()
+        this.dimOverlay.setDepth(UI_DEPTH.dimOverlay)
+        this.dimOverlay.on('pointerdown', () => {
+            this.scene.uiManager?.closeMenu()
+        })
     }
 
     private createMenuBackground(): void {
@@ -217,7 +207,7 @@ export class MenuOverlay {
             this.rewardsLayer.setScrollFactor(0)
             this.rewardsLayer.setScale(2.5)
             this.rewardsLayer.setPosition(700, 100)
-            this.rewardsLayer.setDepth(999)
+            this.rewardsLayer.setDepth(UI_DEPTH.menuBackground)
         }
     }
 
@@ -237,6 +227,9 @@ export class MenuOverlay {
             this.rewardsMap = undefined
         }
 
+        this.dimOverlay?.destroy()
+        this.dimOverlay = null
+
         this.container?.destroy()
         this.container = null
         this.menuItems = []
@@ -253,19 +246,19 @@ export class MenuOverlay {
 
         this.subScreenContainer = this.scene.add.container(700, 80)
         this.subScreenContainer.setScrollFactor(0)
-        this.subScreenContainer.setDepth(1001)
+        this.subScreenContainer.setDepth(UI_DEPTH.menuContent)
 
         // Create tilemap background for sub-screen
         this.createSubScreenBackground()
 
         // Title
         const titleX = category === 'ACHIEVEMENTS' ? 130 : 200
-        const title = this.scene.add.text(titleX, 60, category, {
-            fontFamily: 'CyberPunkFont, Arial',
-            fontSize: '48px',
-            color: '#ffd700',
-            fontStyle: 'bold',
-        })
+        const title = this.scene.add.text(
+            titleX,
+            60,
+            category,
+            UI_TEXT_STYLES.title
+        )
         title.setScrollFactor(0)
         this.subScreenContainer.add(title)
 
@@ -279,12 +272,7 @@ export class MenuOverlay {
                 70,
                 startY + i * lineHeight,
                 `• ${item}`,
-                {
-                    fontFamily: 'CyberPunkFont, Arial',
-                    fontSize: '28px',
-                    color: '#ffffff',
-                    wordWrap: {width: 400},
-                }
+                UI_TEXT_STYLES.bodyWithWrap(400)
             )
             text.setScrollFactor(0)
             this.subScreenContainer!.add(text)
@@ -292,26 +280,22 @@ export class MenuOverlay {
         // Title - check if it's ACHIEVEMENTS and adjust x
 
         // Back button
-        const backBtn = this.scene.add.text(310, 760, 'BACK', {
-            fontFamily: 'CyberPunkFont, Arial',
-            fontSize: '48px',
-            color: '#ffd700',
-        })
+        const backBtn = this.scene.add.text(
+            310,
+            760,
+            'BACK',
+            UI_TEXT_STYLES.backButton
+        )
         backBtn.setOrigin(0.5)
         backBtn.setScrollFactor(0)
         backBtn.setInteractive({useHandCursor: true})
         backBtn.on('pointerdown', () => this.closeSubScreen())
-        backBtn.on('pointerover', () => {
-            backBtn.setColor('#ffffff')
-            backBtn.setStyle({
-                backgroundColor: '#ffd70044',
-                padding: {left: 12, right: 12, top: 4, bottom: 4},
-            })
-        })
-        backBtn.on('pointerout', () => {
-            backBtn.setColor('#ffd700')
-            backBtn.setStyle({backgroundColor: undefined, padding: undefined})
-        })
+        createHoverHandlers(
+            backBtn,
+            UI_COLORS.gold,
+            UI_COLORS.white,
+            UI_COLORS.hoverBgGold
+        )
         this.subScreenContainer.add(backBtn)
     }
 
@@ -335,7 +319,7 @@ export class MenuOverlay {
             this.subScreenLayer.setScrollFactor(0)
             this.subScreenLayer.setScale(2.5)
             this.subScreenLayer.setPosition(700, 100)
-            this.subScreenLayer.setDepth(1000)
+            this.subScreenLayer.setDepth(UI_DEPTH.subScreenBackground)
         }
     }
 
@@ -393,17 +377,11 @@ export class MenuOverlay {
             this.scene.cameras.main.width / 2,
             this.scene.cameras.main.height / 2,
             'Logging out...',
-            {
-                fontFamily: 'Arial',
-                fontSize: '36px',
-                color: '#ff4800',
-                backgroundColor: '#000000dd',
-                padding: {left: 20, right: 20, top: 10, bottom: 10},
-            }
+            UI_TEXT_STYLES.logoutFeedback
         )
         logoutText.setOrigin(0.5)
         logoutText.setScrollFactor(0)
-        logoutText.setDepth(2000)
+        logoutText.setDepth(UI_DEPTH.feedback)
 
         this.scene.time.delayedCall(1500, () => {
             window.location.href = `/auth/logout?returnTo=${returnUrl}`

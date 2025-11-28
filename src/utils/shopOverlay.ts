@@ -1,5 +1,11 @@
 import type {UIScene} from '@/scenes/UIScene'
 import {createTransaction, getRewardsByCourseWithStats} from '@/db'
+import {
+    UI_COLORS,
+    UI_DEPTH,
+    UI_TEXT_STYLES,
+    createHoverHandlers,
+} from './uiStyles'
 
 interface ShopItem {
     id: number
@@ -16,6 +22,7 @@ interface ShopItem {
 export class ShopOverlay {
     private scene: UIScene
     private container: Phaser.GameObjects.Container | null = null
+    private dimOverlay: Phaser.GameObjects.Rectangle | null = null
     private isVisible: boolean = false
     private playerCoins: number = 0
     private userEmail: string = ''
@@ -35,32 +42,6 @@ export class ShopOverlay {
     private downKey?: Phaser.Input.Keyboard.Key
     private enterKey?: Phaser.Input.Keyboard.Key
     private escKey?: Phaser.Input.Keyboard.Key
-
-    // Styles
-    private readonly TITLE_STYLE = {
-        fontFamily: 'CyberPunkFont, Arial',
-        fontSize: '48px',
-        color: '#ffd700',
-        fontStyle: 'bold',
-    }
-
-    private readonly ITEM_STYLE = {
-        fontFamily: 'CyberPunkFont, Arial',
-        fontSize: '32px',
-        color: '#ffffff',
-    }
-
-    private readonly COST_STYLE = {
-        fontFamily: 'CyberPunkFont, Arial',
-        fontSize: '24px',
-        color: '#ffff00',
-    }
-
-    private readonly COINS_STYLE = {
-        fontFamily: 'CyberPunkFont, Arial',
-        fontSize: '32px',
-        color: '#ffd700',
-    }
 
     // Tilemap background
     private shopMap?: Phaser.Tilemaps.Tilemap
@@ -120,9 +101,9 @@ export class ShopOverlay {
         this.itemButtons.forEach((btn, i) => {
             const bg = btn.getAt(0) as Phaser.GameObjects.Rectangle
             if (i === this.selectedIndex) {
-                bg.setFillStyle(0x444444)
+                bg.setFillStyle(UI_COLORS.itemBgSelected)
             } else {
-                bg.setFillStyle(0x222222)
+                bg.setFillStyle(UI_COLORS.itemBg)
             }
         })
     }
@@ -136,16 +117,23 @@ export class ShopOverlay {
         // Block movement while shop is open
         this.scene.getInputHandler().blockMovement()
 
+        this.createDimOverlay()
+
         // Create tilemap background first
         this.createShopBackground()
 
         // Create main container
         this.container = this.scene.add.container(0, 0)
         this.container.setScrollFactor(0)
-        this.container.setDepth(1100)
+        this.container.setDepth(UI_DEPTH.shopContent)
 
         // Title
-        const title = this.scene.add.text(400, 150, 'SHOP', this.TITLE_STYLE)
+        const title = this.scene.add.text(
+            400,
+            150,
+            'SHOP',
+            UI_TEXT_STYLES.title
+        )
         title.setOrigin(0.5)
         title.setScrollFactor(0)
         this.container.add(title)
@@ -155,7 +143,7 @@ export class ShopOverlay {
             400,
             220,
             'Loading...',
-            this.COINS_STYLE
+            UI_TEXT_STYLES.coins
         )
         this.coinsText.setOrigin(0.5)
         this.coinsText.setScrollFactor(0)
@@ -171,18 +159,19 @@ export class ShopOverlay {
             400,
             450,
             'Loading shop items...',
-            this.ITEM_STYLE
+            UI_TEXT_STYLES.body
         )
         this.loadingText.setOrigin(0.5)
         this.loadingText.setScrollFactor(0)
         this.container.add(this.loadingText)
 
         // Close button
-        const closeBtn = this.scene.add.text(470, 740, 'BACK', {
-            fontFamily: 'CyberPunkFont, Arial',
-            fontSize: '48px',
-            color: '#00ffff',
-        })
+        const closeBtn = this.scene.add.text(
+            470,
+            740,
+            'BACK',
+            UI_TEXT_STYLES.backButtonCyan
+        )
         closeBtn.setOrigin(0.5)
         closeBtn.setScrollFactor(0)
         closeBtn.setInteractive({useHandCursor: true})
@@ -190,22 +179,31 @@ export class ShopOverlay {
             this.scene.uiManager?.closeShop()
             this.scene.uiManager?.openMenu()
         })
-        closeBtn.on('pointerover', () => {
-            closeBtn.setColor('#ffffff')
-            closeBtn.setStyle({
-                backgroundColor: '#00ffff44',
-                padding: {left: 12, right: 12, top: 4, bottom: 4},
-            })
-        })
-        closeBtn.on('pointerout', () => {
-            closeBtn.setColor('#00ffff')
-            closeBtn.setStyle({backgroundColor: undefined, padding: undefined})
-        })
+        createHoverHandlers(
+            closeBtn,
+            UI_COLORS.cyan,
+            UI_COLORS.white,
+            UI_COLORS.hoverBgCyan
+        )
         this.container.add(closeBtn)
 
         // Fetch data
         await this.fetchCoins()
         await this.fetchShopItems()
+    }
+
+    private createDimOverlay(): void {
+        this.dimOverlay = this.scene.add.rectangle(
+            960,
+            540,
+            1920,
+            1080,
+            UI_COLORS.dimOverlay,
+            UI_COLORS.dimOverlayAlpha
+        )
+        this.dimOverlay.setScrollFactor(0)
+        this.dimOverlay.setInteractive()
+        this.dimOverlay.setDepth(UI_DEPTH.dimOverlay)
     }
 
     private createShopBackground(): void {
@@ -235,8 +233,8 @@ export class ShopOverlay {
         if (this.shopLayer) {
             this.shopLayer.setScrollFactor(0)
             this.shopLayer.setScale(2.5)
-            this.shopLayer.setPosition(-20, 0)
-            this.shopLayer.setDepth(1099)
+            this.shopLayer.setPosition(700, 100)
+            this.shopLayer.setDepth(UI_DEPTH.shopBackground)
         }
     }
 
@@ -255,6 +253,9 @@ export class ShopOverlay {
             this.shopMap.destroy()
             this.shopMap = undefined
         }
+
+        this.dimOverlay?.destroy()
+        this.dimOverlay = null
 
         if (returnToMenu) {
             this.scene.uiManager?.openMenu()
@@ -315,7 +316,7 @@ export class ShopOverlay {
             console.error('Failed to fetch shop items:', error)
             if (this.loadingText) {
                 this.loadingText.setText('Error loading shop')
-                this.loadingText.setColor('#ff0000')
+                this.loadingText.setColor(UI_COLORS.red)
             }
         }
     }
@@ -336,7 +337,7 @@ export class ShopOverlay {
                 400,
                 450,
                 'No items available',
-                this.ITEM_STYLE
+                UI_TEXT_STYLES.body
             )
             noItems.setOrigin(0.5)
             noItems.setScrollFactor(0)
@@ -349,8 +350,14 @@ export class ShopOverlay {
             const itemContainer = this.scene.add.container(0, 0)
 
             // Background
-            const bg = this.scene.add.rectangle(400, y, 650, 70, 0x222222)
-            bg.setStrokeStyle(1, 0x444444)
+            const bg = this.scene.add.rectangle(
+                400,
+                y,
+                650,
+                70,
+                UI_COLORS.itemBg
+            )
+            bg.setStrokeStyle(1, UI_COLORS.itemBorder)
             bg.setScrollFactor(0)
             itemContainer.add(bg)
 
@@ -359,7 +366,7 @@ export class ShopOverlay {
                 startX,
                 y - 20,
                 item.name,
-                this.ITEM_STYLE
+                UI_TEXT_STYLES.body
             )
             nameText.setScrollFactor(0)
             itemContainer.add(nameText)
@@ -369,23 +376,19 @@ export class ShopOverlay {
                 startX,
                 y + 15,
                 `${item.cost} coins`,
-                this.COST_STYLE
+                UI_TEXT_STYLES.cost
             )
             costText.setScrollFactor(0)
             itemContainer.add(costText)
 
             // Stock (if limited)
             if (item.quantityLimit !== null && item.available !== null) {
-                const stockColor = item.available > 3 ? '#88ff88' : '#ff8888'
+                const isLow = item.available <= 3
                 const stockText = this.scene.add.text(
                     450,
                     y,
                     `Left: ${item.available}`,
-                    {
-                        fontFamily: 'CyberPunkFont, Arial',
-                        fontSize: '20px',
-                        color: stockColor,
-                    }
+                    UI_TEXT_STYLES.stock(isLow)
                 )
                 stockText.setOrigin(0, 0.5)
                 stockText.setScrollFactor(0)
@@ -398,13 +401,7 @@ export class ShopOverlay {
                 700,
                 y,
                 canAfford ? 'BUY' : 'NOT ENOUGH',
-                {
-                    fontFamily: 'CyberPunkFont, Arial',
-                    fontSize: '28px',
-                    color: '#ffffff',
-                    backgroundColor: canAfford ? '#00ff0088' : '#ff444488',
-                    padding: {left: 20, right: 20, top: 10, bottom: 10},
-                }
+                UI_TEXT_STYLES.buyButton(canAfford)
             )
             buyBtn.setOrigin(0.5)
             buyBtn.setScrollFactor(0)
@@ -413,12 +410,12 @@ export class ShopOverlay {
                 buyBtn.setInteractive({useHandCursor: true})
                 buyBtn.on('pointerdown', () => this.purchaseItem(item))
                 buyBtn.on('pointerover', () => {
-                    buyBtn.setStyle({backgroundColor: '#ffffff44'})
+                    buyBtn.setStyle({backgroundColor: UI_COLORS.buyButtonHover})
                     this.selectedIndex = i
                     this.updateHighlight()
                 })
                 buyBtn.on('pointerout', () => {
-                    buyBtn.setStyle({backgroundColor: '#00ff0088'})
+                    buyBtn.setStyle({backgroundColor: UI_COLORS.buyButtonBg})
                 })
             }
             itemContainer.add(buyBtn)
@@ -464,16 +461,15 @@ export class ShopOverlay {
     }
 
     private showPurchaseSuccess(): void {
-        const successText = this.scene.add.text(960, 540, 'PURCHASED!', {
-            fontFamily: 'CyberPunkFont, Arial',
-            fontSize: '56px',
-            color: '#00ff00',
-            stroke: '#00ff00',
-            strokeThickness: 8,
-        })
+        const successText = this.scene.add.text(
+            960,
+            540,
+            'PURCHASED!',
+            UI_TEXT_STYLES.purchaseSuccess
+        )
         successText.setOrigin(0.5)
         successText.setScrollFactor(0)
-        successText.setDepth(2000)
+        successText.setDepth(UI_DEPTH.feedback)
         successText.setAlpha(0)
 
         // Animate in + fade out
@@ -502,14 +498,15 @@ export class ShopOverlay {
     }
 
     private showPurchaseError(): void {
-        const errorText = this.scene.add.text(960, 540, 'Purchase failed!', {
-            fontFamily: 'CyberPunkFont, Arial',
-            fontSize: '40px',
-            color: '#ff0000',
-        })
+        const errorText = this.scene.add.text(
+            960,
+            540,
+            'Purchase failed!',
+            UI_TEXT_STYLES.purchaseError
+        )
         errorText.setOrigin(0.5)
         errorText.setScrollFactor(0)
-        errorText.setDepth(2000)
+        errorText.setDepth(UI_DEPTH.feedback)
 
         this.scene.time.delayedCall(2000, () => errorText.destroy())
     }
