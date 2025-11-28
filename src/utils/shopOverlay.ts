@@ -203,12 +203,6 @@ export class ShopOverlay {
         })
         this.container.add(closeBtn)
 
-        // Make main camera ignore these UI elements
-        this.scene.cameras.main.ignore(this.container)
-        if (this.shopLayer) {
-            this.scene.cameras.main.ignore(this.shopLayer)
-        }
-
         // Fetch data
         await this.fetchCoins()
         await this.fetchShopItems()

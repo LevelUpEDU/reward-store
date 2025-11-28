@@ -7,7 +7,7 @@ import type {Quest, Submission, Transaction} from '@/types/db'
 import {getQuestsByCourse, getQuestById} from './quest'
 import {createTransaction} from './transaction'
 
-import {eq} from 'drizzle-orm'
+import {eq, and} from 'drizzle-orm'
 
 export async function createSubmission(data: {
     email: string
@@ -24,6 +24,17 @@ export async function createSubmission(data: {
         .returning()
 
     return result[0]
+}
+
+export async function deleteSubmission(email: string, questId: number) {
+    return await db
+        .delete(submission)
+        .where(
+            and(
+                eq(submission.studentId, email),
+                eq(submission.questId, questId)
+            )
+        )
 }
 
 export async function getSubmissionById(

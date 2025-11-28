@@ -22,9 +22,6 @@ export class RewardPointsUI {
 
         this.positionUI()
 
-        // Main camera ignores UI
-        this.scene.cameras.main.ignore(this.container)
-
         this.scene.scale.on('resize', this.positionUI, this)
     }
 

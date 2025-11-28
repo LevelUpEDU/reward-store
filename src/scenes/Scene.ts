@@ -9,8 +9,6 @@ import {createCollisionBox} from '@/utils/physics'
 import {addPulseEffect} from '@/utils/sprites'
 import {InputHandler} from '@/utils/inputHandler'
 import {InteractionHandler} from '@/interactions/interactionHandler'
-import {RewardPointsUI} from '@/utils/rewardPointsUI'
-import {UIManager} from '@/utils/uiManager'
 import '@/interactions'
 
 interface SpriteManifest {
@@ -31,10 +29,6 @@ export class Scene extends Phaser.Scene implements GameScene {
     protected inputHandler!: InputHandler
     public interactionHandler!: InteractionHandler
     public player!: Phaser.Physics.Arcade.Sprite
-
-    // UI components
-    public rewardPointsUI?: RewardPointsUI
-    public uiManager!: UIManager
 
     // input objects
     public cursors!: Phaser.Types.Input.Keyboard.CursorKeys
@@ -157,6 +151,16 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.interactionHandler = new InteractionHandler(this)
         this.inputHandler = new InputHandler(this, this.getMovementSpeed())
 
+        if (!this.scene.isActive('UIScene')) {
+            this.scene.launch('UIScene', {worldScene: this})
+        } else {
+            // If UI is already running, just update the reference
+            this.scene
+                .get('UIScene')
+                .events.emit('update-world-reference', this)
+        }
+        this.scene.bringToTop('UIScene')
+
         this.createTiledObjects('object')
 
         this.createInteractables()
@@ -165,16 +169,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         }
 
         this.setupInput()
-
-        this.setupRewardPointsUI().catch((err) => {
-            console.error('Error setting up reward points UI:', err)
-        })
-
         this.createCollisions()
-        this.uiManager = new UIManager(this)
-        this.uiManager.initialize()
-        this.setupUICamera()
-        this.setupMobileMenuButton()
     }
 
     /* for adding images - images are stored in /public/assets/sprites/{sceneName}/
@@ -441,71 +436,6 @@ export class Scene extends Phaser.Scene implements GameScene {
         camera.roundPixels = true // keeps pixel art crisp
     }
 
-    protected async setupRewardPointsUI(): Promise<void> {
-        this.rewardPointsUI = new RewardPointsUI(this)
-
-        // Try to get user email and fetch points
-        const userEmail = this.getUserEmail()
-        if (userEmail) {
-            this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
-        } else {
-            // If no user email, show 0 points
-            this.rewardPointsUI.setPoints(0)
-        }
-    }
-    // add a hamburger menu on mobile to open the menu
-    protected setupMobileMenuButton(): void {
-        // check touch capability before adding this menu
-        if (!this.sys.game.device.input.touch) return
-
-        const menuButton = this.add.text(20, 20, '☰', {
-            fontSize: '48px',
-            color: '#ffffff',
-            backgroundColor: '#00000088',
-            padding: {x: 12, y: 8},
-        })
-        menuButton.setScrollFactor(0)
-        menuButton.setDepth(1000)
-        menuButton.setInteractive({useHandCursor: true})
-        menuButton.on('pointerdown', () => {
-            this.uiManager?.toggleMenu()
-        })
-
-        // main camera should ignore this button
-        this.cameras.main.ignore(menuButton)
-    }
-    protected setupUICamera(): void {
-        const uiCam = this.cameras.add(0, 0, 1920, 1080)
-        uiCam.setScroll(0, 0)
-        uiCam.setZoom(1)
-        uiCam.setName('uiCamera')
-
-        // ui camera
-        uiCam.ignore(this.player)
-
-        // ignore tilemap layers, sprites, interactables, collision groups
-        // and any prompts from interactable objects
-        this.map.layers.forEach((layer) => {
-            if (layer.tilemapLayer) {
-                uiCam.ignore(layer.tilemapLayer)
-            }
-        })
-        if (this.interactionHandler) {
-            uiCam.ignore(this.interactionHandler.getUIElements())
-        }
-        if (this.collisionGroup) {
-            uiCam.ignore(this.collisionGroup.getChildren())
-        }
-        if (this.interactionHandler?.interactionGroup) {
-            uiCam.ignore(this.interactionHandler.interactionGroup.getChildren())
-        }
-        this.children.list.forEach((child) => {
-            if (child instanceof Phaser.GameObjects.Image) {
-                uiCam.ignore(child)
-            }
-        })
-    }
-
     public getUserEmail(): string {
         const email = this.game.registry.get('userEmail')
         if (email) {
@@ -520,19 +450,14 @@ export class Scene extends Phaser.Scene implements GameScene {
      * Call this after the player earns or spends points
      */
     public updateRewardPoints(newPoints: number): void {
-        if (this.rewardPointsUI) {
-            this.rewardPointsUI.animatePointsChange(newPoints)
-        }
+        this.events.emit('update-points', newPoints)
     }
 
     /**
      * Refresh the reward points from the API
      */
     public async refreshRewardPoints(): Promise<void> {
-        const userEmail = this.getUserEmail()
-        if (userEmail && this.rewardPointsUI) {
-            await this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
-        }
+        this.events.emit('request-point-refresh')
     }
 
     shutdown(): void {
@@ -541,7 +466,6 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.anims.remove('walk_up')
         this.anims.remove('walk_left')
         this.anims.remove('walk_down')
-        this.uiManager?.destroy()
     }
 
     update(): void {

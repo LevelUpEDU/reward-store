@@ -1,4 +1,4 @@
-import type {Scene} from '@/scenes/Scene'
+import type {UIScene} from '@/scenes/UIScene'
 
 interface MenuItem {
     label: string
@@ -9,7 +9,7 @@ interface MenuItem {
  * Overlay menu for rewards, shop, settings, logout, etc.
  */
 export class MenuOverlay {
-    private scene: Scene
+    private scene: UIScene
     private container: Phaser.GameObjects.Container | null = null
     private menuItems: Phaser.GameObjects.Text[] = []
     private selectedIndex: number = 0
@@ -66,7 +66,7 @@ export class MenuOverlay {
         padding: {left: 12, right: 12, top: 4, bottom: 4},
     }
 
-    constructor(scene: Scene) {
+    constructor(scene: UIScene) {
         this.scene = scene
         this.setupKeyboardControls()
     }
@@ -186,12 +186,6 @@ export class MenuOverlay {
         })
 
         this.updateHighlight()
-
-        // Main camera ignores all menu elements
-        this.scene.cameras.main.ignore(this.container)
-        if (this.rewardsLayer) {
-            this.scene.cameras.main.ignore(this.rewardsLayer)
-        }
     }
 
     private createMenuBackground(): void {
@@ -326,12 +320,6 @@ export class MenuOverlay {
             backBtn.setStyle({backgroundColor: undefined, padding: undefined})
         })
         this.subScreenContainer.add(backBtn)
-
-        // Make sure cameras handle it correctly
-        this.scene.cameras.main.ignore(this.subScreenContainer)
-        if (this.subScreenLayer) {
-            this.scene.cameras.main.ignore(this.subScreenLayer)
-        }
     }
 
     private createSubScreenBackground(): void {

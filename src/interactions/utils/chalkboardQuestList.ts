@@ -83,6 +83,20 @@ export function createQuestUI(
 
     const toggleDoneInternal = (index: number) => {
         if (!showDoneColumn) return
+
+        // 1. STRICT GET: Retrieve Course ID from registry
+        const currentCourseId = scene.registry.get('courseId')
+        const userEmail = scene.registry.get('userEmail')
+
+        // 2. GUARD CLAUSE: Stop immediately if no valid Course ID exists
+        // This ensures we never save data to a default/random course
+        if (typeof currentCourseId !== 'number') {
+            console.error(
+                '[chalkboardQuestList] Critical: Cannot toggle quest. No Course ID found in registry.'
+            )
+            return
+        }
+
         const newVal = !doneStates[index]
         // Get the relative index in the visible window
         const relativeIndex = index - windowStart
@@ -97,6 +111,7 @@ export function createQuestUI(
             return
         }
 
+        // Case A: Marking as Done (True) -> Requires Confirmation Dialog
         if (newVal) {
             if (dialogActive) return
             dialogActive = true
@@ -135,7 +150,14 @@ export function createQuestUI(
                     const q = quests[index]
                     const questId = q?.id
                     try {
-                        const ok = await persistToggle(index, true, questId)
+                        // PASS STRICT COURSE ID
+                        const ok = await persistToggle(
+                            index,
+                            true,
+                            questId,
+                            currentCourseId,
+                            userEmail
+                        )
                         if (!ok) {
                             doneStates[index] = false
                             mark.setVisible(false)
@@ -198,16 +220,22 @@ export function createQuestUI(
             return
         }
 
+        // Case B: Unmarking (False) -> Immediate Action
         doneStates[index] = false
         mark.setVisible(false)
         const q = quests[index]
         const questId = q?.id
-        persistToggle(index, false, questId).then((ok) => {
-            if (!ok) {
-                doneStates[index] = true
-                mark.setVisible(true)
+
+        // PASS STRICT COURSE ID
+        persistToggle(index, false, questId, currentCourseId, userEmail).then(
+            (ok) => {
+                if (!ok) {
+                    // Revert UI if server save failed
+                    doneStates[index] = true
+                    mark.setVisible(true)
+                }
             }
-        })
+        )
     }
 
     const claimedStates: boolean[] = quests.map(() => false)

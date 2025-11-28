@@ -74,6 +74,7 @@ export default function GameComponent() {
             // Add any additional scenes here !
             const {Lobby} = await import('@/scenes/Lobby')
             const {Classroom} = await import('@/scenes/Classroom')
+            const {UIScene} = await import('@/scenes/UIScene')
 
             const config = {
                 type: Phaser.WEBGL,
@@ -98,7 +99,7 @@ export default function GameComponent() {
                         debug: false,
                     },
                 },
-                scene: [Lobby, Classroom],
+                scene: [Lobby, Classroom, UIScene],
                 callbacks: {
                     preBoot: (game: Phaser.Game) => {
                         // store email in game registry so all scenes can access it
