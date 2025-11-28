@@ -29,6 +29,8 @@ export class MenuOverlay {
     private upKey?: Phaser.Input.Keyboard.Key
     private downKey?: Phaser.Input.Keyboard.Key
     private enterKey?: Phaser.Input.Keyboard.Key
+    private wKey?: Phaser.Input.Keyboard.Key
+    private sKey?: Phaser.Input.Keyboard.Key
 
     // Menu position config (relative to screen)
     private readonly MENU_POSITIONS = [
@@ -81,9 +83,17 @@ export class MenuOverlay {
         this.enterKey = this.scene.input.keyboard!.addKey(
             Phaser.Input.Keyboard.KeyCodes.ENTER
         )
+        this.wKey = this.scene.input.keyboard!.addKey(
+            Phaser.Input.Keyboard.KeyCodes.W
+        )
+        this.sKey = this.scene.input.keyboard!.addKey(
+            Phaser.Input.Keyboard.KeyCodes.S
+        )
 
         this.upKey.on('down', () => this.navigateUp())
+        this.wKey.on('down', () => this.navigateUp())
         this.downKey.on('down', () => this.navigateDown())
+        this.sKey.on('down', () => this.navigateDown())
         this.enterKey.on('down', () => this.selectCurrent())
     }
 
@@ -273,8 +283,6 @@ export class MenuOverlay {
         })
         title.setScrollFactor(0)
         this.subScreenContainer.add(title)
-        title.setScrollFactor(0)
-        this.subScreenContainer.add(title)
 
         // Content based on category
         const data = this.getDataForCategory(category)
@@ -440,6 +448,8 @@ export class MenuOverlay {
         this.upKey?.off('down')
         this.downKey?.off('down')
         this.enterKey?.off('down')
+        this.wKey?.off('down')
+        this.sKey?.off('down')
 
         this.hide()
     }
