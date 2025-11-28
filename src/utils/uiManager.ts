@@ -1,4 +1,5 @@
 import type {Scene} from '@/scenes/Scene'
+import type {UIScene} from '@/scenes/UIScene'
 import {MenuOverlay} from './menuOverlay'
 import {ShopOverlay} from './shopOverlay'
 
@@ -6,13 +7,13 @@ import {ShopOverlay} from './shopOverlay'
  * Manages the main menu UI accessible to all screens
  */
 export class UIManager {
-    private scene: Scene
+    private scene: UIScene
     private menuOverlay: MenuOverlay | null = null
     private shopOverlay: ShopOverlay | null = null
     private isMenuOpen: boolean = false
     private isShopOpen: boolean = false
 
-    constructor(scene: Scene) {
+    constructor(scene: UIScene) {
         this.scene = scene
     }
 

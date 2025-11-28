@@ -1,4 +1,5 @@
 import type {Scene} from '@/scenes/Scene'
+import type {UIScene} from '@/scenes/UIScene'
 import {createTransaction, getRewardsByCourseWithStats} from '@/db'
 
 interface ShopItem {
@@ -14,7 +15,7 @@ interface ShopItem {
  * Can be opened from MenuOverlay or directly via interaction
  */
 export class ShopOverlay {
-    private scene: Scene
+    private scene: UIScene
     private container: Phaser.GameObjects.Container | null = null
     private isVisible: boolean = false
     private playerCoins: number = 0
@@ -66,7 +67,7 @@ export class ShopOverlay {
     private shopMap?: Phaser.Tilemaps.Tilemap
     private shopLayer?: Phaser.Tilemaps.TilemapLayer | null
 
-    constructor(scene: Scene) {
+    constructor(scene: UIScene) {
         this.scene = scene
         this.setupKeyboardControls()
     }

@@ -1,4 +1,5 @@
 import type {Scene} from '@/scenes/Scene'
+import type {UIScene} from '@/scenes/UIScene'
 import type {TiledObject} from '@/types'
 import {interactionRegistry} from './interactionRegistry'
 
@@ -168,13 +169,15 @@ export class InteractionHandler {
 
     private handleInteractionInput(): void {
         if (!this.currentInteractionObject) return
+        const uiScene = this.scene.scene.get('UIScene') as UIScene
 
-        // ignore if the menu/shop are open
         if (
-            this.scene.uiManager?.isOpen() ||
-            this.scene.uiManager?.isShopVisible()
-        )
+            uiScene &&
+            (uiScene.uiManager?.isOpen() || uiScene.uiManager?.isShopVisible())
+        ) {
             return
+        }
+
         const config = this.getConfigFromObject(this.currentInteractionObject)
         if (config?.canInteract) {
             this.performInteraction(config.type)
