@@ -1,4 +1,3 @@
-import type {Scene} from '@/scenes/Scene'
 import type {UIScene} from '@/scenes/UIScene'
 import {MenuOverlay} from './menuOverlay'
 import {ShopOverlay} from './shopOverlay'

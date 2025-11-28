@@ -1,4 +1,3 @@
-import type {Scene} from '@/scenes/Scene'
 import type {UIScene} from '@/scenes/UIScene'
 import {createTransaction, getRewardsByCourseWithStats} from '@/db'
 
