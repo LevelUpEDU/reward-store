@@ -36,6 +36,7 @@ export class Lobby extends Scene {
 
     create(): void {
         super.create()
+        this.welcomeText()
         this.setCamera()
         this.interactionHandler.updateScale()
     }
@@ -45,6 +46,22 @@ export class Lobby extends Scene {
 
     protected setCamera(): void {
         super.setCamera(0.75)
+    }
+
+    private welcomeText(): void {
+        const userName = this.game.registry.get('userName') || 'Student'
+        const text = this.add.text(
+            1500,
+            743,
+            `Welcome to LevelUpEDU, ${userName}!`,
+            {
+                fontFamily: 'CyberPunkFont',
+                fontSize: '48px',
+                color: '#ffffff',
+            }
+        )
+        text.setOrigin(0.5, 0)
+        text.setDepth(1000)
     }
 
     protected getMovementSpeed(): number {

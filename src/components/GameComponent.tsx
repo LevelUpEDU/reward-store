@@ -68,6 +68,20 @@ export default function GameComponent() {
         let gameInstance: Phaser.Game | null = null
 
         const initGame = async () => {
+            let userEmail = email
+            let userName = 'Student'
+
+            try {
+                const res = await fetch('/api/auth/me')
+                if (res.ok) {
+                    const data = await res.json()
+                    userEmail = data.email
+                    userName = data.name
+                }
+            } catch (err) {
+                console.warn('Could not fetch user info:', err)
+            }
+
             const Phaser = await import('phaser')
 
             // let phaser know upfront about the existing scenes
@@ -103,7 +117,8 @@ export default function GameComponent() {
                 callbacks: {
                     preBoot: (game: Phaser.Game) => {
                         // store email in game registry so all scenes can access it
-                        game.registry.set('userEmail', email)
+                        game.registry.set('userEmail', userEmail)
+                        game.registry.set('userName', userName)
                     },
                 },
             }
