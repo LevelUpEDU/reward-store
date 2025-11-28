@@ -233,26 +233,6 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
         keyData.text.on('pointerdown', handleKeyPress)
     })
 
-    // Keyboard navigation
-    let selectedKeyIndex = 4 // Start at key 5 (center)
-    let selectedKey = keypadKeys[selectedKeyIndex]
-
-    // Highlight selected key
-    const highlightSelectedKey = () => {
-        keypadKeys.forEach((keyData, index) => {
-            if (index === selectedKeyIndex) {
-                keyData.bg.setFillStyle(0xffff00) // Yellow highlight
-                keyData.bg.setAlpha(0.8)
-            } else {
-                keyData.bg.setFillStyle(0xffffff) // White background
-                keyData.bg.setAlpha(1)
-            }
-        })
-    }
-
-    // Initialize highlight
-    highlightSelectedKey()
-
     // Keyboard input handler
     const handleKeyboardInput = (event: KeyboardEvent) => {
         console.log('Key pressed:', event.key) // Debug log
@@ -275,50 +255,8 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
             event.preventDefault()
         }
 
-        // Navigation
-        if (key === 'w' || event.key === 'ArrowUp') {
-            if (selectedKeyIndex >= 3) {
-                selectedKeyIndex -= 3
-                highlightSelectedKey()
-                console.log('Moved up to index:', selectedKeyIndex)
-            }
-        } else if (key === 's' || event.key === 'ArrowDown') {
-            if (selectedKeyIndex <= 8) {
-                selectedKeyIndex += 3
-                highlightSelectedKey()
-                console.log('Moved down to index:', selectedKeyIndex)
-            }
-        } else if (key === 'a' || event.key === 'ArrowLeft') {
-            if (selectedKeyIndex > 0) {
-                selectedKeyIndex -= 1
-                highlightSelectedKey()
-                console.log('Moved left to index:', selectedKeyIndex)
-            }
-        } else if (key === 'd' || event.key === 'ArrowRight') {
-            if (selectedKeyIndex < 11) {
-                selectedKeyIndex += 1
-                highlightSelectedKey()
-                console.log('Moved right to index:', selectedKeyIndex)
-            }
-        }
-        // Selection
-        else if (key === ' ' || key === 'e') {
-            selectedKey = keypadKeys[selectedKeyIndex]
-            console.log('Selected key:', selectedKey?.num)
-            if (selectedKey) {
-                if (selectedKey.num === '✕') {
-                    currentInput = ''
-                    updateDisplay()
-                } else if (selectedKey.num === '⌫') {
-                    currentInput = currentInput.slice(0, -1)
-                    updateDisplay()
-                } else if (selectedKey.num >= '0' && selectedKey.num <= '9') {
-                    if (currentInput.length < 6) {
-                        currentInput += selectedKey.num
-                        updateDisplay()
-                    }
-                }
-            }
+        if (event.key === 'Escape') {
+            handleClosePress()
         }
         // Direct number input
         else if (key >= '0' && key <= '9') {
@@ -342,12 +280,12 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
             updateDisplay()
         }
         // Clear
-        else if (event.key === 'Escape' || key === 'c') {
+        else if (event.key === 'c') {
             currentInput = ''
             updateDisplay()
-        }
-        // Submit
-        else if (event.key === 'Enter') {
+
+            // Submit
+        } else if (event.key === 'Enter') {
             handleEnterPress()
         }
     }
