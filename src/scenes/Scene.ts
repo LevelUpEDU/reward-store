@@ -159,7 +159,6 @@ export class Scene extends Phaser.Scene implements GameScene {
                 .get('UIScene')
                 .events.emit('update-world-reference', this)
         }
-        this.scene.bringToTop('UIScene')
 
         this.createTiledObjects('object')
 

@@ -20,6 +20,8 @@ export class UIScene extends Phaser.Scene {
         // fools typescript through double casting, probably not great >:(
         this.rewardPointsUI = new RewardPointsUI(this)
         this.uiManager = new UIManager(this)
+        this.cameras.main.setScroll(0, 0)
+        this.cameras.main.setZoom(1)
 
         // gets the currently active scene
         if (data && data.worldScene) {
@@ -35,27 +37,22 @@ export class UIScene extends Phaser.Scene {
     }
 
     private setGameScene(newScene: Scene): void {
-        // 1. CLEANUP OLD LISTENERS
         if (this.gameScene) {
             this.gameScene.events.off('update-points')
-            this.gameScene.events.off('request-point-refresh') // <--- ADD THIS
+            this.gameScene.events.off('request-point-refresh')
         }
 
         this.gameScene = newScene
 
-        // 2. ADD NEW LISTENERS
         if (this.gameScene) {
-            // Existing listener
             this.gameScene.events.on('update-points', (points: number) => {
                 this.rewardPointsUI.animatePointsChange(points)
             })
 
-            // NEW: Listen for refresh requests from the world
             this.gameScene.events.on('request-point-refresh', () => {
                 this.refreshRewardPoints()
             })
 
-            // Initial fetch
             this.refreshRewardPoints()
         }
     }

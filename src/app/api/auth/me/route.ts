@@ -1,10 +1,11 @@
 import {auth0} from '@/lib/auth0'
-import {type NextRequest, NextResponse} from 'next/server'
+import {NextResponse, type NextRequest} from 'next/server'
+import {getStudentByEmail} from '@/db/queries/student'
+import {getInstructorByEmail} from '@/db/queries/instructor'
 
-export async function GET(_request: NextRequest) {
+export async function GET(_req: NextRequest) {
     try {
         const session = await auth0.getSession()
-
         if (!session?.user) {
             return NextResponse.json(
                 {error: 'Not authenticated'},
@@ -12,13 +13,39 @@ export async function GET(_request: NextRequest) {
             )
         }
 
+        const email = session.user.email
+
+        // return early if email can't be found
+        if (!email) {
+            return NextResponse.json({
+                email: null,
+                name: 'User',
+                sub: session.user.sub,
+            })
+        }
+
+        // find user name given an email (works for students or instructors)
+        let name: string | null = null
+
+        const student = await getStudentByEmail(email)
+        if (student) {
+            name = student.name
+        } else {
+            const instructor = await getInstructorByEmail(email)
+            if (instructor) {
+                name = instructor.name
+            }
+        }
+
         return NextResponse.json({
-            email: session.user.email,
-            name: session.user.name,
+            email,
+            name: name || email.split('@')[0] || 'User',
             sub: session.user.sub,
         })
     } catch (error) {
-        console.error('Auth error:', error)
-        return NextResponse.json({error: 'Failed to get user'}, {status: 500})
+        return NextResponse.json(
+            {error: (error as Error).message},
+            {status: 500}
+        )
     }
 }
