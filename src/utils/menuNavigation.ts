@@ -44,8 +44,6 @@ export function createMenuNavigation(
 
     // Create keyboard keys
     const keys = {
-        esc: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
-        q: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q),
         up: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
         down: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
         w: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
@@ -191,8 +189,16 @@ export function createMenuNavigation(
     keys.s.on('up', stopDownRepeat)
     keys.enter.on('down', handleSelect)
     keys.e.on('down', handleSelect)
-    keys.esc.on('down', handleClose)
-    keys.q.on('down', handleClose)
+
+    // bind escape/q using global events
+    const globalCloseHandler = (event: KeyboardEvent) => {
+        // Stop propagation just to be safe (good practice for modals)
+        event.stopImmediatePropagation()
+        handleClose()
+    }
+
+    scene.input.keyboard!.on('keydown-ESC', globalCloseHandler)
+    scene.input.keyboard!.on('keydown-Q', globalCloseHandler)
 
     // Cleanup function to remove all listeners
     const cleanup = () => {
@@ -211,8 +217,11 @@ export function createMenuNavigation(
 
         keys.enter.off('down', handleSelect)
         keys.e.off('down', handleSelect)
-        keys.esc.off('down', handleClose)
-        keys.q.off('down', handleClose)
+
+        scene.input.keyboard!.off('keydown-ESC', globalCloseHandler)
+        scene.input.keyboard!.off('keydown-Q', globalCloseHandler)
+
+        Object.values(keys).forEach((key) => key.destroy())
     }
 
     return {

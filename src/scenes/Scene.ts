@@ -9,7 +9,6 @@ import {createCollisionBox} from '@/utils/physics'
 import {addPulseEffect} from '@/utils/sprites'
 import {InputHandler} from '@/utils/inputHandler'
 import {InteractionHandler} from '@/interactions/interactionHandler'
-import {RewardPointsUI} from '@/utils/rewardPointsUI'
 import '@/interactions'
 
 interface SpriteManifest {
@@ -30,9 +29,6 @@ export class Scene extends Phaser.Scene implements GameScene {
     protected inputHandler!: InputHandler
     public interactionHandler!: InteractionHandler
     public player!: Phaser.Physics.Arcade.Sprite
-
-    // UI components
-    protected rewardPointsUI?: RewardPointsUI
 
     // input objects
     public cursors!: Phaser.Types.Input.Keyboard.CursorKeys
@@ -116,33 +112,64 @@ export class Scene extends Phaser.Scene implements GameScene {
                 }
             })
         })
+
+        // menu assets
+        this.load.font(
+            'CyberPunkFont',
+            '/assets/fonts/CyberpunkCraftpixPixel.otf'
+        )
+
+        // Menu tilemap backgrounds
+        this.load.tilemapTiledJSON('rewardsMap', '/assets/rewards/rewards.json')
+        this.load.image(
+            'Interface windows',
+            '/assets/tilemaps/Interface windows.png'
+        )
+        this.load.tilemapTiledJSON(
+            'subScreenMap',
+            '/assets/rewards/rewards_subscreen.json'
+        )
+        this.load.tilemapTiledJSON('shopMap', '/assets/rewards/shop.json')
+
+        // Shop tilesets
+        this.load.image('FrameMap', '/assets/tilemaps/FrameMap.png')
+        this.load.spritesheet(
+            'button_yellow_left',
+            '/assets/tilemaps/button_yellow_left.png',
+            {frameWidth: 32, frameHeight: 32}
+        )
+        this.load.image(
+            'button_yellow_right',
+            '/assets/tilemaps/button_yellow_right.png'
+        )
     }
 
     create(): void {
         this.createMap()
         this.createPlayer()
         this.setCamera()
-        this.createCollisions()
-        this.inputHandler = new InputHandler(this, 100)
         this.interactionHandler = new InteractionHandler(this)
+        this.inputHandler = new InputHandler(this, this.getMovementSpeed())
 
-        // Handle specific object layers from Tiled (like 'object' in lobby3.json)
+        if (!this.scene.isActive('UIScene')) {
+            this.scene.launch('UIScene', {worldScene: this})
+        } else {
+            // If UI is already running, just update the reference
+            this.scene
+                .get('UIScene')
+                .events.emit('update-world-reference', this)
+        }
+        this.scene.bringToTop('UIScene')
+
         this.createTiledObjects('object')
 
-        // Handle logical interactables (like legacy setup)
         this.createInteractables()
-
-        this.setupInput()
-        // Call setupRewardPointsUI asynchronously
-        this.setupRewardPointsUI().catch((err) => {
-            console.error('Error setting up reward points UI:', err)
-        })
-        this.setupRewardPointsUI()
-
-        // 1. REGISTER CUSTOM COLLIDERS (Walls, Furniture, etc)
         if (this.customColliders.length > 0) {
             this.physics.add.collider(this.player, this.customColliders)
         }
+
+        this.setupInput()
+        this.createCollisions()
     }
 
     /* for adding images - images are stored in /public/assets/sprites/{sceneName}/
@@ -199,11 +226,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         // Add each layer, passing ALL tilesets (Phaser will use only the relevant ones)
         this.mapConfig.layers.forEach((layerConfig) => {
             if (allTilesets.length > 0) {
-                // Check if it's a tile layer (not an object layer) before creating
-                const layerData = this.map.getLayer(layerConfig.name)
-                if (layerData) {
-                    this.map.createLayer(layerConfig.name, allTilesets)
-                }
+                this.map.createLayer(layerConfig.name, allTilesets)
             }
         })
 
@@ -217,17 +240,17 @@ export class Scene extends Phaser.Scene implements GameScene {
         )
     }
 
-    protected createPlayer(): void {
+    protected createPlayer(
+        x: number = 400,
+        y: number = 300,
+        scale: number = 2
+    ): void {
         // Check if animations for 'bob' already exist
         if (!this.anims.exists('walk_right')) {
             this.anims.createFromAseprite('bob')
         }
-        this.player = this.physics.add.sprite(400, 300, 'bob')
-        this.player.setScale(2)
-        this.player.setDepth(10) // Ensure player renders above floor
-
-        // 3. ENABLE PLAYER WORLD BOUNDS COLLISION
-        this.player.setCollideWorldBounds(true)
+        this.player = this.physics.add.sprite(x, y, 'bob')
+        this.player.setScale(scale)
     }
 
     protected createCollisions(): void {
@@ -236,8 +259,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         ) as TiledObjectLayer | null
 
         if (collisionLayer) {
-            // We use the customColliders array instead of collisionGroup
-            // to avoid the StaticGroup.add() crash with Rectangles
+            this.collisionGroup = this.physics.add.staticGroup()
 
             collisionLayer.objects.forEach((obj) => {
                 if (obj.width > 0 && obj.height > 0 && obj.visible) {
@@ -248,20 +270,11 @@ export class Scene extends Phaser.Scene implements GameScene {
                         obj.width,
                         obj.height
                     )
-
-                    // Ensure physics is enabled
-                    if (!collisionRect.body) {
-                        this.physics.add.existing(collisionRect, true)
-                    }
-
-                    // Add to safe array instead of Group
-                    this.customColliders.push(collisionRect)
+                    this.collisionGroup.add(collisionRect)
                 }
             })
 
-            // Note: We don't need to call physics.add.collider here because
-            // the Scene.create() method already does this:
-            // this.physics.add.collider(this.player, this.customColliders)
+            this.physics.add.collider(this.player, this.collisionGroup)
         }
     }
 
@@ -338,13 +351,20 @@ export class Scene extends Phaser.Scene implements GameScene {
                 const sprite = this.addSpriteToScene(obj)
                 if (sprite) {
                     sprite.setInteractive()
-                    let pulseColor = undefined
-                    if (obj.properties?.pulseColor) {
-                        pulseColor = parseInt(
-                            obj.properties.pulseColor.replace('#', '0x')
-                        )
+
+                    const shouldPulse = obj.properties?.pulseColor ?? true
+
+                    if (shouldPulse) {
+                        const pulseColor =
+                            obj.properties?.pulseColor ?
+                                parseInt(
+                                    obj.properties.pulseColor.replace('#', '0x')
+                                )
+                            :   undefined
+
+                        addPulseEffect(this, sprite, pulseColor)
                     }
-                    addPulseEffect(this, sprite, pulseColor)
+
                     this.interactionHandler.createInteractionFromTiled(
                         obj,
                         sprite
@@ -369,6 +389,10 @@ export class Scene extends Phaser.Scene implements GameScene {
                 }
             })
         }
+    }
+
+    public getInputHandler(): InputHandler {
+        return this.inputHandler
     }
 
     protected setupInput(): void {
@@ -404,36 +428,21 @@ export class Scene extends Phaser.Scene implements GameScene {
         })
     }
 
-    protected setCamera(): void {
+    protected setCamera(scale: number = 1): void {
         const camera = this.cameras.main
         camera.startFollow(this.player, true, 0.1, 0.1) // smooth follow
         camera.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
-        // camera.setZoom(1) // adjust zoom for how close/far you want it
+        camera.setZoom(scale) // adjust zoom for how close/far you want it
         camera.roundPixels = true // keeps pixel art crisp
     }
 
-    protected async setupRewardPointsUI(): Promise<void> {
-        this.rewardPointsUI = new RewardPointsUI(this)
-
-        // Try to get user email and fetch points
-        const userEmail = this.getUserEmail()
-        if (userEmail) {
-            this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
-        } else {
-            // If no user email, show 0 points
-            this.rewardPointsUI.setPoints(0)
-        }
-    }
-
     public getUserEmail(): string {
-        // get email from game registry (set by React component)
         const email = this.game.registry.get('userEmail')
         if (email) {
             return email
         }
 
-        // for development only
-        return 'kamal@my.bcit.ca'
+        return 'dev@example.com'
     }
 
     /**
@@ -441,19 +450,14 @@ export class Scene extends Phaser.Scene implements GameScene {
      * Call this after the player earns or spends points
      */
     public updateRewardPoints(newPoints: number): void {
-        if (this.rewardPointsUI) {
-            this.rewardPointsUI.animatePointsChange(newPoints)
-        }
+        this.events.emit('update-points', newPoints)
     }
 
     /**
      * Refresh the reward points from the API
      */
     public async refreshRewardPoints(): Promise<void> {
-        const userEmail = this.getUserEmail()
-        if (userEmail && this.rewardPointsUI) {
-            await this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
-        }
+        this.events.emit('request-point-refresh')
     }
 
     shutdown(): void {
@@ -475,5 +479,9 @@ export class Scene extends Phaser.Scene implements GameScene {
 
         this.inputHandler.update(this.player)
         this.interactionHandler.update()
+    }
+
+    protected getMovementSpeed(): number {
+        return 100
     }
 }

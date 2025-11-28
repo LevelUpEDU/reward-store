@@ -1,6 +1,10 @@
 import {interactionRegistry} from './interactionRegistry'
 
-interactionRegistry.register('keypad', async (scene, _data?) => {
+interactionRegistry.register('keypad', async (worldScene, _data?) => {
+    // swap out the scene for the UI Scene
+    const uiScene = worldScene.scene.get('UIScene')
+    const scene = uiScene as any
+
     scene.interactionHandler.blockMovement()
 
     // FIX 1: Define a high depth constant

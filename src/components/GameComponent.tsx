@@ -54,7 +54,6 @@ export default function GameComponent() {
     // create a placeholder reference, the div won't exist just yet
     const gameRef = useRef<HTMLDivElement>(null)
     const [isClient, setIsClient] = useState(false)
-
     const {email, isLoading} = useAuth()
 
     // sets the client to true once component mounts in browser
@@ -64,8 +63,7 @@ export default function GameComponent() {
     }, [])
 
     useEffect(() => {
-        // don't start until DOM is ready and we have the auth info
-        if (!isClient || !gameRef.current || isLoading) return
+        if (!isClient || !gameRef.current || isLoading) return // wait for DOM and auth info to populate
 
         let gameInstance: Phaser.Game | null = null
 
@@ -76,6 +74,7 @@ export default function GameComponent() {
             // Add any additional scenes here !
             const {Lobby} = await import('@/scenes/Lobby')
             const {Classroom} = await import('@/scenes/Classroom')
+            const {UIScene} = await import('@/scenes/UIScene')
 
             const config = {
                 type: Phaser.WEBGL,
@@ -84,6 +83,7 @@ export default function GameComponent() {
                 render: {
                     pixelArt: true,
                     antialias: false,
+                    roundPixels: true,
                 },
                 scale: {
                     mode: Phaser.Scale.FIT,
@@ -99,10 +99,10 @@ export default function GameComponent() {
                         debug: false,
                     },
                 },
-                scene: [Lobby, Classroom],
+                scene: [Lobby, Classroom, UIScene],
                 callbacks: {
                     preBoot: (game: Phaser.Game) => {
-                        // stores the email so all scenes can access it
+                        // store email in game registry so all scenes can access it
                         game.registry.set('userEmail', email)
                     },
                 },

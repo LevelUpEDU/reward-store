@@ -1,6 +1,5 @@
 'use client'
 import dynamic from 'next/dynamic'
-import Link from 'next/link'
 import {useState, useEffect} from 'react'
 
 interface PreInstallPromptEvent extends Event {
@@ -158,43 +157,10 @@ function InstallPrompt() {
         </div>
     )
 }
-function GameNavigation() {
-    return (
-        <div
-            style={{
-                position: 'fixed',
-                top: '10px',
-                left: '10px',
-                zIndex: 1000,
-                background: 'rgba(255, 255, 255, 0.95)',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-                display: 'flex',
-                gap: '10px',
-                alignItems: 'center',
-            }}>
-            <Link
-                href="/"
-                style={{
-                    background: '#667eea',
-                    color: 'white',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                }}>
-                Home
-            </Link>
-        </div>
-    )
-}
 
 export default function GamePage() {
     return (
         <div>
-            <GameNavigation />
             <InstallPrompt />
             <GameComponent />
         </div>

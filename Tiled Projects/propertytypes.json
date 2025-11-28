@@ -33,6 +33,11 @@
                 "name": "tooltip",
                 "type": "string",
                 "value": ""
+            },
+            {
+                "name": "target",
+                "type": "string",
+                "value": ""
             }
         ],
         "name": "Interactable",

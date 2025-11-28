@@ -1,20 +1,17 @@
 import {NextResponse} from 'next/server'
-import {db} from '@/db'
 import {quest} from '@/db/schema'
-import fs from 'fs'
-import path from 'path'
-
-const dataPath = path.join(process.cwd(), 'src', 'data', 'quests.json')
+import {
+    createSubmission,
+    deleteSubmission,
+    getSubmissionsByStudent,
+} from '@/db/queries/submission'
+import {db, getQuestsByCourse} from '@/db'
 
 // We will use the project's existing Drizzle/Neon helpers when DATABASE_URL is set.
 // The project exposes queries in src/db/queries; import the helper to read quests.
-let useDb = false
+const useDb = Boolean(process.env.DATABASE_URL)
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-const {getQuestsByCourse} = await import('@/db/queries/quest')
-if (typeof getQuestsByCourse === 'function' && process.env.DATABASE_URL) {
-    useDb = true
-}
 
 export async function POST(request: Request) {
     try {
@@ -63,27 +60,54 @@ export async function POST(request: Request) {
 // GET: return quests from DB when available, otherwise from the local JSON
 export async function GET(request: Request) {
     try {
-        if (useDb) {
-            const {dbGetQuests} = await import('./helpers')
-            return await dbGetQuests(request)
-        }
+        const {searchParams} = new URL(request.url)
+        const courseIdParam = searchParams.get('courseId')
+        const studentEmail = searchParams.get('studentEmail')
 
-        // Fallback to file-based data
-        // eslint-disable-next-line no-console
-        console.log('[api/quests] falling back to JSON file at', dataPath)
-        if (!fs.existsSync(dataPath)) {
-            return NextResponse.json({quests: []})
-        }
-        const raw = fs.readFileSync(dataPath, 'utf8')
-        const data = JSON.parse(raw)
-        return NextResponse.json(data)
-    } catch (err: unknown) {
-        // eslint-disable-next-line no-console
-        console.error('[api/quests] GET error', err)
-        const payload: Record<string, unknown> = {error: String(err)}
-        if (process.env.NODE_ENV !== 'production' && err instanceof Error)
-            payload.stack = err.stack
-        return NextResponse.json(payload, {status: 500})
+        if (!courseIdParam)
+            return NextResponse.json({error: 'Missing courseId'}, {status: 400})
+        const courseId = parseInt(courseIdParam)
+
+        if (!useDb)
+            return NextResponse.json(
+                {error: 'DB not configured'},
+                {status: 500}
+            )
+
+        // 2. PARALLEL FETCH
+        // We get the definitions from the Quest table...
+        // ...and the status from the Submission table.
+        const [courseQuests, studentSubmissions] = await Promise.all([
+            getQuestsByCourse(courseId),
+            studentEmail ? getSubmissionsByStudent(studentEmail) : [],
+        ])
+
+        // 3. MERGE
+        const formattedQuests = courseQuests.map((q) => {
+            const matchedSubmission = studentSubmissions.find(
+                (s) => s.questId === q.id
+            )
+            return {
+                ...q,
+                done: Boolean(matchedSubmission),
+                submissionId: matchedSubmission?.id || null,
+                submissionStatus: matchedSubmission?.status || null,
+            }
+        })
+
+        // (Optional) You can fetch the real course title here if you have a getCourseById query
+        const courseData = {id: courseId, title: 'Course'}
+
+        return NextResponse.json({
+            course: courseData,
+            quests: formattedQuests,
+        })
+    } catch (err) {
+        console.error('[API] GET Quests Error:', err)
+        return NextResponse.json(
+            {error: 'Internal Server Error'},
+            {status: 500}
+        )
     }
 }
 
@@ -92,57 +116,41 @@ export async function GET(request: Request) {
 // you should implement server-side logic that maps student -> submission rows.
 export async function PATCH(request: Request) {
     try {
-        const body = await request.json()
-        const {index, done, confirmed, questId} = body
-        if (
-            (typeof index !== 'number' && typeof questId !== 'number') ||
-            (typeof done !== 'boolean' && typeof confirmed !== 'boolean')
-        ) {
+        if (!useDb)
             return NextResponse.json(
-                {
-                    error: 'Invalid payload: require index or questId and done/confirmed',
-                },
-                {status: 400}
+                {error: 'Database not configured'},
+                {status: 500}
             )
+
+        const body = await request.json()
+        const {done, questId, studentEmail} = body
+
+        if (
+            !studentEmail ||
+            typeof questId !== 'number' ||
+            typeof done !== 'boolean'
+        ) {
+            return NextResponse.json({error: 'Invalid payload'}, {status: 400})
         }
 
-        // If DB is configured, operate against DB: map index -> quest id and create a submission for the student.
-        if (useDb) {
-            const {dbPatchHandler} = await import('./helpers')
-            return await dbPatchHandler(body, request)
-        }
-
-        // fallback: file-based behavior
-        type FileQuest = {
-            title?: string
-            points?: number
-            done?: boolean
-            confirmed?: boolean
-        }
-        let data: {quests: FileQuest[]} = {quests: []}
-        if (fs.existsSync(dataPath)) {
-            const raw = fs.readFileSync(dataPath, 'utf8')
-            const parsed = JSON.parse(raw) as
-                | {quests?: FileQuest[] | undefined}
-                | undefined
-            data = {quests: parsed?.quests ?? []}
-        }
-        if (!Array.isArray(data.quests)) data.quests = []
-        if (!data.quests[index])
-            data.quests[index] = {
-                title: `Quest ${index + 1}`,
-                points: 0,
-                done: false,
+        if (done) {
+            // MARK DONE: Create row
+            try {
+                await createSubmission({email: studentEmail, questId})
+            } catch (e) {
+                console.warn(`[API] Duplicate submission ignored: ${e}`)
             }
-        if (typeof done === 'boolean') data.quests[index].done = done
-        if (typeof confirmed === 'boolean')
-            data.quests[index].confirmed = confirmed
-        fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf8')
-        return NextResponse.json({ok: true, quests: data.quests})
-    } catch (err: unknown) {
-        const payload: Record<string, unknown> = {error: String(err)}
-        if (process.env.NODE_ENV !== 'production' && err instanceof Error)
-            payload.stack = err.stack
-        return NextResponse.json(payload, {status: 500})
+        } else {
+            // UNMARK: Delete row
+            await deleteSubmission(studentEmail, questId)
+        }
+
+        return NextResponse.json({ok: true})
+    } catch (err) {
+        console.error('[API] Patch Error:', err)
+        return NextResponse.json(
+            {error: 'Internal Server Error'},
+            {status: 500}
+        )
     }
 }

@@ -6,7 +6,6 @@ export interface TilesetConfig {
 
 export interface LayerConfig {
     name: string
-    tilesetKey: string
 }
 
 export interface MapConfig {

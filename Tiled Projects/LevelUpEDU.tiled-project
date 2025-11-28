@@ -40,6 +40,11 @@
                     "value": ""
                 },
                 {
+                    "name": "target",
+                    "type": "string",
+                    "value": ""
+                },
+                {
                     "name": "tooltip",
                     "type": "string",
                     "value": ""
