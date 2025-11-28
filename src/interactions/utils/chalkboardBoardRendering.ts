@@ -39,6 +39,9 @@ export function renderDoneLabel(
             )
             .setOrigin(0.5)
             .setDepth((styles.depths.text ?? 0) + 1)
+        // Add to both arrays:
+        // - boardElements: destroyed when switching boards
+        // - elements: destroyed when closing chalkboard
         state.boardElements.push(doneLabel)
         elements.push(doneLabel)
     } catch {
@@ -111,7 +114,7 @@ export function renderQuestList(
         ) {
             state.boardQuestUI.destroyAllElements()
         }
-        state.boardElements.length = 0
+        // Don't clear state.boardElements here - it may already contain the Done label
         // Only pass showDone as true if board.name is 'Available'
         const showDoneAvailable = board.name === 'Available' ? showDone : false
         state.boardQuestUI = createQuestUI(

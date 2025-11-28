@@ -12,20 +12,23 @@ export class RewardPointsUI {
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene
-        this.container = this.scene.add.container(0, 0)
-        this.container.setScrollFactor(0) // Fixed position on screen
-        this.container.setDepth(1000) // Always on top
 
-        // Create the UI elements
+        this.container = this.scene.add.container(0, 0)
+        this.container.setDepth(1000)
+
         this.createBackground()
         this.iconSprite = this.createIcon()
         this.pointsText = this.createText()
 
-        // Position at top right
         this.positionUI()
 
-        // Listen for window resize
         this.scene.scale.on('resize', this.positionUI, this)
+    }
+
+    private positionUI(): void {
+        const x = 1920 - 160
+        const y = 20
+        this.container.setPosition(x, y)
     }
 
     private createBackground(): void {
@@ -83,14 +86,14 @@ export class RewardPointsUI {
         return text
     }
 
-    private positionUI(): void {
-        // Position at top right with some padding
-        // Use the game's scale dimensions instead of camera
-        const gameWidth = this.scene.scale.width
-        const x = gameWidth - 160
-        const y = 20
-        this.container.setPosition(x, y)
-    }
+    // private positionUI(): void {
+    //     // Position at top right with some padding
+    //     // Use the game's scale dimensions instead of camera
+    //     const gameWidth = this.scene.scale.width
+    //     const x = gameWidth - 160
+    //     const y = 20
+    //     this.container.setPosition(x, y)
+    // }
 
     /**
      * Update the displayed points value
@@ -103,22 +106,26 @@ export class RewardPointsUI {
     /**
      * Fetch and update points from the API
      */
-    public async fetchAndUpdatePoints(userEmail: string): Promise<void> {
+    public async fetchAndUpdatePoints(userEmail: string): Promise<any> {
         try {
             const response = await fetch(
                 `/api/student/points?email=${encodeURIComponent(userEmail)}`
             )
-            if (response.ok) {
-                const data = await response.json()
-                this.setPoints(data.points || 0)
-            } else {
+
+            if (!response.ok) {
                 console.warn(
                     '[RewardPointsUI] Failed to fetch points:',
                     response.statusText
                 )
+                return 0
             }
+
+            const data = await response.json()
+            this.setPoints(data.points || 0)
+            return data
         } catch (error) {
             console.error('[RewardPointsUI] Error fetching points:', error)
+            return 0
         }
     }
 

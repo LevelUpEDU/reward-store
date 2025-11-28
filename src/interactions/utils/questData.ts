@@ -29,7 +29,7 @@ let persistToggleInflight: Map<string, Promise<boolean>> | null = null
  * Returns an object { course, quests } for robust handling of both DB and JSON fallback.
  */
 export async function loadQuests(
-    courseId: number = 3,
+    courseId: number,
     studentEmail?: string
 ): Promise<{course: Course; quests: Quest[]}> {
     try {
@@ -65,33 +65,42 @@ export async function loadQuests(
 export async function persistToggle(
     index: number,
     value: boolean,
-    questId?: number
+    questId: number | undefined,
+    courseId: number,
+    studentEmail: string
 ): Promise<boolean> {
     try {
-        // prevent concurrent requests for the same quest/index
         const key = typeof questId === 'number' ? `q:${questId}` : `i:${index}`
         if (!persistToggleInflight) persistToggleInflight = new Map()
         const inflight = persistToggleInflight
         if (inflight.has(key)) {
-            // wait for existing request to complete, then return its result
             return inflight.get(key) as Promise<boolean>
         }
 
         const p = (async () => {
-            // include courseId=3 so server maps against the classroom course
-            const url = `/api/quests?courseId=3`
+            if (!courseId) {
+                console.error('[persistToggle] Missing courseId')
+                return false
+            }
+
+            const url = `/api/quests?courseId=${courseId}`
+
             const res = await fetch(url, {
                 method: 'PATCH',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({index, done: value, questId}),
+                body: JSON.stringify({
+                    index,
+                    done: value,
+                    questId,
+                    studentEmail,
+                }),
             })
             return res.ok
         })()
 
         inflight.set(key, p)
         try {
-            const ok = await p
-            return ok
+            return await p
         } finally {
             inflight.delete(key)
         }

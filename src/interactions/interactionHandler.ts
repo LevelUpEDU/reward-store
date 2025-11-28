@@ -1,4 +1,5 @@
 import type {Scene} from '@/scenes/Scene'
+import type {UIScene} from '@/scenes/UIScene'
 import type {TiledObject} from '@/types'
 import {interactionRegistry} from './interactionRegistry'
 
@@ -8,6 +9,7 @@ export interface InteractionConfig {
     tooltip?: string
     canInteract: boolean
     onInteract?: (scene: Scene) => void
+    data?: unknown
 }
 
 export class InteractionHandler {
@@ -27,10 +29,14 @@ export class InteractionHandler {
             Phaser.Input.Keyboard.KeyCodes.E
         )
 
+        const zoom = scene.cameras.main.zoom
+        const nameTagSize = Math.round(24 / zoom)
+        const promptSize = Math.round(22 / zoom)
+
         // Create UI elements
         this.nameTagText = scene.add
             .text(0, 0, '', {
-                fontSize: '16px',
+                fontSize: `${nameTagSize}px`,
                 color: '#ffffff',
                 backgroundColor: '#000000',
                 padding: {x: 8, y: 4},
@@ -40,7 +46,7 @@ export class InteractionHandler {
 
         this.interactionPrompt = scene.add
             .text(0, 0, '', {
-                fontSize: '14px',
+                fontSize: `${promptSize}px`,
                 color: '#ffff00',
                 backgroundColor: '#333333',
                 padding: {x: 6, y: 3},
@@ -69,6 +75,10 @@ export class InteractionHandler {
 
     public unblockMovement(): void {
         this.isInterfaceOpen = false
+    }
+    // return the tooltip and name prompt
+    public getUIElements(): Phaser.GameObjects.GameObject[] {
+        return [this.nameTagText, this.interactionPrompt]
     }
 
     public isMovementBlocked(): boolean {
@@ -99,6 +109,7 @@ export class InteractionHandler {
             type: obj.properties.eventType || obj.name,
             tooltip: obj.properties.tooltip || 'Press E to interact',
             canInteract: obj.properties.active ?? true,
+            data: obj.properties.target,
         }
 
         interactionZone.setData('config', config)
@@ -149,7 +160,7 @@ export class InteractionHandler {
 
         const objectBounds = this.currentInteractionObject.getBounds()
         if (objectBounds.contains(pointer.worldX, pointer.worldY)) {
-            this.performInteraction(config.type)
+            this.performInteraction(config.type, config.data)
             return false
         }
 
@@ -158,6 +169,14 @@ export class InteractionHandler {
 
     private handleInteractionInput(): void {
         if (!this.currentInteractionObject) return
+        const uiScene = this.scene.scene.get('UIScene') as UIScene
+
+        if (
+            uiScene &&
+            (uiScene.uiManager?.isOpen() || uiScene.uiManager?.isShopVisible())
+        ) {
+            return
+        }
 
         const config = this.getConfigFromObject(this.currentInteractionObject)
         if (config?.canInteract) {
@@ -181,6 +200,15 @@ export class InteractionHandler {
 
         this.nameTagText.setPosition(tagX, tagY)
         this.nameTagText.setVisible(true)
+    }
+
+    public updateScale(): void {
+        const zoom = this.scene.cameras.main.zoom
+        const nameTagSize = Math.round(24 / zoom)
+        const promptSize = Math.round(22 / zoom)
+
+        this.nameTagText.setFontSize(nameTagSize)
+        this.interactionPrompt.setFontSize(promptSize)
     }
 
     private showInteractionPrompt(text: string, x: number, y: number): void {
@@ -219,6 +247,7 @@ export class InteractionHandler {
     }
 
     private performInteraction(type: string, data?: unknown): void {
-        interactionRegistry.execute(type, this.scene, data)
+        const config = this.getConfigFromObject(this.currentInteractionObject)
+        interactionRegistry.execute(type, this.scene, config?.data ?? data)
     }
 }

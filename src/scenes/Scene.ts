@@ -9,16 +9,10 @@ import {createCollisionBox} from '@/utils/physics'
 import {addPulseEffect} from '@/utils/sprites'
 import {InputHandler} from '@/utils/inputHandler'
 import {InteractionHandler} from '@/interactions/interactionHandler'
-import {RewardPointsUI} from '@/utils/rewardPointsUI'
 import '@/interactions'
 
 interface SpriteManifest {
     sprites: string[]
-}
-
-// Define a type for scene with user data
-interface SceneWithUser extends Phaser.Scene {
-    userEmail?: string
 }
 
 export class Scene extends Phaser.Scene implements GameScene {
@@ -29,13 +23,12 @@ export class Scene extends Phaser.Scene implements GameScene {
     protected mapConfig: MapConfig
     protected spriteObjects: Set<string> = new Set()
     public collisionGroup!: Phaser.Physics.Arcade.StaticGroup
+    // Array to hold custom collision objects (bypassing the buggy Group)
+    protected customColliders: Phaser.GameObjects.GameObject[] = []
 
     protected inputHandler!: InputHandler
     public interactionHandler!: InteractionHandler
     public player!: Phaser.Physics.Arcade.Sprite
-
-    // UI components
-    protected rewardPointsUI?: RewardPointsUI
 
     // input objects
     public cursors!: Phaser.Types.Input.Keyboard.CursorKeys
@@ -82,13 +75,23 @@ export class Scene extends Phaser.Scene implements GameScene {
             }
         })
 
-        // tilesets
+        // UPDATED TILESET LOADING LOOP
         this.mapConfig.tilesets.forEach((tileset) => {
-            this.load.image(tileset.key, tileset.imagePath)
+            // Check if frame dimensions are provided in the config
+            // We cast to 'any' here to avoid TypeScript errors if MapConfig interface isn't updated yet
+            const ts = tileset as any
+
+            if (ts.frameWidth && ts.frameHeight) {
+                this.load.spritesheet(tileset.key, tileset.imagePath, {
+                    frameWidth: ts.frameWidth,
+                    frameHeight: ts.frameHeight,
+                })
+            } else {
+                this.load.image(tileset.key, tileset.imagePath)
+            }
         })
 
         // tilemap
-        // this.load.tilemapTiledJSON('map', this.mapConfig.tilemapPath)
         this.load.tilemapTiledJSON(this.sceneName, this.mapConfig.tilemapPath)
 
         // player
@@ -103,34 +106,78 @@ export class Scene extends Phaser.Scene implements GameScene {
 
         this.load.on('complete', () => {
             this.mapConfig.tilesets.forEach((tileset) => {
-                this.textures
-                    .get(tileset.key)
-                    .setFilter(Phaser.Textures.FilterMode.NEAREST)
+                const tex = this.textures.get(tileset.key)
+                if (tex) {
+                    tex.setFilter(Phaser.Textures.FilterMode.NEAREST)
+                }
             })
         })
+
+        // menu assets
+        this.load.font(
+            'CyberPunkFont',
+            '/assets/fonts/CyberpunkCraftpixPixel.otf'
+        )
+
+        // Menu tilemap backgrounds
+        this.load.tilemapTiledJSON('rewardsMap', '/assets/rewards/rewards.json')
+        this.load.image(
+            'Interface windows',
+            '/assets/tilemaps/Interface windows.png'
+        )
+        this.load.tilemapTiledJSON(
+            'subScreenMap',
+            '/assets/rewards/rewards_subscreen.json'
+        )
+        this.load.tilemapTiledJSON('shopMap', '/assets/rewards/shop.json')
+
+        // Shop tilesets
+        this.load.image('FrameMap', '/assets/tilemaps/FrameMap.png')
+        this.load.spritesheet(
+            'button_yellow_left',
+            '/assets/tilemaps/button_yellow_left.png',
+            {frameWidth: 32, frameHeight: 32}
+        )
+        this.load.image(
+            'button_yellow_right',
+            '/assets/tilemaps/button_yellow_right.png'
+        )
     }
 
     create(): void {
         this.createMap()
         this.createPlayer()
         this.setCamera()
-        this.createCollisions()
-        this.inputHandler = new InputHandler(this, 100)
         this.interactionHandler = new InteractionHandler(this)
+        this.inputHandler = new InputHandler(this, this.getMovementSpeed())
+
+        if (!this.scene.isActive('UIScene')) {
+            this.scene.launch('UIScene', {worldScene: this})
+        } else {
+            // If UI is already running, just update the reference
+            this.scene
+                .get('UIScene')
+                .events.emit('update-world-reference', this)
+        }
+
+        this.createTiledObjects('object')
 
         this.createInteractables()
+        if (this.customColliders.length > 0) {
+            this.physics.add.collider(this.player, this.customColliders)
+        }
 
         this.setupInput()
-        this.setupRewardPointsUI()
+        this.createCollisions()
     }
 
     /* for adding images - images are stored in /public/assets/sprites/{sceneName}/
      * **must** be added to the manifest.json file in that folder - ie for "chalkboard.png":
-     *    {
-     *      "sprites": [
-     *        "chalkboard"
-     *      ]
-     *    }
+     * {
+     * "sprites": [
+     * "chalkboard"
+     * ]
+     * }
      */
     protected addSpriteToScene(
         obj: TiledObject
@@ -179,18 +226,30 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.mapConfig.layers.forEach((layerConfig) => {
             if (allTilesets.length > 0) {
                 this.map.createLayer(layerConfig.name, allTilesets)
-                // layer?.setScale(0.5)
             }
         })
+
+        // 2. SET PHYSICS WORLD BOUNDS TO MATCH MAP
+        // This stops the player from walking "outside the frame"
+        this.physics.world.setBounds(
+            0,
+            0,
+            this.map.widthInPixels,
+            this.map.heightInPixels
+        )
     }
 
-    protected createPlayer(): void {
+    protected createPlayer(
+        x: number = 400,
+        y: number = 300,
+        scale: number = 2
+    ): void {
         // Check if animations for 'bob' already exist
         if (!this.anims.exists('walk_right')) {
             this.anims.createFromAseprite('bob')
         }
-        this.player = this.physics.add.sprite(400, 300, 'bob')
-        this.player.setScale(2)
+        this.player = this.physics.add.sprite(x, y, 'bob')
+        this.player.setScale(scale)
     }
 
     protected createCollisions(): void {
@@ -218,6 +277,69 @@ export class Scene extends Phaser.Scene implements GameScene {
         }
     }
 
+    /**
+     * Handles visual objects defined in Tiled Object Layers (e.g. furniture with GIDs)
+     */
+    // Updated createTiledObjects using customColliders (Safe Mode)
+    protected createTiledObjects(layerName: string): void {
+        const objectLayer = this.map.getObjectLayer(
+            layerName
+        ) as TiledObjectLayer | null
+        if (!objectLayer) return
+
+        objectLayer.objects.forEach((obj) => {
+            if (obj.gid === undefined) return
+            if (obj.gid >= 2216) return // Skip furniture (handled in Lobby)
+
+            const tileset = this.map.tilesets.find(
+                (t) => obj.gid! >= t.firstgid && obj.gid! < t.firstgid + t.total
+            )
+
+            if (!tileset) return
+
+            if (tileset.image && this.textures.exists(tileset.name)) {
+                try {
+                    const relativeId = obj.gid - tileset.firstgid
+                    const sprite = this.add.sprite(
+                        obj.x!,
+                        obj.y!,
+                        tileset.name,
+                        relativeId
+                    )
+
+                    if (sprite) {
+                        sprite.setOrigin(0, 1)
+                        if (obj.width && obj.height)
+                            sprite.setDisplaySize(obj.width, obj.height)
+                        sprite.setDepth(sprite.y)
+
+                        // Collision Box
+                        const width = obj.width || sprite.width
+                        const height = obj.height || sprite.height
+                        const collisionHeight = height * 0.3
+                        const collisionY = obj.y! - collisionHeight / 2
+                        const collisionX = obj.x! + width / 2
+
+                        const collider = this.add.rectangle(
+                            collisionX,
+                            collisionY,
+                            width,
+                            collisionHeight,
+                            0x000000,
+                            0
+                        )
+
+                        this.physics.add.existing(collider, true)
+                        this.customColliders.push(collider)
+                    }
+                } catch (err) {
+                    console.warn(`Failed object GID ${obj.gid}`, err)
+                }
+            }
+        })
+    }
+
+    // Updated createInteractables using customColliders (Safe Mode)
     protected createInteractables(): void {
         const interactableLayer = this.map.getObjectLayer(
             'Interactable'
@@ -229,30 +351,27 @@ export class Scene extends Phaser.Scene implements GameScene {
                 if (sprite) {
                     sprite.setInteractive()
 
-                    const pulseColor =
-                        obj.properties?.pulseColor ?
-                            parseInt(
-                                obj.properties.pulseColor.replace('#', '0x')
-                            )
-                        :   undefined
+                    const shouldPulse = obj.properties?.pulseColor ?? true
 
-                    addPulseEffect(this, sprite, pulseColor)
+                    if (shouldPulse) {
+                        const pulseColor =
+                            obj.properties?.pulseColor ?
+                                parseInt(
+                                    obj.properties.pulseColor.replace('#', '0x')
+                                )
+                            :   undefined
+
+                        addPulseEffect(this, sprite, pulseColor)
+                    }
+
                     this.interactionHandler.createInteractionFromTiled(
                         obj,
                         sprite
                     )
+
                     const isPassable = obj.properties?.passable ?? true
 
                     if (!isPassable) {
-                        if (!this.collisionGroup) {
-                            this.collisionGroup = this.physics.add.staticGroup()
-                            this.physics.add.collider(
-                                this.player,
-                                this.collisionGroup
-                            )
-                        }
-
-                        // create a rect overtop of the object and use it to create a collision box
                         const bounds = sprite.getBounds()
                         const collisionRect = createCollisionBox(
                             this,
@@ -261,12 +380,18 @@ export class Scene extends Phaser.Scene implements GameScene {
                             bounds.width,
                             bounds.height
                         )
-
-                        this.collisionGroup.add(collisionRect)
+                        if (!collisionRect.body) {
+                            this.physics.add.existing(collisionRect, true)
+                        }
+                        this.customColliders.push(collisionRect)
                     }
                 }
             })
         }
+    }
+
+    public getInputHandler(): InputHandler {
+        return this.inputHandler
     }
 
     protected setupInput(): void {
@@ -302,55 +427,21 @@ export class Scene extends Phaser.Scene implements GameScene {
         })
     }
 
-    protected setCamera(): void {
+    protected setCamera(scale: number = 1): void {
         const camera = this.cameras.main
         camera.startFollow(this.player, true, 0.1, 0.1) // smooth follow
         camera.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
-        // camera.setZoom(1) // adjust zoom for how close/far you want it
+        camera.setZoom(scale) // adjust zoom for how close/far you want it
         camera.roundPixels = true // keeps pixel art crisp
     }
 
-    protected setupRewardPointsUI(): void {
-        this.rewardPointsUI = new RewardPointsUI(this)
-
-        // Try to get user email and fetch points
-        const userEmail = this.getUserEmail()
-        if (userEmail) {
-            this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
-        } else {
-            // If no user email, show 0 points
-            this.rewardPointsUI.setPoints(0)
-        }
-    }
-
-    protected getUserEmail(): string | undefined {
-        // Check if userEmail is set on the scene
-        const sceneWithUser = this as unknown as SceneWithUser
-        if (sceneWithUser.userEmail) {
-            return sceneWithUser.userEmail
+    public getUserEmail(): string {
+        const email = this.game.registry.get('userEmail')
+        if (email) {
+            return email
         }
 
-        // Default student email for development
-        let devStudent = 'zion_li@my.bcit.ca'
-
-        // Try to get from environment or process (for development)
-        try {
-            if (typeof process !== 'undefined') {
-                const proc = process as unknown as
-                    | {env?: Record<string, string | undefined>}
-                    | undefined
-                const envEmail =
-                    proc?.env?.DEV_STUDENT_EMAIL ||
-                    proc?.env?.NEXT_PUBLIC_DEV_STUDENT_EMAIL
-                if (typeof envEmail === 'string' && envEmail.length > 0) {
-                    devStudent = envEmail
-                }
-            }
-        } catch {
-            // ignore
-        }
-
-        return devStudent
+        return 'dev@example.com'
     }
 
     /**
@@ -358,19 +449,14 @@ export class Scene extends Phaser.Scene implements GameScene {
      * Call this after the player earns or spends points
      */
     public updateRewardPoints(newPoints: number): void {
-        if (this.rewardPointsUI) {
-            this.rewardPointsUI.animatePointsChange(newPoints)
-        }
+        this.events.emit('update-points', newPoints)
     }
 
     /**
      * Refresh the reward points from the API
      */
     public async refreshRewardPoints(): Promise<void> {
-        const userEmail = this.getUserEmail()
-        if (userEmail && this.rewardPointsUI) {
-            await this.rewardPointsUI.fetchAndUpdatePoints(userEmail)
-        }
+        this.events.emit('request-point-refresh')
     }
 
     shutdown(): void {
@@ -392,5 +478,9 @@ export class Scene extends Phaser.Scene implements GameScene {
 
         this.inputHandler.update(this.player)
         this.interactionHandler.update()
+    }
+
+    protected getMovementSpeed(): number {
+        return 100
     }
 }

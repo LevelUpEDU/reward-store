@@ -77,5 +77,6 @@ export interface TiledObject {
         displayName?: string
         pulseColor?: string
         tooltip?: string
+        target?: string
     }
 }

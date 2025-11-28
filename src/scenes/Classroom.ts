@@ -2,6 +2,9 @@ import {Scene} from './Scene'
 import type {MapConfig} from '@/types'
 
 export class Classroom extends Scene {
+    public courseId?: number
+    public userEmail?: string
+
     private static readonly CONFIG: MapConfig = {
         name: 'classroom',
         tilemapPath: '/api/maps/classroom',
@@ -18,16 +21,15 @@ export class Classroom extends Scene {
             },
         ],
         layers: [
-            {name: 'Floor', tilesetKey: 'roomBuilder'},
-            {name: 'Horizontal Walls', tilesetKey: 'roomBuilder'},
-            {name: 'Vertical Walls', tilesetKey: 'roomBuilder'},
-            {name: 'Shadows', tilesetKey: 'roomBuilder'},
-            {name: 'Tables', tilesetKey: 'interiors'},
-            {name: 'Chairs', tilesetKey: 'interiors'},
-            {name: 'Chairs Left', tilesetKey: 'interiors'},
-            {name: 'Chairs Right', tilesetKey: 'interiors'},
-            {name: 'Decorations', tilesetKey: 'interiors'},
-            {name: 'Doors', tilesetKey: 'interiors'},
+            {name: 'Floor'},
+            {name: 'Horizontal Walls'},
+            {name: 'Vertical Walls'},
+            {name: 'Shadows'},
+            {name: 'Tables'},
+            {name: 'Chairs'},
+            {name: 'Chairs Left'},
+            {name: 'Chairs Right'},
+            {name: 'Decorations'},
         ],
     }
 
@@ -35,65 +37,22 @@ export class Classroom extends Scene {
         super('ClassroomScene', Classroom.CONFIG)
     }
 
-    create(): void {
-        super.create()
-        this.setCameraResolution()
-        this.defineSceneTransitions()
+    init(data?: {courseId?: number; userEmail?: string}): void {
+        if (data) {
+            this.courseId = data.courseId
+            this.userEmail = data.userEmail
+        }
     }
 
-    private setCameraResolution(): void {
-        const targetWidth = 800
-        const targetHeight = 600
+    protected createPlayer(): void {
+        super.createPlayer(670, 120, 2)
+    }
 
-        // Resize Phaser canvas
-        this.scale.resize(targetWidth, targetHeight)
-
-        // Center the canvas in the browser window
-        this.scale.displaySize.setAspectRatio(targetWidth / targetHeight)
-        this.scale.refresh()
-
-        // Adjust camera to match new size
+    protected setCamera(): void {
         const cam = this.cameras.main
-        cam.setViewport(0, 0, targetWidth, targetHeight)
-
-        // Optional: center camera on classroom map
-        const worldCenterX = this.map.widthInPixels / 2
-        const worldCenterY = this.map.heightInPixels / 2
-        cam.centerOn(worldCenterX, worldCenterY)
-    }
-
-    private defineSceneTransitions(): void {
-        // Example of transition triggers
-        const portals = [
-            {x: 705, y: 100, width: 64, height: 64, target: 'LobbyScene'},
-        ]
-
-        portals.forEach((portal) => {
-            const rect = this.add.rectangle(
-                portal.x,
-                portal.y,
-                portal.width,
-                portal.height,
-                0x00ff00,
-                0.3
-            )
-            this.physics.add.existing(rect, true)
-            this.physics.add.overlap(
-                this.player,
-                rect,
-                () => {
-                    this.transitionTo(portal.target)
-                },
-                undefined,
-                this
-            )
-        })
-    }
-
-    private transitionTo(targetSceneKey: string): void {
-        this.cameras.main.fadeOut(800, 0, 0, 0)
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start(targetSceneKey)
-        })
+        cam.setViewport(0, 0, 1920, 1080)
+        cam.setZoom(1.8)
+        cam.centerOn(this.map.widthInPixels / 2, this.map.heightInPixels / 2)
+        cam.roundPixels = true
     }
 }

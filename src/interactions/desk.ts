@@ -1,7 +1,8 @@
 import {interactionRegistry} from './interactionRegistry'
 import type {Scene} from '@/scenes/Scene'
 
-interactionRegistry.register('desk', (scene: Scene) => {
+interactionRegistry.register('desk', (worldScene: Scene) => {
+    const scene = worldScene.scene.get('UIScene') as any
     const message = scene.add
         .text(
             scene.scale.width / 2,
