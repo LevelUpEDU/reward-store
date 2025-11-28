@@ -199,21 +199,6 @@ export class MenuOverlay {
     }
 
     private createMenuBackground(): void {
-        if (!this.scene.textures.exists('Interface windows')) {
-            // Fallback to simple rectangle if tilemap not loaded
-            const bg = this.scene.add.rectangle(
-                200,
-                400,
-                400,
-                600,
-                0x000000,
-                0.85
-            )
-            bg.setScrollFactor(0)
-            this.container!.add(bg)
-            return
-        }
-
         this.rewardsMap = this.scene.make.tilemap({key: 'rewardsMap'})
         const tileset = this.rewardsMap.addTilesetImage('Interface windows')
 
@@ -266,7 +251,7 @@ export class MenuOverlay {
             this.rewardsLayer.setVisible(false)
         }
 
-        this.subScreenContainer = this.scene.add.container(0, 0)
+        this.subScreenContainer = this.scene.add.container(700, 80)
         this.subScreenContainer.setScrollFactor(0)
         this.subScreenContainer.setDepth(1001)
 
@@ -331,20 +316,6 @@ export class MenuOverlay {
     }
 
     private createSubScreenBackground(): void {
-        if (!this.scene.textures.exists('Interface windows')) {
-            const bg = this.scene.add.rectangle(
-                250,
-                400,
-                500,
-                700,
-                0x222222,
-                0.95
-            )
-            bg.setScrollFactor(0)
-            this.subScreenContainer!.add(bg)
-            return
-        }
-
         this.subScreenMap = this.scene.make.tilemap({key: 'subScreenMap'})
         const tileset = this.subScreenMap.addTilesetImage('Interface windows')
 
@@ -353,6 +324,7 @@ export class MenuOverlay {
             return
         }
 
+        // subScreenLayer is the actual background image
         this.subScreenLayer = this.subScreenMap.createLayer(
             'base_layer',
             tileset,
@@ -362,7 +334,7 @@ export class MenuOverlay {
         if (this.subScreenLayer) {
             this.subScreenLayer.setScrollFactor(0)
             this.subScreenLayer.setScale(2.5)
-            this.subScreenLayer.setPosition(0, 20)
+            this.subScreenLayer.setPosition(700, 100)
             this.subScreenLayer.setDepth(1000)
         }
     }
