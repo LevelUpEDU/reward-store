@@ -6,7 +6,6 @@ interactionRegistry.register(
     (scene: Scene, data?: unknown) => {
         const target = data as string
         if (!target) {
-            console.error('roomTransition: missing target scene')
             return
         }
 

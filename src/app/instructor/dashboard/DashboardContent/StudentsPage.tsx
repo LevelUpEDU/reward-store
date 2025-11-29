@@ -23,8 +23,34 @@ const StudentsPage = () => {
             if (!email) return
 
             try {
-                const data = await getStudentsByInstructor(email)
-                setStudents(data)
+                const studentsData = await getStudentsByInstructor(email)
+
+                const studentsWithPoints = await Promise.all(
+                    studentsData.map(async (student) => {
+                        try {
+                            const res = await fetch(
+                                `/api/student/points?email=${student.email}`
+                            )
+
+                            if (!res.ok) throw new Error('Failed to fetch')
+
+                            const data = await res.json()
+
+                            return {
+                                ...student,
+                                totalPoints: data.points ?? 0,
+                            }
+                        } catch (e) {
+                            console.error(
+                                `Could not fetch points for ${student.email}`,
+                                e
+                            )
+                            return {...student, totalPoints: 0}
+                        }
+                    })
+                )
+
+                setStudents(studentsWithPoints)
             } catch (err) {
                 setError(err instanceof Error ? err.message : String(err))
             } finally {

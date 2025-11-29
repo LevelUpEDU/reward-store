@@ -7,7 +7,6 @@ export class MapLoader {
             if (!response.ok) throw new Error(`Failed to load map: ${mapName}`)
             return await response.json()
         } catch (error) {
-            console.error('Error loading map:', error)
             throw error
         }
     }
