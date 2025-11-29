@@ -5,8 +5,8 @@ import {
     UI_TEXT_STYLES,
     createHoverHandlers,
     clearTextStyle,
-} from './uiStyles'
-import {UI_POSITIONS} from './uiPositions'
+} from '../uiStyles'
+import {UI_POSITIONS} from '../uiPositions'
 import {createMenuNavigation, MenuNavigationControls} from '../menuNavigation'
 
 interface MenuItem {

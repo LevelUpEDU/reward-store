@@ -22,6 +22,24 @@ export const UI_COLORS = {
     stockHigh: '#88ff88',
     stockLow: '#ff8888',
     logoutBg: '#000000dd',
+
+    // keypad
+    keypadBg: 0x3a4556,
+    keypadBorder: 0x1a202c,
+    keypadPadding: 0xe8e8e8,
+    keypadDisplay: 0x3d4a5c,
+    keypadDisplayBorder: 0x2d3748,
+    keypadKey: 0xffffff,
+    keypadKeyBorder: 0x94a3b8,
+    keypadKeyText: '#2d3748',
+    keypadEnter: 0x10b981,
+    keypadEnterBorder: 0x065f46,
+    keypadClose: 0xef4444,
+    keypadCloseBorder: 0x7f1d1d,
+    popupBg: 0x000000,
+    popupBgAlpha: 0.9,
+    success: '#10b981',
+    error: '#ef4444',
 }
 
 export const UI_FONTS = {
@@ -141,6 +159,47 @@ export const UI_TEXT_STYLES = {
         backgroundColor: '#000000dd',
         padding: {left: 20, right: 20, top: 10, bottom: 10},
     },
+
+    keypadTitle: {
+        fontSize: '18px',
+        color: UI_COLORS.gold,
+        align: 'center' as const,
+        fontStyle: 'bold' as const,
+    },
+
+    keypadDisplay: {
+        fontSize: '32px',
+        color: UI_COLORS.gold,
+        fontFamily: 'Courier New',
+        align: 'center' as const,
+    },
+
+    keypadKey: {
+        fontSize: '18px',
+        color: UI_COLORS.keypadKeyText,
+        align: 'center' as const,
+        fontStyle: 'bold' as const,
+    },
+
+    keypadButton: {
+        fontSize: '16px',
+        color: UI_COLORS.white,
+        align: 'center' as const,
+        fontStyle: 'bold' as const,
+    },
+
+    popupText: (color: string) => ({
+        fontSize: '40px',
+        color,
+        align: 'center' as const,
+    }),
+
+    popupButton: {
+        fontSize: '24px',
+        color: UI_COLORS.white,
+        align: 'center' as const,
+        fontStyle: 'bold' as const,
+    },
 }
 
 export const UI_DEPTH = {
@@ -152,6 +211,8 @@ export const UI_DEPTH = {
     shopBackground: 1099,
     shopContent: 1100,
     feedback: 2000,
+    keypad: 20000,
+    keypadPopup: 20001,
 }
 
 export const UI_BUTTON_PADDING = {

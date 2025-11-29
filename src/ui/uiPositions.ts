@@ -67,4 +67,45 @@ export const UI_POSITIONS = {
         animateOffsetY: -50,
         fadeOffsetY: -100,
     },
+
+    keypad: {
+        scale: 1.0,
+        padding: {width: 350, height: 570},
+        area: {width: 330, height: 550},
+        title: {offsetY: -200},
+        display: {
+            offsetY: -120,
+            width: 300,
+            height: 60,
+        },
+        keys: {
+            width: 60,
+            height: 50,
+            spacingX: 80,
+            spacingY: 60,
+            startOffsetY: -40,
+            grid: [
+                ['1', '2', '3'],
+                ['4', '5', '6'],
+                ['7', '8', '9'],
+                ['✕', '0', '⌫'],
+            ],
+        },
+        actionButtons: {
+            offsetY: 200,
+            width: 100,
+            height: 40,
+            spacing: 120,
+        },
+        popup: {
+            small: {width: 800, height: 250},
+            large: {width: 900, height: 450},
+            textOffsetY: -30,
+            buttonOffsetY: 50,
+            largeTextOffsetY: -50,
+            largeButtonOffsetY: 120,
+            buttonWidth: 150,
+            buttonHeight: 50,
+        },
+    },
 }

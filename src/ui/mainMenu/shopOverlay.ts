@@ -5,8 +5,8 @@ import {
     UI_DEPTH,
     UI_TEXT_STYLES,
     createHoverHandlers,
-} from './uiStyles'
-import {UI_POSITIONS} from './uiPositions'
+} from '../uiStyles'
+import {UI_POSITIONS} from '../uiPositions'
 
 interface ShopItem {
     id: number
