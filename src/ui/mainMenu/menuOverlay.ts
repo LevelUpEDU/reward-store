@@ -7,6 +7,7 @@ import {
     clearTextStyle,
 } from './uiStyles'
 import {UI_POSITIONS} from './uiPositions'
+import {createMenuNavigation, MenuNavigationControls} from '../menuNavigation'
 
 interface MenuItem {
     label: string
@@ -21,7 +22,6 @@ export class MenuOverlay {
     private container: Phaser.GameObjects.Container | null = null
     private dimOverlay: Phaser.GameObjects.Rectangle | null = null
     private menuItems: Phaser.GameObjects.Text[] = []
-    private selectedIndex: number = 0
     private isVisible: boolean = false
 
     // Tilemap background
@@ -34,12 +34,8 @@ export class MenuOverlay {
     private subScreenMap?: Phaser.Tilemaps.Tilemap
     private subScreenLayer?: Phaser.Tilemaps.TilemapLayer | null
 
-    // Keyboard controls
-    private upKey?: Phaser.Input.Keyboard.Key
-    private downKey?: Phaser.Input.Keyboard.Key
-    private enterKey?: Phaser.Input.Keyboard.Key
-    private wKey?: Phaser.Input.Keyboard.Key
-    private sKey?: Phaser.Input.Keyboard.Key
+    // Navigation
+    private navigation: MenuNavigationControls | null = null
 
     private readonly MENU_OPTIONS: MenuItem[] = [
         {label: 'REWARDS', action: () => this.openSubScreen('REWARDS')},
@@ -50,69 +46,16 @@ export class MenuOverlay {
         {label: 'BADGES', action: () => this.openSubScreen('BADGES')},
         {label: 'SHOP', action: () => this.openShop()},
         {label: 'LOGOUT', action: () => this.handleLogout()},
-    ] // Menu configuration
+    ]
 
     constructor(scene: UIScene) {
         this.scene = scene
-        this.setupKeyboardControls()
-    }
-
-    private setupKeyboardControls(): void {
-        this.upKey = this.scene.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.UP
-        )
-        this.downKey = this.scene.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.DOWN
-        )
-        this.enterKey = this.scene.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.ENTER
-        )
-        this.wKey = this.scene.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.W
-        )
-        this.sKey = this.scene.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.S
-        )
-
-        this.upKey.on('down', () => this.navigateUp())
-        this.wKey.on('down', () => this.navigateUp())
-        this.downKey.on('down', () => this.navigateDown())
-        this.sKey.on('down', () => this.navigateDown())
-        this.enterKey.on('down', () => this.selectCurrent())
-    }
-
-    private navigateUp(): void {
-        if (!this.isVisible) return
-        if (this.subScreenVisible) return // Don't navigate main menu when sub-screen is open
-
-        this.selectedIndex =
-            (this.selectedIndex - 1 + this.MENU_OPTIONS.length) %
-            this.MENU_OPTIONS.length
-        this.updateHighlight()
-    }
-
-    private navigateDown(): void {
-        if (!this.isVisible) return
-        if (this.subScreenVisible) return
-
-        this.selectedIndex = (this.selectedIndex + 1) % this.MENU_OPTIONS.length
-        this.updateHighlight()
-    }
-
-    private selectCurrent(): void {
-        if (!this.isVisible) return
-        if (this.subScreenVisible) {
-            this.closeSubScreen()
-            return
-        }
-
-        const option = this.MENU_OPTIONS[this.selectedIndex]
-        option.action()
     }
 
     private updateHighlight(): void {
+        const selectedIndex = this.navigation?.getSelectedIndex() ?? 0
         this.menuItems.forEach((item, i) => {
-            if (i === this.selectedIndex) {
+            if (i === selectedIndex) {
                 item.setStyle(UI_TEXT_STYLES.menuItemSelected)
             } else {
                 clearTextStyle(item, UI_TEXT_STYLES.menuItem)
@@ -123,19 +66,15 @@ export class MenuOverlay {
     public show(): void {
         if (this.isVisible) return
         this.isVisible = true
-        this.selectedIndex = 0
 
         this.createDimOverlay()
 
-        // Create container for all menu elements
         this.container = this.scene.add.container(0, 0)
         this.container.setScrollFactor(0)
         this.container.setDepth(UI_DEPTH.menuContent)
 
-        // Create tilemap background
         this.createMenuBackground()
 
-        // Menu items at specific positions
         this.menuItems = []
         this.MENU_OPTIONS.forEach((option, i) => {
             const pos = UI_POSITIONS.menu.items[i]
@@ -149,8 +88,7 @@ export class MenuOverlay {
             item.setInteractive({useHandCursor: true})
 
             item.on('pointerover', () => {
-                this.selectedIndex = i
-                this.updateHighlight()
+                this.navigation?.setSelectedIndex(i)
             })
             item.on('pointerdown', () => {
                 option.action()
@@ -160,7 +98,23 @@ export class MenuOverlay {
             this.container!.add(item)
         })
 
+        this.navigation = createMenuNavigation({
+            scene: this.scene,
+            itemCount: this.MENU_OPTIONS.length,
+            onSelectionChange: () => this.updateHighlight(),
+            onSelect: (index) => this.MENU_OPTIONS[index].action(),
+            onClose: () => this.handleClose(),
+        })
+
         this.updateHighlight()
+    }
+
+    private handleClose(): void {
+        if (this.subScreenVisible) {
+            this.closeSubScreen()
+        } else {
+            this.scene.uiManager?.closeMenu()
+        }
     }
 
     private createDimOverlay(): void {
@@ -211,7 +165,6 @@ export class MenuOverlay {
 
         this.closeSubScreen()
 
-        // Clean up tilemap
         if (this.rewardsLayer) {
             this.rewardsLayer.destroy()
             this.rewardsLayer = null
@@ -224,6 +177,9 @@ export class MenuOverlay {
         this.dimOverlay?.destroy()
         this.dimOverlay = null
 
+        this.navigation?.cleanup()
+        this.navigation = null
+
         this.container?.destroy()
         this.container = null
         this.menuItems = []
@@ -232,6 +188,8 @@ export class MenuOverlay {
     private openSubScreen(category: string): void {
         if (this.subScreenVisible) return
         this.subScreenVisible = true
+
+        this.navigation?.pause()
 
         this.menuItems.forEach((item) => item.setVisible(false))
         if (this.rewardsLayer) {
@@ -246,10 +204,8 @@ export class MenuOverlay {
         this.subScreenContainer.setScrollFactor(0)
         this.subScreenContainer.setDepth(UI_DEPTH.subScreenContent)
 
-        // Create tilemap background for sub-screen
         this.createSubScreenBackground()
 
-        // Title
         const titlePos =
             category === 'ACHIEVEMENTS' ?
                 sub.title.achievements
@@ -263,7 +219,6 @@ export class MenuOverlay {
         title.setScrollFactor(0)
         this.subScreenContainer.add(title)
 
-        // Content based on category
         const data = this.getDataForCategory(category)
         const content = sub.content
 
@@ -277,9 +232,7 @@ export class MenuOverlay {
             text.setScrollFactor(0)
             this.subScreenContainer!.add(text)
         })
-        // Title - check if it's ACHIEVEMENTS and adjust x
 
-        // Back button
         const backBtn = this.scene.add.text(
             sub.backButton.x,
             sub.backButton.y,
@@ -308,7 +261,6 @@ export class MenuOverlay {
             return
         }
 
-        // subScreenLayer is the actual background image
         this.subScreenLayer = this.subScreenMap.createLayer(
             'base_layer',
             tileset,
@@ -328,7 +280,6 @@ export class MenuOverlay {
         if (!this.subScreenVisible) return
         this.subScreenVisible = false
 
-        // Clean up tilemap
         if (this.subScreenLayer) {
             this.subScreenLayer.destroy()
             this.subScreenLayer = null
@@ -344,6 +295,8 @@ export class MenuOverlay {
         if (this.rewardsLayer) {
             this.rewardsLayer.setVisible(true)
         }
+
+        this.navigation?.resume()
     }
 
     private getDataForCategory(category: string): string[] {
@@ -374,7 +327,6 @@ export class MenuOverlay {
         const returnUrl = window.location.origin
         const feedback = UI_POSITIONS.feedback
 
-        // Visual feedback
         const logoutText = this.scene.add.text(
             feedback.x,
             feedback.y,
@@ -391,18 +343,11 @@ export class MenuOverlay {
     }
 
     private openShop(): void {
-        // Close menu first, then open shop
         this.scene.uiManager?.closeMenu()
         this.scene.uiManager?.openShop()
     }
 
     public destroy(): void {
-        this.upKey?.off('down')
-        this.downKey?.off('down')
-        this.enterKey?.off('down')
-        this.wKey?.off('down')
-        this.sKey?.off('down')
-
         this.hide()
     }
 }

@@ -14,8 +14,8 @@ export interface MenuNavigationControls {
     getSelectedIndex: () => number
     setSelectedIndex: (index: number) => void
     cleanup: () => void
-    pause?: () => void
-    resume?: () => void
+    pause: () => void
+    resume: () => void
 }
 
 /**
