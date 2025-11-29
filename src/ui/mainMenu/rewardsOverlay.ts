@@ -194,7 +194,7 @@ export class RewardsOverlay {
             } else {
                 this.redemptions = []
             }
-        } catch (error) {
+        } catch (_error) {
             this.redemptions = []
         }
         this.isLoading = false
