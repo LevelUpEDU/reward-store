@@ -2,9 +2,9 @@
 import {db} from '../index'
 import {submission, student} from '../schema'
 
-import type {Quest, Submission, Transaction} from '@/types/db'
+import type {Submission, Transaction} from '@/types/db'
 
-import {getQuestsByCourse, getQuestById} from './quest'
+import {getQuestById} from './quest'
 import {createTransaction} from './transaction'
 
 import {eq, and} from 'drizzle-orm'
