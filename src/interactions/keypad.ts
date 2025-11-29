@@ -1,6 +1,10 @@
 import {interactionRegistry} from './interactionRegistry'
 import {UI_COLORS, UI_DEPTH, UI_TEXT_STYLES} from '@/ui/uiStyles'
 import {UI_POSITIONS} from '@/ui/uiPositions'
+import {
+    createInteractionInput,
+    InteractionInputControls,
+} from '@/ui/input/interactionInputHandler'
 
 interactionRegistry.register('keypad', async (worldScene, _data?) => {
     const uiScene = worldScene.scene.get('UIScene')
@@ -16,6 +20,15 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
     const scale = keypadPos.scale
 
     const elements: Phaser.GameObjects.GameObject[] = []
+    let inputHandler: InteractionInputControls | null = null
+    let activePopup: Phaser.GameObjects.Container | null = null
+
+    let currentInput = ''
+    const formatDisplay = (value: string) => {
+        if (!value) return '---·---'
+        const padded = value.padEnd(6, '-')
+        return padded.slice(0, 3) + '·' + padded.slice(3, 6)
+    }
 
     const whitePadding = scene.add.rectangle(
         centerX,
@@ -70,22 +83,28 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
     displayText.setScrollFactor(0)
     elements.push(displayText)
 
-    let currentInput = ''
-
     const updateDisplay = () => {
-        if (!currentInput) {
-            displayText.setText('---·---')
-        } else {
-            const padded = currentInput.padEnd(6, '-')
-            displayText.setText(padded.slice(0, 3) + '·' + padded.slice(3, 6))
+        displayText.setText(formatDisplay(currentInput))
+    }
+
+    const addDigit = (digit: string) => {
+        if (currentInput.length < 6) {
+            currentInput += digit
+            updateDisplay()
         }
     }
 
-    const keypadKeys: {
-        bg: Phaser.GameObjects.Rectangle
-        text: Phaser.GameObjects.Text
-        num: string
-    }[] = []
+    const removeDigit = () => {
+        if (currentInput.length > 0) {
+            currentInput = currentInput.slice(0, -1)
+            updateDisplay()
+        }
+    }
+
+    const clearInput = () => {
+        currentInput = ''
+        updateDisplay()
+    }
 
     const keysConfig = keypadPos.keys
     keysConfig.grid.forEach((row, rowIndex) => {
@@ -118,7 +137,18 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
             keyText.setScrollFactor(0)
             elements.push(keyText)
 
-            keypadKeys.push({bg: keyBg, text: keyText, num})
+            const handleKeyPress = () => {
+                if (num === '✕') {
+                    clearInput()
+                } else if (num === '⌫') {
+                    removeDigit()
+                } else {
+                    addDigit(num)
+                }
+            }
+
+            keyBg.on('pointerdown', handleKeyPress)
+            keyText.on('pointerdown', handleKeyPress)
         })
     })
 
@@ -171,64 +201,34 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
         ;(el as Phaser.GameObjects.Image).setDepth(UI_DEPTH.keypad)
     })
 
-    keypadKeys.forEach((keyData) => {
-        const handleKeyPress = () => {
-            if (keyData.num === '✕') {
-                currentInput = ''
-                updateDisplay()
-            } else if (keyData.num === '⌫') {
-                currentInput = currentInput.slice(0, -1)
-                updateDisplay()
-            } else if (keyData.num >= '0' && keyData.num <= '9') {
-                if (currentInput.length < 6) {
-                    currentInput += keyData.num
-                    updateDisplay()
-                }
-            }
-        }
+    const createLoadingPopup = (message: string) => {
+        const popupConfig = UI_POSITIONS.keypad.popup
 
-        keyData.bg.on('pointerdown', handleKeyPress)
-        keyData.text.on('pointerdown', handleKeyPress)
-    })
+        const popup = scene.add.container(centerX, centerY)
+        popup.setScrollFactor(0)
+        popup.setDepth(UI_DEPTH.keypadPopup)
 
-    const handleKeyboardInput = (event: KeyboardEvent) => {
-        const key = event.key.toLowerCase()
+        const bg = scene.add.rectangle(
+            0,
+            0,
+            popupConfig.small.width,
+            popupConfig.small.height,
+            UI_COLORS.popupBg,
+            UI_COLORS.popupBgAlpha
+        )
+        popup.add(bg)
 
-        if (
-            ['w', 'a', 's', 'd', ' ', 'e', 'c'].includes(key) ||
-            [
-                'ArrowUp',
-                'ArrowDown',
-                'ArrowLeft',
-                'ArrowRight',
-                'Enter',
-                'Backspace',
-                'Delete',
-                'Escape',
-            ].includes(event.key)
-        ) {
-            event.preventDefault()
-        }
+        const text = scene.add.text(
+            0,
+            0,
+            message,
+            UI_TEXT_STYLES.popupText(UI_COLORS.gold)
+        )
+        text.setOrigin(0.5)
+        popup.add(text)
 
-        if (event.key === 'Escape') {
-            handleClosePress()
-        } else if (key >= '0' && key <= '9') {
-            if (currentInput.length < 6) {
-                currentInput += key
-                updateDisplay()
-            }
-        } else if (event.key === 'Backspace' || event.key === 'Delete') {
-            currentInput = currentInput.slice(0, -1)
-            updateDisplay()
-        } else if (event.key === 'c') {
-            currentInput = ''
-            updateDisplay()
-        } else if (event.key === 'Enter') {
-            handleEnterPress()
-        }
+        return popup
     }
-
-    document.addEventListener('keydown', handleKeyboardInput)
 
     const createPopup = (
         message: string,
@@ -288,42 +288,31 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
         closeBtnText.setScrollFactor(0)
         popup.add(closeBtnText)
 
-        closeBtnBg.on('pointerdown', () => popup.destroy())
-        closeBtnText.on('pointerdown', () => popup.destroy())
+        const closePopup = () => {
+            popup.destroy()
+            activePopup = null
+            inputHandler?.setMode('numericInput')
+        }
+
+        closeBtnBg.on('pointerdown', closePopup)
+        closeBtnText.on('pointerdown', closePopup)
+
+        activePopup = popup
+        inputHandler?.setMode('dialog')
 
         return popup
     }
 
-    const createLoadingPopup = (message: string) => {
-        const popupConfig = UI_POSITIONS.keypad.popup
-
-        const popup = scene.add.container(centerX, centerY)
-        popup.setScrollFactor(0)
-        popup.setDepth(UI_DEPTH.keypadPopup)
-
-        const bg = scene.add.rectangle(
-            0,
-            0,
-            popupConfig.small.width,
-            popupConfig.small.height,
-            UI_COLORS.popupBg,
-            UI_COLORS.popupBgAlpha
-        )
-        popup.add(bg)
-
-        const text = scene.add.text(
-            0,
-            0,
-            message,
-            UI_TEXT_STYLES.popupText(UI_COLORS.gold)
-        )
-        text.setOrigin(0.5)
-        popup.add(text)
-
-        return popup
+    const handleClose = () => {
+        if (activePopup) {
+            activePopup.destroy()
+            activePopup = null
+            inputHandler?.setMode('numericInput')
+        } else {
+            cleanup()
+        }
     }
-
-    const handleEnterPress = async () => {
+    const handleSubmit = async () => {
         if (currentInput.length !== 6) {
             createPopup('Please enter all 6 digits', UI_COLORS.error)
             return
@@ -364,7 +353,8 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
                     }
 
                     createPopup(successMessage, UI_COLORS.success, 'large')
-                } catch (_registerError) {
+                } catch (registerError) {
+                    console.error('Registration error:', registerError)
                     createPopup(
                         'Course found but registration failed\nPlease try again',
                         UI_COLORS.error
@@ -376,8 +366,9 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
                     UI_COLORS.error
                 )
             }
-        } catch (_error) {
+        } catch (error) {
             loadingPopup.destroy()
+            console.error('Error verifying course:', error)
             createPopup(
                 'Error verifying course\nPlease try again',
                 UI_COLORS.error
@@ -385,19 +376,14 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
         }
     }
 
-    const handleClosePress = () => {
-        cleanup()
-    }
-
-    enterBtn.on('pointerdown', handleEnterPress)
-    enterText.on('pointerdown', handleEnterPress)
-    closeBtn.on('pointerdown', handleClosePress)
-    closeText.on('pointerdown', handleClosePress)
-
     let _cleaned = false
     const cleanup = () => {
         if (_cleaned) return
         _cleaned = true
+
+        inputHandler?.cleanup()
+        inputHandler = null
+
         elements.forEach((el) => {
             try {
                 el.destroy()
@@ -405,14 +391,26 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
                 /* ignore */
             }
         })
-        document.removeEventListener('keydown', handleKeyboardInput)
+
         scene.interactionHandler.unblockMovement()
     }
 
-    const escKey = scene.input.keyboard!.addKey(
-        Phaser.Input.Keyboard.KeyCodes.ESC
-    )
-    escKey.on('down', cleanup)
+    inputHandler = createInteractionInput({
+        scene,
+        initialMode: 'numericInput',
+        handlers: {
+            onNumericInput: addDigit,
+            onBackspace: removeDigit,
+            onClear: clearInput,
+            onSelect: handleSubmit,
+            onClose: handleClose,
+        },
+    })
+
+    enterBtn.on('pointerdown', handleSubmit)
+    enterText.on('pointerdown', handleSubmit)
+    closeBtn.on('pointerdown', cleanup)
+    closeText.on('pointerdown', cleanup)
 })
 
 function scaleTextStyle(style: object, scale: number): object {
