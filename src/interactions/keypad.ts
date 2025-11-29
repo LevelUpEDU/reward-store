@@ -3,7 +3,7 @@ import {UI_COLORS, UI_DEPTH, UI_TEXT_STYLES} from '@/ui/uiStyles'
 import {UI_POSITIONS} from '@/ui/uiPositions'
 import {
     createInteractionInput,
-    InteractionInputControls,
+    type InteractionInputControls,
 } from '@/ui/input/interactionInputHandler'
 
 interactionRegistry.register('keypad', async (worldScene, _data?) => {

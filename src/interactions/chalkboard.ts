@@ -242,9 +242,9 @@ function createQuestList(opts: QuestListOptions) {
     const isAvailable = boardName === 'Available'
     const isApproved = boardName === 'Approved'
 
-    let selectedIndex = 0
+    let _selectedIndex = 0
     let dialogActive = false
-    let windowStart = 0
+    const windowStart = 0
     const VISIBLE_COUNT = 5
 
     const questTexts: Phaser.GameObjects.Text[] = []
@@ -271,7 +271,7 @@ function createQuestList(opts: QuestListOptions) {
     }
 
     const updateVisuals = (index: number) => {
-        selectedIndex = index
+        _selectedIndex = index
         questTexts.forEach((qt, i) => {
             const isSelected = i === index
             qt.setColor(
@@ -629,7 +629,7 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
 
     // Get data
     const courseId = scene.registry.get('courseId')
-    let studentEmail = scene.registry.get('userEmail') || ''
+    const studentEmail = scene.registry.get('userEmail') || ''
 
     const cleanup = () => {
         if (cleaned) return
