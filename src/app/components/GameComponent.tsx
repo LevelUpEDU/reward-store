@@ -1,6 +1,7 @@
 'use client'
 
 import {useEffect, useRef, useState} from 'react'
+import {useAuth} from '@/app/hooks/useAuth'
 import styles from './GameComponent.module.css'
 
 /*
@@ -52,8 +53,8 @@ import styles from './GameComponent.module.css'
 export default function GameComponent() {
     // create a placeholder reference, the div won't exist just yet
     const gameRef = useRef<HTMLDivElement>(null)
-
     const [isClient, setIsClient] = useState(false)
+    const {email, isLoading} = useAuth()
 
     // sets the client to true once component mounts in browser
     // only runs client side
@@ -62,15 +63,32 @@ export default function GameComponent() {
     }, [])
 
     useEffect(() => {
-        if (!isClient || !gameRef.current) return // don't try to render unless the DOM is ready
+        if (!isClient || !gameRef.current || isLoading) return // wait for DOM and auth info to populate
 
         let gameInstance: Phaser.Game | null = null
 
         const initGame = async () => {
+            let userEmail = email
+            let userName = 'Student'
+
+            try {
+                const res = await fetch('/api/auth/me')
+                if (res.ok) {
+                    const data = await res.json()
+                    userEmail = data.email
+                    userName = data.name
+                }
+            } catch (err) {
+                console.warn('Could not fetch user info:', err)
+            }
+
             const Phaser = await import('phaser')
 
-            // default scene to load
+            // let phaser know upfront about the existing scenes
+            // Add any additional scenes here !
+            const {Lobby} = await import('@/scenes/Lobby')
             const {Classroom} = await import('@/scenes/Classroom')
+            const {UIScene} = await import('@/scenes/UIScene')
 
             const config = {
                 type: Phaser.WEBGL,
@@ -79,12 +97,13 @@ export default function GameComponent() {
                 render: {
                     pixelArt: true,
                     antialias: false,
+                    roundPixels: true,
                 },
                 scale: {
                     mode: Phaser.Scale.FIT,
                     autoCenter: Phaser.Scale.CENTER_BOTH,
-                    width: 800,
-                    height: 600,
+                    width: 1920,
+                    height: 1080,
                     parent: gameRef.current,
                 },
                 physics: {
@@ -94,7 +113,14 @@ export default function GameComponent() {
                         debug: false,
                     },
                 },
-                scene: Classroom,
+                scene: [Lobby, Classroom, UIScene],
+                callbacks: {
+                    preBoot: (game: Phaser.Game) => {
+                        // store email in game registry so all scenes can access it
+                        game.registry.set('userEmail', userEmail)
+                        game.registry.set('userName', userName)
+                    },
+                },
             }
 
             gameInstance = new Phaser.Game(config)
@@ -108,9 +134,9 @@ export default function GameComponent() {
                 gameInstance.destroy(true) // destroy the game and free memory
             }
         }
-    }, [isClient]) // runs when isClient changes
+    }, [isClient, isLoading, email]) // runs when isClient changes
 
-    if (!isClient) {
+    if (!isClient || isLoading) {
         return null
     }
 

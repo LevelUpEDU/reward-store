@@ -70,7 +70,7 @@ export class UIManager {
 
     private handleUp(): void {
         if (this.isShopOpen) {
-            this.shopOverlay?.navigateUp()
+            return
         } else if (this.isMenuOpen) {
             this.menuOverlay?.navigateUp()
         }
@@ -78,7 +78,7 @@ export class UIManager {
 
     private handleDown(): void {
         if (this.isShopOpen) {
-            this.shopOverlay?.navigateDown()
+            return
         } else if (this.isMenuOpen) {
             this.menuOverlay?.navigateDown()
         }
@@ -86,7 +86,7 @@ export class UIManager {
 
     private handleSelect(): void {
         if (this.isShopOpen) {
-            this.shopOverlay?.selectCurrent()
+            return
         } else if (this.isMenuOpen) {
             this.menuOverlay?.selectCurrent()
         }
@@ -94,8 +94,6 @@ export class UIManager {
 
     private handleEsc(): void {
         if (this.isShopOpen) {
-            this.closeShop()
-            this.openMenu()
             return
         }
 

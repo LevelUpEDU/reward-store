@@ -50,27 +50,39 @@ export const UI_POSITIONS = {
         },
         title: {x: 630, y: 170},
         coins: {x: 645, y: 230},
+        courseSelector: {
+            y: 270,
+            arrowOffsetX: 400, // distance between course name and arrows
+            labelX: 940, // center X for course name
+            arrowHitArea: {width: 60, height: 60},
+        },
         items: {
             startX: 553,
             startY: 360,
             height: 100,
-            bgWidth: 890,
+            bgWidth: 860,
             bgHeight: 70,
             bgCenterX: 940,
             nameOffsetY: -25,
             costOffsetY: 5,
             stockOffsetX: 400,
+            stockOffsetY: 15,
             buyButtonOffsetX: 680,
+            maxVisible: 4,
         },
         backButton: {x: 940, y: 850},
-        // NEW: Configuration for the split yellow button
         backButtonDecor: {
             scale: 2.5,
             totalWidth: 96, // 64 + 32
             leftWidth: 64,
         },
-        loading: {x: 630, y: 450},
-        noItems: {x: 630, y: 450},
+        scrollIndicators: {
+            x: 940,
+            upY: 295,
+            downY: 800,
+        },
+        loading: {x: 745, y: 450},
+        noItems: {x: 745, y: 450},
     },
 
     feedback: {

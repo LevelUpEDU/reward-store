@@ -22,6 +22,10 @@ export const UI_COLORS = {
     stockHigh: '#88ff88',
     stockLow: '#ff8888',
     logoutBg: '#000000dd',
+    arrowNormal: '#aaaaaa',
+    arrowHover: '#ffffff',
+    arrowDisabled: '#444444',
+    courseName: '#00ffff',
 
     // keypad
     keypadBg: 0x3a4556,
@@ -199,6 +203,23 @@ export const UI_TEXT_STYLES = {
         color: UI_COLORS.white,
         align: 'center' as const,
         fontStyle: 'bold' as const,
+    },
+    courseSelector: {
+        ...baseTextStyle,
+        fontSize: UI_FONT_SIZES.body,
+        color: UI_COLORS.cyan,
+    },
+
+    scrollIndicator: {
+        ...baseTextStyle,
+        fontSize: '32px',
+        color: UI_COLORS.white,
+    },
+
+    scrollIndicatorDisabled: {
+        ...baseTextStyle,
+        fontSize: '32px',
+        color: '#444444',
     },
 }
 
