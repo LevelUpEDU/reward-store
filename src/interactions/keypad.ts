@@ -364,7 +364,7 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
                     }
 
                     createPopup(successMessage, UI_COLORS.success, 'large')
-                } catch (registerError) {
+                } catch (_registerError) {
                     createPopup(
                         'Course found but registration failed\nPlease try again',
                         UI_COLORS.error
@@ -376,7 +376,7 @@ interactionRegistry.register('keypad', async (worldScene, _data?) => {
                     UI_COLORS.error
                 )
             }
-        } catch (error) {
+        } catch (_error) {
             loadingPopup.destroy()
             createPopup(
                 'Error verifying course\nPlease try again',

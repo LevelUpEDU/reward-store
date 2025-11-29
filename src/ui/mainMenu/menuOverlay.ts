@@ -7,7 +7,10 @@ import {
     clearTextStyle,
 } from '../uiStyles'
 import {UI_POSITIONS} from '../uiPositions'
-import {createMenuNavigation, MenuNavigationControls} from '../menuNavigation'
+import {
+    createMenuNavigation,
+    type MenuNavigationControls,
+} from '../menuNavigation'
 
 interface MenuItem {
     label: string
