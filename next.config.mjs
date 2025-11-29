@@ -6,6 +6,11 @@ const nextConfig = {
         DATABASE_URL: process.env.DATABASE_URL,
     },
     webpack: (config, {isServer}) => {
+        config.externals.push({
+            'utf-8-validate': 'commonjs utf-8-validate',
+            bufferutil: 'commonjs bufferutil',
+        })
+
         if (isServer) {
             config.externals.push('phaser')
         }

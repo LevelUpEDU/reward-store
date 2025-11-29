@@ -4,7 +4,7 @@ import {reward, redemption} from '../schema'
 
 import type {Reward} from '@/types/db'
 
-import {and, count, eq, inArray} from 'drizzle-orm'
+import {and, count, eq, inArray, sql} from 'drizzle-orm'
 
 export async function createReward(data: {
     courseId: number
@@ -151,4 +151,49 @@ export async function getRewardById(rewardId: number): Promise<Reward | null> {
         .limit(1)
 
     return result[0] ?? null
+}
+
+// for use in updating rewards to avoid race conditions
+// uses a transaction to ensure the correct value is returned
+export async function getRewardIfAvailableForUpdate(
+    tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+    rewardId: number
+): Promise<{reward: Reward; available: number | null} | null> {
+    // create a transaction to lock the reward while updating
+    const rewardData = await tx.execute(
+        sql`SELECT * FROM reward WHERE id = ${rewardId} FOR UPDATE`
+    )
+
+    if (!rewardData.rows[0]) return null
+
+    const rewardRow = rewardData.rows[0] as Reward
+    if (!rewardRow.active) return null
+
+    // count the current redemptions first
+    const redeemed = await tx
+        .select({count: count()})
+        .from(redemption)
+        .where(
+            and(
+                eq(redemption.rewardId, rewardId),
+                inArray(redemption.status, ['pending', 'fulfilled'])
+            )
+        )
+
+    const redeemedCount = Number(redeemed[0].count)
+
+    if (
+        rewardRow.quantityLimit !== null &&
+        redeemedCount >= rewardRow.quantityLimit
+    ) {
+        return null
+    }
+
+    return {
+        reward: rewardRow,
+        available:
+            rewardRow.quantityLimit === null ?
+                null
+            :   rewardRow.quantityLimit - redeemedCount,
+    }
 }
