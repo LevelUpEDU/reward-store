@@ -60,10 +60,10 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
         navigator.clipboard
             .writeText(questId.toString())
             .then(() => {
-                alert('Quest ID copied to clipboard!')
+                toast('Quest ID copied to clipboard!')
             })
             .catch(() => {
-                alert('Failed to copy Quest ID')
+                toast('Failed to copy Quest ID')
             })
     }
 
@@ -76,7 +76,7 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
                 submissions: submissions,
             })
         } catch (err) {
-            alert(
+            toast(
                 'Failed to load submissions: ' +
                     (err instanceof Error ? err.message : String(err))
             )
@@ -112,9 +112,9 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
                 }
             })
 
-            alert(`Submission ${action}d successfully!`)
+            toast(`Submission ${action}d successfully!`)
         } catch (err) {
-            alert(
+            toast(
                 'Failed to process submission: ' +
                     (err instanceof Error ? err.message : String(err))
             )
@@ -153,10 +153,9 @@ const QuestsPage = ({setActiveTab}: QuestsPageProps) => {
                 setSelectedQuest(null)
             }
 
-            // alert('Quest deleted successfully.')
             toast('Quest deleted successfully.')
         } catch (err) {
-            alert(
+            toast(
                 'Failed to delete quest: ' +
                     (err instanceof Error ? err.message : String(err))
             )

@@ -91,7 +91,6 @@ export function mountBoards(options: MountBoardsOptions) {
     function extendedCleanup(): void {
         if (_cleanedUp) return
         try {
-            console.warn('[chalkboardBoards] extendedCleanup start')
         } catch {}
         _cleanedUp = true
         // remove keyboard bindings for board navigation and destroy Key objects

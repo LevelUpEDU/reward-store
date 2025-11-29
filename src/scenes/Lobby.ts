@@ -27,7 +27,7 @@ export class Lobby extends Scene {
                 key: 'walls',
             },
         ],
-        layers: [{name: 'ground'}, {name: 'props'}, {name: 'walls'}],
+        layers: [{name: 'ground'}, {name: 'walls'}],
     }
 
     constructor() {

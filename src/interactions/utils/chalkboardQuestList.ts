@@ -409,11 +409,6 @@ export function createQuestUI(
                                     .setOrigin(0, 0.5)
                                     .setDepth(styles.depths.text + 2)
                                 elements.push(claimedLabel)
-                                console.warn(
-                                    '[chalkboardQuestList] Claimed label pushed to elements:',
-                                    claimedLabel
-                                )
-                                console.warn(elements)
                             } else {
                                 claimBtn?.setText('Claim')
                             }
@@ -464,7 +459,6 @@ export function createQuestUI(
     // Debug: log destruction of all elements
     function destroyAllElements() {
         elements.forEach((el) => {
-            console.warn('[chalkboardQuestList] Destroying element:', el)
             try {
                 el.destroy()
             } catch {}

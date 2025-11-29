@@ -5,6 +5,7 @@ import {useAuth} from '@/app/hooks/useAuth'
 import {getCourseById} from '@/db/queries/course'
 import {getQuestsByCourse} from '@/db/queries/quest'
 import type {Quest} from '@/types/db'
+import {toast} from 'sonner'
 
 type Course = {
     id: number
@@ -59,10 +60,10 @@ export default function CourseDetailPage({
         navigator.clipboard
             .writeText(questId.toString())
             .then(() => {
-                alert('Quest ID copied to clipboard!')
+                toast('Quest ID copied to clipboard!')
             })
             .catch(() => {
-                alert('Failed to copy Quest ID')
+                toast('Failed to copy Quest ID')
             })
     }
 

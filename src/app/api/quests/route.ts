@@ -49,9 +49,8 @@ export async function POST(request: Request) {
             {status: 201}
         )
     } catch (error) {
-        console.error('Failed to create quest:', error)
         return NextResponse.json(
-            {message: 'Internal Server Error'},
+            {message: `Internal Server Error: ${error}`},
             {status: 500}
         )
     }
@@ -103,9 +102,8 @@ export async function GET(request: Request) {
             quests: formattedQuests,
         })
     } catch (err) {
-        console.error('[API] GET Quests Error:', err)
         return NextResponse.json(
-            {error: 'Internal Server Error'},
+            {error: `Internal Server Error: ${err}`},
             {status: 500}
         )
     }
@@ -147,9 +145,8 @@ export async function PATCH(request: Request) {
 
         return NextResponse.json({ok: true})
     } catch (err) {
-        console.error('[API] Patch Error:', err)
         return NextResponse.json(
-            {error: 'Internal Server Error'},
+            {error: `Internal Server Error: ${err}`},
             {status: 500}
         )
     }

@@ -53,11 +53,6 @@ export class RewardPointsUI {
             icon = this.scene.add.image(25, 25, 'coin-icon')
             icon.setDisplaySize(32, 32) // Set to fixed size that fits the UI
         } else {
-            // Fallback: create a simple circle as placeholder
-            console.warn(
-                '[RewardPointsUI] coin-icon texture not found, using fallback'
-            )
-            // Create a temporary texture with a circle
             const graphics = this.scene.make.graphics({x: 0, y: 0}, false)
             graphics.fillStyle(0xffd700, 1)
             graphics.fillCircle(16, 16, 16)

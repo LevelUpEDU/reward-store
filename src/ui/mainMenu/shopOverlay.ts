@@ -228,11 +228,6 @@ export class ShopOverlay {
             (t): t is Phaser.Tilemaps.Tileset => Boolean(t)
         )
 
-        if (validTilesets.length < 1) {
-            console.error('Shop tilesets missing!')
-            return
-        }
-
         this.shopLayer = this.shopMap.createLayer('base layer', validTilesets)
         if (this.shopLayer) {
             const bg = UI_POSITIONS.shop.background

@@ -146,10 +146,6 @@ interactionRegistry.register(
 
         // 5. SAFETY CHECK: Abort if no Course ID
         if (!courseId) {
-            console.warn(
-                '[Chalkboard] No courseId found in registry. Did you enter through the portal?'
-            )
-
             stopLoadingAnimation()
             loadingText.destroy()
 
@@ -168,11 +164,6 @@ interactionRegistry.register(
         }
 
         // 6. LOAD QUESTS
-        console.log('[Chalkboard] Loading quests for:', {
-            courseId,
-            studentEmail,
-        })
-
         try {
             const {course, quests} = await loadQuests(courseId, studentEmail)
 
