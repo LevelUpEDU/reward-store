@@ -5,8 +5,8 @@ import {
     UI_TEXT_STYLES,
     createHoverHandlers,
     clearTextStyle,
-} from '../uiStyles'
-import {UI_POSITIONS} from '../uiPositions'
+} from '../styles/uiStyles'
+import {UI_POSITIONS} from '../styles/uiPositions'
 
 interface MenuItem {
     label: string
