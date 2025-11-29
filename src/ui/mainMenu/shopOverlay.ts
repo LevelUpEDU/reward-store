@@ -16,10 +16,6 @@ interface ShopItem {
     available: number | null
 }
 
-/**
- * Shop overlay for purchasing rewards with coins
- * Can be opened from MenuOverlay or directly via interaction
- */
 export class ShopOverlay {
     private scene: UIScene
     private container: Phaser.GameObjects.Container | null = null
@@ -27,53 +23,23 @@ export class ShopOverlay {
     private isVisible: boolean = false
     private playerCoins: number = 0
     private userEmail: string = ''
+    private selectedIndex: number = 0
 
-    // UI elements that need updating
     private coinsText: Phaser.GameObjects.Text | null = null
     private itemsContainer: Phaser.GameObjects.Container | null = null
     private loadingText: Phaser.GameObjects.Text | null = null
 
-    // Navigation
     private shopItems: ShopItem[] = []
-    private selectedIndex: number = 0
     private itemButtons: Phaser.GameObjects.Container[] = []
 
-    // Keyboard controls
-    private upKey?: Phaser.Input.Keyboard.Key
-    private downKey?: Phaser.Input.Keyboard.Key
-    private enterKey?: Phaser.Input.Keyboard.Key
-    private escKey?: Phaser.Input.Keyboard.Key
-
-    // Tilemap background
     private shopMap?: Phaser.Tilemaps.Tilemap
     private shopLayer?: Phaser.Tilemaps.TilemapLayer | null
 
     constructor(scene: UIScene) {
         this.scene = scene
-        this.setupKeyboardControls()
     }
 
-    private setupKeyboardControls(): void {
-        this.upKey = this.scene.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.UP
-        )
-        this.downKey = this.scene.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.DOWN
-        )
-        this.enterKey = this.scene.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.ENTER
-        )
-        this.escKey = this.scene.input.keyboard!.addKey(
-            Phaser.Input.Keyboard.KeyCodes.ESC
-        )
-
-        this.upKey.on('down', () => this.navigateUp())
-        this.downKey.on('down', () => this.navigateDown())
-        this.enterKey.on('down', () => this.selectCurrent())
-        this.escKey.on('down', () => this.hide())
-    }
-
-    private navigateUp(): void {
+    public navigateUp(): void {
         if (!this.isVisible || this.shopItems.length === 0) return
 
         this.selectedIndex =
@@ -82,20 +48,17 @@ export class ShopOverlay {
         this.updateHighlight()
     }
 
-    private navigateDown(): void {
+    public navigateDown(): void {
         if (!this.isVisible || this.shopItems.length === 0) return
 
         this.selectedIndex = (this.selectedIndex + 1) % this.shopItems.length
         this.updateHighlight()
     }
 
-    private selectCurrent(): void {
+    public selectCurrent(): void {
         if (!this.isVisible || this.shopItems.length === 0) return
 
-        const item = this.shopItems[this.selectedIndex]
-        if (this.playerCoins >= item.cost) {
-            this.purchaseItem(item)
-        }
+        this.tryPurchase(this.selectedIndex)
     }
 
     private updateHighlight(): void {
@@ -115,22 +78,17 @@ export class ShopOverlay {
         this.userEmail = userEmail
         this.selectedIndex = 0
 
-        // Block movement while shop is open
         this.scene.getInputHandler().blockMovement()
 
         this.createDimOverlay()
-
-        // Create tilemap background first
         this.createShopBackground()
 
-        // Create main container
         this.container = this.scene.add.container(0, 0)
         this.container.setScrollFactor(0)
         this.container.setDepth(UI_DEPTH.shopContent)
 
         const shop = UI_POSITIONS.shop
 
-        // Title
         const title = this.scene.add.text(
             shop.title.x,
             shop.title.y,
@@ -141,7 +99,6 @@ export class ShopOverlay {
         title.setScrollFactor(0)
         this.container.add(title)
 
-        // Coins display
         this.coinsText = this.scene.add.text(
             shop.coins.x,
             shop.coins.y,
@@ -152,12 +109,10 @@ export class ShopOverlay {
         this.coinsText.setScrollFactor(0)
         this.container.add(this.coinsText)
 
-        // Items container
         this.itemsContainer = this.scene.add.container(0, 0)
         this.itemsContainer.setScrollFactor(0)
         this.container.add(this.itemsContainer)
 
-        // Loading text
         this.loadingText = this.scene.add.text(
             shop.loading.x,
             shop.loading.y,
@@ -168,7 +123,6 @@ export class ShopOverlay {
         this.loadingText.setScrollFactor(0)
         this.container.add(this.loadingText)
 
-        // Close button
         const closeBtn = this.scene.add.text(
             shop.backButton.x,
             shop.backButton.y,
@@ -178,10 +132,7 @@ export class ShopOverlay {
         closeBtn.setOrigin(0.5)
         closeBtn.setScrollFactor(0)
         closeBtn.setInteractive({useHandCursor: true})
-        closeBtn.on('pointerdown', () => {
-            this.scene.uiManager?.closeShop()
-            this.scene.uiManager?.openMenu()
-        })
+        closeBtn.on('pointerdown', () => this.returnToMenu())
         createHoverHandlers(
             closeBtn,
             UI_COLORS.cyan,
@@ -190,9 +141,20 @@ export class ShopOverlay {
         )
         this.container.add(closeBtn)
 
-        // Fetch data
         await this.fetchCoins()
         await this.fetchShopItems()
+    }
+
+    private returnToMenu(): void {
+        this.scene.uiManager?.closeShop()
+        this.scene.uiManager?.openMenu()
+    }
+
+    private tryPurchase(index: number): void {
+        const item = this.shopItems[index]
+        if (item && this.playerCoins >= item.cost) {
+            this.purchaseItem(item)
+        }
     }
 
     private createDimOverlay(): void {
@@ -212,7 +174,6 @@ export class ShopOverlay {
 
     private createShopBackground(): void {
         if (!this.scene.textures.exists('FrameMap')) {
-            // Fallback - no tilemap
             return
         }
 
@@ -228,6 +189,11 @@ export class ShopOverlay {
             (t): t is Phaser.Tilemaps.Tileset => Boolean(t)
         )
 
+        if (validTilesets.length < 1) {
+            console.error('Shop tilesets missing!')
+            return
+        }
+
         this.shopLayer = this.shopMap.createLayer('base layer', validTilesets)
         if (this.shopLayer) {
             const bg = UI_POSITIONS.shop.background
@@ -238,13 +204,12 @@ export class ShopOverlay {
         }
     }
 
-    public hide(returnToMenu: boolean = false): void {
+    public hide(): void {
         if (!this.isVisible) return
         this.isVisible = false
 
         this.scene.getInputHandler().unblockMovement()
 
-        // Clean up tilemap
         if (this.shopLayer) {
             this.shopLayer.destroy()
             this.shopLayer = null
@@ -257,10 +222,6 @@ export class ShopOverlay {
         this.dimOverlay?.destroy()
         this.dimOverlay = null
 
-        if (returnToMenu) {
-            this.scene.uiManager?.openMenu()
-        }
-
         this.container?.destroy()
         this.container = null
         this.itemsContainer = null
@@ -272,7 +233,6 @@ export class ShopOverlay {
 
     private async fetchCoins(): Promise<void> {
         try {
-            // Use the scene's reward points UI to get current coins
             if (this.scene.rewardPointsUI) {
                 const data =
                     await this.scene.rewardPointsUI.fetchAndUpdatePoints(
@@ -296,7 +256,6 @@ export class ShopOverlay {
 
     private async fetchShopItems(): Promise<void> {
         try {
-            // TODO: Make course ID configurable or fetch from context
             const rewards = await getRewardsByCourseWithStats(19)
             const available = rewards.filter((r) => r.isAvailable)
 
@@ -324,7 +283,6 @@ export class ShopOverlay {
     private renderShopItems(): void {
         if (!this.itemsContainer) return
 
-        // Clear existing
         this.itemsContainer.removeAll(true)
         this.itemButtons = []
 
@@ -348,7 +306,6 @@ export class ShopOverlay {
             const y = items.startY + i * items.height
             const itemContainer = this.scene.add.container(0, 0)
 
-            // Background
             const bg = this.scene.add.rectangle(
                 items.bgCenterX,
                 y,
@@ -360,7 +317,6 @@ export class ShopOverlay {
             bg.setScrollFactor(0)
             itemContainer.add(bg)
 
-            // Item name
             const nameText = this.scene.add.text(
                 items.startX,
                 y + items.nameOffsetY,
@@ -370,7 +326,6 @@ export class ShopOverlay {
             nameText.setScrollFactor(0)
             itemContainer.add(nameText)
 
-            // Cost
             const costText = this.scene.add.text(
                 items.startX,
                 y + items.costOffsetY,
@@ -380,7 +335,6 @@ export class ShopOverlay {
             costText.setScrollFactor(0)
             itemContainer.add(costText)
 
-            // Stock (if limited)
             if (item.quantityLimit !== null && item.available !== null) {
                 const isLow = item.available <= 3
                 const stockText = this.scene.add.text(
@@ -394,7 +348,6 @@ export class ShopOverlay {
                 itemContainer.add(stockText)
             }
 
-            // Buy button
             const canAfford = this.playerCoins >= item.cost
             const buyBtn = this.scene.add.text(
                 items.startX + items.buyButtonOffsetX,
@@ -429,7 +382,6 @@ export class ShopOverlay {
     private async purchaseItem(item: ShopItem): Promise<void> {
         if (this.playerCoins < item.cost) return
 
-        // Optimistic update
         this.playerCoins -= item.cost
         this.updateCoinsDisplay()
 
@@ -437,24 +389,16 @@ export class ShopOverlay {
             await createTransaction({
                 email: this.userEmail,
                 points: -item.cost,
-                submissionId: 151, // TODO: Make configurable
+                submissionId: 151,
             })
 
-            // Success feedback
             this.showPurchaseSuccess()
-
-            // Refresh shop items to update stock
             await this.fetchShopItems()
-
-            // Update the scene's reward points UI
             this.scene.refreshRewardPoints()
         } catch (error) {
             console.error('Purchase failed:', error)
-
-            // Rollback
             this.playerCoins += item.cost
             this.updateCoinsDisplay()
-
             this.showPurchaseError()
         }
     }
@@ -472,7 +416,6 @@ export class ShopOverlay {
         successText.setDepth(UI_DEPTH.feedback)
         successText.setAlpha(0)
 
-        // Animate in + fade out
         this.scene.tweens.add({
             targets: successText,
             alpha: 1,
@@ -493,7 +436,6 @@ export class ShopOverlay {
             },
         })
 
-        // Flash effect
         this.scene.cameras.main.flash(300, 0, 255, 0)
     }
 
@@ -513,11 +455,6 @@ export class ShopOverlay {
     }
 
     public destroy(): void {
-        this.upKey?.off('down')
-        this.downKey?.off('down')
-        this.enterKey?.off('down')
-        this.escKey?.off('down')
-
         this.hide()
     }
 }

@@ -7,38 +7,27 @@ import {
     clearTextStyle,
 } from '../uiStyles'
 import {UI_POSITIONS} from '../uiPositions'
-import {
-    createMenuNavigation,
-    type MenuNavigationControls,
-} from '../menuNavigation'
 
 interface MenuItem {
     label: string
     action: () => void
 }
 
-/**
- * Overlay menu for rewards, shop, settings, logout, etc.
- */
 export class MenuOverlay {
     private scene: UIScene
     private container: Phaser.GameObjects.Container | null = null
     private dimOverlay: Phaser.GameObjects.Rectangle | null = null
     private menuItems: Phaser.GameObjects.Text[] = []
     private isVisible: boolean = false
+    private selectedIndex: number = 0
 
-    // Tilemap background
     private rewardsMap?: Phaser.Tilemaps.Tilemap
     private rewardsLayer?: Phaser.Tilemaps.TilemapLayer | null
 
-    // Sub-screen state
     private subScreenContainer: Phaser.GameObjects.Container | null = null
     private subScreenVisible: boolean = false
     private subScreenMap?: Phaser.Tilemaps.Tilemap
     private subScreenLayer?: Phaser.Tilemaps.TilemapLayer | null
-
-    // Navigation
-    private navigation: MenuNavigationControls | null = null
 
     private readonly MENU_OPTIONS: MenuItem[] = [
         {label: 'REWARDS', action: () => this.openSubScreen('REWARDS')},
@@ -55,10 +44,57 @@ export class MenuOverlay {
         this.scene = scene
     }
 
+    public navigateUp(): void {
+        if (!this.isVisible || this.subScreenVisible) return
+
+        this.selectedIndex =
+            (this.selectedIndex - 1 + this.MENU_OPTIONS.length) %
+            this.MENU_OPTIONS.length
+        this.updateHighlight()
+    }
+
+    public navigateDown(): void {
+        if (!this.isVisible || this.subScreenVisible) return
+
+        this.selectedIndex = (this.selectedIndex + 1) % this.MENU_OPTIONS.length
+        this.updateHighlight()
+    }
+
+    public selectCurrent(): void {
+        if (!this.isVisible) return
+        if (this.subScreenVisible) return
+
+        this.MENU_OPTIONS[this.selectedIndex].action()
+    }
+
+    public isSubScreenOpen(): boolean {
+        return this.subScreenVisible
+    }
+
+    public closeSubScreen(): void {
+        if (!this.subScreenVisible) return
+        this.subScreenVisible = false
+
+        if (this.subScreenLayer) {
+            this.subScreenLayer.destroy()
+            this.subScreenLayer = null
+        }
+        if (this.subScreenMap) {
+            this.subScreenMap.destroy()
+            this.subScreenMap = undefined
+        }
+
+        this.subScreenContainer?.destroy()
+        this.subScreenContainer = null
+        this.menuItems.forEach((item) => item.setVisible(true))
+        if (this.rewardsLayer) {
+            this.rewardsLayer.setVisible(true)
+        }
+    }
+
     private updateHighlight(): void {
-        const selectedIndex = this.navigation?.getSelectedIndex() ?? 0
         this.menuItems.forEach((item, i) => {
-            if (i === selectedIndex) {
+            if (i === this.selectedIndex) {
                 item.setStyle(UI_TEXT_STYLES.menuItemSelected)
             } else {
                 clearTextStyle(item, UI_TEXT_STYLES.menuItem)
@@ -69,6 +105,7 @@ export class MenuOverlay {
     public show(): void {
         if (this.isVisible) return
         this.isVisible = true
+        this.selectedIndex = 0
 
         this.createDimOverlay()
 
@@ -91,7 +128,8 @@ export class MenuOverlay {
             item.setInteractive({useHandCursor: true})
 
             item.on('pointerover', () => {
-                this.navigation?.setSelectedIndex(i)
+                this.selectedIndex = i
+                this.updateHighlight()
             })
             item.on('pointerdown', () => {
                 option.action()
@@ -101,23 +139,7 @@ export class MenuOverlay {
             this.container!.add(item)
         })
 
-        this.navigation = createMenuNavigation({
-            scene: this.scene,
-            itemCount: this.MENU_OPTIONS.length,
-            onSelectionChange: () => this.updateHighlight(),
-            onSelect: (index) => this.MENU_OPTIONS[index].action(),
-            onClose: () => this.handleClose(),
-        })
-
         this.updateHighlight()
-    }
-
-    private handleClose(): void {
-        if (this.subScreenVisible) {
-            this.closeSubScreen()
-        } else {
-            this.scene.uiManager?.closeMenu()
-        }
     }
 
     private createDimOverlay(): void {
@@ -180,9 +202,6 @@ export class MenuOverlay {
         this.dimOverlay?.destroy()
         this.dimOverlay = null
 
-        this.navigation?.cleanup()
-        this.navigation = null
-
         this.container?.destroy()
         this.container = null
         this.menuItems = []
@@ -191,8 +210,6 @@ export class MenuOverlay {
     private openSubScreen(category: string): void {
         if (this.subScreenVisible) return
         this.subScreenVisible = true
-
-        this.navigation?.pause()
 
         this.menuItems.forEach((item) => item.setVisible(false))
         if (this.rewardsLayer) {
@@ -279,31 +296,7 @@ export class MenuOverlay {
         }
     }
 
-    private closeSubScreen(): void {
-        if (!this.subScreenVisible) return
-        this.subScreenVisible = false
-
-        if (this.subScreenLayer) {
-            this.subScreenLayer.destroy()
-            this.subScreenLayer = null
-        }
-        if (this.subScreenMap) {
-            this.subScreenMap.destroy()
-            this.subScreenMap = undefined
-        }
-
-        this.subScreenContainer?.destroy()
-        this.subScreenContainer = null
-        this.menuItems.forEach((item) => item.setVisible(true))
-        if (this.rewardsLayer) {
-            this.rewardsLayer.setVisible(true)
-        }
-
-        this.navigation?.resume()
-    }
-
     private getDataForCategory(category: string): string[] {
-        // TODO: Replace with actual data fetching
         switch (category) {
             case 'REWARDS':
                 return [
