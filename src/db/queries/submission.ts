@@ -49,10 +49,6 @@ export async function getSubmissionById(
     return result[0] ?? null
 }
 
-export async function getPendingSubmissions(): Promise<Submission[]> {
-    return db.select().from(submission).where(eq(submission.status, 'pending'))
-}
-
 export async function getSubmissionsByStudent(
     email: string
 ): Promise<Submission[]> {
@@ -142,20 +138,4 @@ export async function verifySubmission(
         submission: updatedSubmission[0],
         transaction: transactionResult,
     }
-}
-
-export async function getQuestsForStudent(
-    studentEmail: string,
-    courseId: number
-): Promise<Quest[]> {
-    const allQuests = await getQuestsByCourse(courseId)
-
-    const submissions = await db
-        .select()
-        .from(submission)
-        .where(eq(submission.studentId, studentEmail))
-
-    const submittedQuestIds = new Set(submissions.map((s) => s.questId))
-
-    return allQuests.filter((q: Quest) => !submittedQuestIds.has(q.id))
 }
