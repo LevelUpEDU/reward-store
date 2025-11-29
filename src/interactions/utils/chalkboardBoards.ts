@@ -1,6 +1,6 @@
 import {chalkboardStyles as styles} from '../styles/chalkboardStyles'
 import type {Scene} from '@/scenes/Scene'
-import {createMenuNavigation} from '@/utils/menuNavigation'
+import {createMenuNavigation} from '@/ui/menuNavigation'
 import {createQuestUI} from './chalkboardQuestList'
 import {createArrows} from './chalkboardBoardsHelpers'
 import {createShowBoard} from './chalkboardBoardsShow'

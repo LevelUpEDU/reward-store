@@ -1,5 +1,5 @@
 import type {Scene} from '@/scenes/Scene'
-import type {MenuNavigationControls} from '@/utils/menuNavigation'
+import type {MenuNavigationControls} from '@/ui/menuNavigation'
 
 export interface SmallQuest {
     id?: number

@@ -1,5 +1,3 @@
-// utils/menuNavigation.ts
-
 export interface MenuNavigationConfig {
     scene: Phaser.Scene
     itemCount: number

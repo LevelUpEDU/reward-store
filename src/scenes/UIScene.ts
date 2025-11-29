@@ -1,6 +1,6 @@
 import {type Scene} from './Scene'
-import {UIManager} from '@/utils/uiManager'
-import {RewardPointsUI} from '@/utils/rewardPointsUI'
+import {UIManager} from '@/ui/mainMenu/uiManager'
+import {RewardPointsUI} from '@/ui/rewardPointsUI'
 
 export class UIScene extends Phaser.Scene {
     public gameScene!: Scene

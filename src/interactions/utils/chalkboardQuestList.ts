@@ -2,7 +2,7 @@ import {chalkboardStyles as styles} from '@/interactions/styles/chalkboardStyles
 import type {Scene} from '@/scenes/Scene'
 import {type Quest, persistToggle} from './questData'
 import {createConfirmDialog} from './chalkboardDialog'
-import type {MenuNavigationControls} from '@/utils/menuNavigation'
+import type {MenuNavigationControls} from '@/ui/menuNavigation'
 import {ellipsizeToFit} from './chalkboardUIHelpers'
 
 export function createQuestUI(
