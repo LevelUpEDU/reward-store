@@ -5,8 +5,8 @@ import {
     UI_TEXT_STYLES,
     createHoverHandlers,
     clearTextStyle,
-} from '../uiStyles'
-import {UI_POSITIONS} from '../uiPositions'
+} from '../styles/uiStyles'
+import {UI_POSITIONS} from '../styles/uiPositions'
 
 interface MenuItem {
     label: string
@@ -23,12 +23,11 @@ export class MenuOverlay {
 
     private menuBg: Phaser.GameObjects.Image | null = null
     private subScreenBg: Phaser.GameObjects.Image | null = null
-
     private subScreenContainer: Phaser.GameObjects.Container | null = null
     private subScreenVisible: boolean = false
 
     private readonly MENU_OPTIONS: MenuItem[] = [
-        {label: 'REWARDS', action: () => this.openSubScreen('REWARDS')},
+        {label: 'REWARDS', action: () => this.openRewards()},
         {
             label: 'ACHIEVEMENTS',
             action: () => this.openSubScreen('ACHIEVEMENTS'),
@@ -42,9 +41,17 @@ export class MenuOverlay {
         this.scene = scene
     }
 
+    private openRewards(): void {
+        this.scene.uiManager?.openRewards()
+    }
+
+    private openShop(): void {
+        this.scene.uiManager?.closeMenu()
+        this.scene.uiManager?.openShop()
+    }
+
     public navigateUp(): void {
         if (!this.isVisible || this.subScreenVisible) return
-
         this.selectedIndex =
             (this.selectedIndex - 1 + this.MENU_OPTIONS.length) %
             this.MENU_OPTIONS.length
@@ -53,59 +60,23 @@ export class MenuOverlay {
 
     public navigateDown(): void {
         if (!this.isVisible || this.subScreenVisible) return
-
         this.selectedIndex = (this.selectedIndex + 1) % this.MENU_OPTIONS.length
         this.updateHighlight()
     }
 
     public selectCurrent(): void {
-        if (!this.isVisible) return
-        if (this.subScreenVisible) return
-
+        if (!this.isVisible || this.subScreenVisible) return
         this.MENU_OPTIONS[this.selectedIndex].action()
-    }
-
-    public isSubScreenOpen(): boolean {
-        return this.subScreenVisible
-    }
-
-    public closeSubScreen(): void {
-        if (!this.subScreenVisible) return
-        this.subScreenVisible = false
-
-        this.subScreenBg?.destroy()
-        this.subScreenBg = null
-
-        this.subScreenContainer?.destroy()
-        this.subScreenContainer = null
-
-        this.menuItems.forEach((item) => item.setVisible(true))
-        if (this.menuBg) {
-            this.menuBg.setVisible(true)
-        }
-    }
-
-    private updateHighlight(): void {
-        this.menuItems.forEach((item, i) => {
-            if (i === this.selectedIndex) {
-                item.setStyle(UI_TEXT_STYLES.menuItemSelected)
-            } else {
-                clearTextStyle(item, UI_TEXT_STYLES.menuItem)
-            }
-        })
     }
 
     public show(): void {
         if (this.isVisible) return
         this.isVisible = true
         this.selectedIndex = 0
-
         this.createDimOverlay()
-
         this.container = this.scene.add.container(0, 0)
         this.container.setScrollFactor(0)
         this.container.setDepth(UI_DEPTH.menuContent)
-
         this.createMenuBackground()
 
         this.menuItems = []
@@ -119,20 +90,38 @@ export class MenuOverlay {
             )
             item.setScrollFactor(0)
             item.setInteractive({useHandCursor: true})
-
             item.on('pointerover', () => {
                 this.selectedIndex = i
                 this.updateHighlight()
             })
-            item.on('pointerdown', () => {
-                option.action()
-            })
-
+            item.on('pointerdown', () => option.action())
             this.menuItems.push(item)
             this.container!.add(item)
         })
-
         this.updateHighlight()
+    }
+
+    public hide(): void {
+        if (!this.isVisible) return
+        this.isVisible = false
+        this.closeSubScreen()
+        this.menuBg?.destroy()
+        this.menuBg = null
+        this.dimOverlay?.destroy()
+        this.dimOverlay = null
+        this.container?.destroy()
+        this.container = null
+        this.menuItems = []
+    }
+
+    private updateHighlight(): void {
+        this.menuItems.forEach((item, i) => {
+            if (i === this.selectedIndex) {
+                item.setStyle(UI_TEXT_STYLES.menuItemSelected)
+            } else {
+                clearTextStyle(item, UI_TEXT_STYLES.menuItem)
+            }
+        })
     }
 
     private createDimOverlay(): void {
@@ -148,14 +137,13 @@ export class MenuOverlay {
         this.dimOverlay.setScrollFactor(0)
         this.dimOverlay.setInteractive()
         this.dimOverlay.setDepth(UI_DEPTH.dimOverlay)
-        this.dimOverlay.on('pointerdown', () => {
+        this.dimOverlay.on('pointerdown', () =>
             this.scene.uiManager?.closeMenu()
-        })
+        )
     }
 
     private createMenuBackground(): void {
         const bg = UI_POSITIONS.menu.background
-
         this.menuBg = this.scene.add.image(bg.x, bg.y, 'mainMenu')
         this.menuBg.setOrigin(0, 0)
         this.menuBg.setScale(bg.scale)
@@ -163,22 +151,19 @@ export class MenuOverlay {
         this.menuBg.setDepth(UI_DEPTH.menuBackground)
     }
 
-    public hide(): void {
-        if (!this.isVisible) return
-        this.isVisible = false
+    public isSubScreenOpen(): boolean {
+        return this.subScreenVisible
+    }
 
-        this.closeSubScreen()
-
-        // CLEANUP: Destroy Main Menu BG
-        this.menuBg?.destroy()
-        this.menuBg = null
-
-        this.dimOverlay?.destroy()
-        this.dimOverlay = null
-
-        this.container?.destroy()
-        this.container = null
-        this.menuItems = []
+    public closeSubScreen(): void {
+        if (!this.subScreenVisible) return
+        this.subScreenVisible = false
+        this.subScreenBg?.destroy()
+        this.subScreenBg = null
+        this.subScreenContainer?.destroy()
+        this.subScreenContainer = null
+        this.menuItems.forEach((item) => item.setVisible(true))
+        if (this.menuBg) this.menuBg.setVisible(true)
     }
 
     private openSubScreen(category: string): void {
@@ -186,9 +171,7 @@ export class MenuOverlay {
         this.subScreenVisible = true
 
         this.menuItems.forEach((item) => item.setVisible(false))
-        if (this.menuBg) {
-            this.menuBg.setVisible(false)
-        }
+        if (this.menuBg) this.menuBg.setVisible(false)
 
         const sub = UI_POSITIONS.subScreen
         this.subScreenContainer = this.scene.add.container(
@@ -200,6 +183,7 @@ export class MenuOverlay {
 
         this.createSubScreenBackground()
 
+        // setup page titles
         const titlePos =
             category === 'ACHIEVEMENTS' ?
                 sub.title.achievements
@@ -213,9 +197,9 @@ export class MenuOverlay {
         title.setScrollFactor(0)
         this.subScreenContainer.add(title)
 
+        // populate content
         const data = this.getDataForCategory(category)
         const content = sub.content
-
         data.forEach((item, i) => {
             const text = this.scene.add.text(
                 content.startX,
@@ -227,6 +211,7 @@ export class MenuOverlay {
             this.subScreenContainer!.add(text)
         })
 
+        // back btn
         const backBtn = this.scene.add.text(
             sub.backButton.x,
             sub.backButton.y,
@@ -246,11 +231,8 @@ export class MenuOverlay {
         this.subScreenContainer.add(backBtn)
     }
 
-    // REFACTORED: Use Image instead of Tilemap
     private createSubScreenBackground(): void {
         const bg = UI_POSITIONS.subScreen.background
-
-        // Uses 'infoWindow' which is the square box image
         this.subScreenBg = this.scene.add.image(bg.x, bg.y, 'infoWindow')
         this.subScreenBg.setOrigin(0, 0)
         this.subScreenBg.setScale(bg.scale)
@@ -260,12 +242,6 @@ export class MenuOverlay {
 
     private getDataForCategory(category: string): string[] {
         switch (category) {
-            case 'REWARDS':
-                return [
-                    'Gold Star',
-                    'Bonus Points: 500',
-                    'Certificate of Excellence',
-                ]
             case 'ACHIEVEMENTS':
                 return [
                     'Completed Math Level 1',
@@ -274,8 +250,6 @@ export class MenuOverlay {
                 ]
             case 'BADGES':
                 return ['Math Master', 'Science Star', 'History Hero']
-            case 'SHOP':
-                return ['Coming soon...']
             default:
                 return ['No data available']
         }
@@ -284,7 +258,6 @@ export class MenuOverlay {
     private handleLogout(): void {
         const returnUrl = window.location.origin
         const feedback = UI_POSITIONS.feedback
-
         const logoutText = this.scene.add.text(
             feedback.x,
             feedback.y,
@@ -294,15 +267,9 @@ export class MenuOverlay {
         logoutText.setOrigin(0.5)
         logoutText.setScrollFactor(0)
         logoutText.setDepth(UI_DEPTH.feedback)
-
         this.scene.time.delayedCall(1500, () => {
             window.location.href = `/auth/logout?returnTo=${returnUrl}`
         })
-    }
-
-    private openShop(): void {
-        this.scene.uiManager?.closeMenu()
-        this.scene.uiManager?.openShop()
     }
 
     public destroy(): void {

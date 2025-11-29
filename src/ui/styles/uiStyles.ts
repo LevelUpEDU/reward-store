@@ -22,6 +22,15 @@ export const UI_COLORS = {
     stockHigh: '#88ff88',
     stockLow: '#ff8888',
     logoutBg: '#000000dd',
+    arrowNormal: '#aaaaaa',
+    arrowHover: '#ffffff',
+    arrowDisabled: '#444444',
+    courseName: '#00ffff',
+
+    // reward status colours
+    statusPending: '#ffff00',
+    statusFulfilled: '#00ff00',
+    headerText: '#aaaaaa',
 
     // keypad
     keypadBg: 0x3a4556,
@@ -54,6 +63,8 @@ export const UI_FONT_SIZES = {
     subtext: '28px',
     cost: '24px',
     stock: '20px',
+    small: '18px',
+    tiny: '14px',
     feedbackLarge: '56px',
     feedbackMedium: '40px',
 }
@@ -97,6 +108,33 @@ export const UI_TEXT_STYLES = {
         fontSize: UI_FONT_SIZES.subtext,
         color: UI_COLORS.white,
         wordWrap: {width},
+    }),
+
+    rewardHeader: {
+        ...baseTextStyle,
+        fontSize: UI_FONT_SIZES.small,
+        color: UI_COLORS.headerText,
+    },
+
+    rewardName: {
+        ...baseTextStyle,
+        fontSize: UI_FONT_SIZES.small,
+        color: UI_COLORS.white,
+    },
+
+    rewardQty: {
+        ...baseTextStyle,
+        fontSize: UI_FONT_SIZES.subtext,
+        color: UI_COLORS.cyan,
+    },
+
+    rewardStatus: (status: string) => ({
+        ...baseTextStyle,
+        fontSize: UI_FONT_SIZES.stock,
+        color:
+            status === 'fulfilled' ?
+                UI_COLORS.statusFulfilled
+            :   UI_COLORS.statusPending,
     }),
 
     coins: {
@@ -199,6 +237,23 @@ export const UI_TEXT_STYLES = {
         color: UI_COLORS.white,
         align: 'center' as const,
         fontStyle: 'bold' as const,
+    },
+    courseSelector: {
+        ...baseTextStyle,
+        fontSize: UI_FONT_SIZES.body,
+        color: UI_COLORS.cyan,
+    },
+
+    scrollIndicator: {
+        ...baseTextStyle,
+        fontSize: '32px',
+        color: UI_COLORS.white,
+    },
+
+    scrollIndicatorDisabled: {
+        ...baseTextStyle,
+        fontSize: '32px',
+        color: '#444444',
     },
 }
 
