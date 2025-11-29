@@ -30,7 +30,9 @@ export const UI_POSITIONS = {
         title: {
             default: {x: 170, y: 25},
             achievements: {x: 95, y: 25},
+            rewards: {x: 170, y: 25},
         },
+        // generic content (ie., not rewards or store)
         content: {
             startX: 70,
             startY: 150,
@@ -38,6 +40,30 @@ export const UI_POSITIONS = {
             wrapWidth: 400,
         },
         backButton: {x: 300, y: 720},
+
+        rewards: {
+            courseSelector: {
+                y: 90,
+                labelX: 300,
+                arrowOffset: 260,
+            },
+            headers: {
+                y: 150,
+                nameX: 50,
+                qtyX: 300,
+                statusX: 400,
+            },
+            list: {
+                startY: 190,
+                rowHeight: 50,
+                nameX: 50,
+                qtyX: 315,
+                statusX: 400,
+                maxVisible: 8,
+            },
+            loading: {x: 240, y: 350},
+            empty: {x: 240, y: 350},
+        },
     },
 
     shop: {
@@ -52,8 +78,8 @@ export const UI_POSITIONS = {
         coins: {x: 645, y: 230},
         courseSelector: {
             y: 270,
-            arrowOffsetX: 400, // distance between course name and arrows
-            labelX: 940, // center X for course name
+            arrowOffsetX: 400,
+            labelX: 940,
             arrowHitArea: {width: 60, height: 60},
         },
         items: {
@@ -73,7 +99,7 @@ export const UI_POSITIONS = {
         backButton: {x: 940, y: 850},
         backButtonDecor: {
             scale: 2.5,
-            totalWidth: 96, // 64 + 32
+            totalWidth: 96,
             leftWidth: 64,
         },
         scrollIndicators: {
