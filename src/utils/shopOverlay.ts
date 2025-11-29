@@ -6,6 +6,7 @@ import {
     UI_TEXT_STYLES,
     createHoverHandlers,
 } from './uiStyles'
+import {UI_POSITIONS} from './uiPositions'
 
 interface ShopItem {
     id: number
@@ -127,10 +128,12 @@ export class ShopOverlay {
         this.container.setScrollFactor(0)
         this.container.setDepth(UI_DEPTH.shopContent)
 
+        const shop = UI_POSITIONS.shop
+
         // Title
         const title = this.scene.add.text(
-            400,
-            150,
+            shop.title.x,
+            shop.title.y,
             'SHOP',
             UI_TEXT_STYLES.title
         )
@@ -140,8 +143,8 @@ export class ShopOverlay {
 
         // Coins display
         this.coinsText = this.scene.add.text(
-            400,
-            220,
+            shop.coins.x,
+            shop.coins.y,
             'Loading...',
             UI_TEXT_STYLES.coins
         )
@@ -156,8 +159,8 @@ export class ShopOverlay {
 
         // Loading text
         this.loadingText = this.scene.add.text(
-            400,
-            450,
+            shop.loading.x,
+            shop.loading.y,
             'Loading shop items...',
             UI_TEXT_STYLES.body
         )
@@ -167,8 +170,8 @@ export class ShopOverlay {
 
         // Close button
         const closeBtn = this.scene.add.text(
-            470,
-            740,
+            shop.backButton.x,
+            shop.backButton.y,
             'BACK',
             UI_TEXT_STYLES.backButtonCyan
         )
@@ -193,11 +196,12 @@ export class ShopOverlay {
     }
 
     private createDimOverlay(): void {
+        const dim = UI_POSITIONS.dimOverlay
         this.dimOverlay = this.scene.add.rectangle(
-            960,
-            540,
-            1920,
-            1080,
+            dim.x,
+            dim.y,
+            dim.width,
+            dim.height,
             UI_COLORS.dimOverlay,
             UI_COLORS.dimOverlayAlpha
         )
@@ -231,9 +235,10 @@ export class ShopOverlay {
 
         this.shopLayer = this.shopMap.createLayer('base layer', validTilesets)
         if (this.shopLayer) {
+            const bg = UI_POSITIONS.shop.background
             this.shopLayer.setScrollFactor(0)
-            this.shopLayer.setScale(2.5)
-            this.shopLayer.setPosition(700, 100)
+            this.shopLayer.setScale(bg.scale)
+            this.shopLayer.setPosition(bg.x, bg.y)
             this.shopLayer.setDepth(UI_DEPTH.shopBackground)
         }
     }
@@ -328,14 +333,13 @@ export class ShopOverlay {
         this.itemsContainer.removeAll(true)
         this.itemButtons = []
 
-        const startX = 70
-        const startY = 280
-        const itemHeight = 90
+        const items = UI_POSITIONS.shop.items
+        const shop = UI_POSITIONS.shop
 
         if (this.shopItems.length === 0) {
             const noItems = this.scene.add.text(
-                400,
-                450,
+                shop.noItems.x,
+                shop.noItems.y,
                 'No items available',
                 UI_TEXT_STYLES.body
             )
@@ -346,15 +350,15 @@ export class ShopOverlay {
         }
 
         this.shopItems.forEach((item, i) => {
-            const y = startY + i * itemHeight
+            const y = items.startY + i * items.height
             const itemContainer = this.scene.add.container(0, 0)
 
             // Background
             const bg = this.scene.add.rectangle(
-                400,
+                items.bgCenterX,
                 y,
-                650,
-                70,
+                items.bgWidth,
+                items.bgHeight,
                 UI_COLORS.itemBg
             )
             bg.setStrokeStyle(1, UI_COLORS.itemBorder)
@@ -363,8 +367,8 @@ export class ShopOverlay {
 
             // Item name
             const nameText = this.scene.add.text(
-                startX,
-                y - 20,
+                items.startX,
+                y + items.nameOffsetY,
                 item.name,
                 UI_TEXT_STYLES.body
             )
@@ -373,8 +377,8 @@ export class ShopOverlay {
 
             // Cost
             const costText = this.scene.add.text(
-                startX,
-                y + 15,
+                items.startX,
+                y + items.costOffsetY,
                 `${item.cost} coins`,
                 UI_TEXT_STYLES.cost
             )
@@ -385,7 +389,7 @@ export class ShopOverlay {
             if (item.quantityLimit !== null && item.available !== null) {
                 const isLow = item.available <= 3
                 const stockText = this.scene.add.text(
-                    450,
+                    items.startX + items.stockOffsetX,
                     y,
                     `Left: ${item.available}`,
                     UI_TEXT_STYLES.stock(isLow)
@@ -398,7 +402,7 @@ export class ShopOverlay {
             // Buy button
             const canAfford = this.playerCoins >= item.cost
             const buyBtn = this.scene.add.text(
-                700,
+                items.startX + items.buyButtonOffsetX,
                 y,
                 canAfford ? 'BUY' : 'NOT ENOUGH',
                 UI_TEXT_STYLES.buyButton(canAfford)
@@ -461,9 +465,10 @@ export class ShopOverlay {
     }
 
     private showPurchaseSuccess(): void {
+        const feedback = UI_POSITIONS.feedback
         const successText = this.scene.add.text(
-            960,
-            540,
+            feedback.x,
+            feedback.y,
             'PURCHASED!',
             UI_TEXT_STYLES.purchaseSuccess
         )
@@ -477,7 +482,7 @@ export class ShopOverlay {
             targets: successText,
             alpha: 1,
             scale: 1.3,
-            y: successText.y - 50,
+            y: feedback.y + feedback.animateOffsetY,
             duration: 400,
             ease: 'Power2',
             yoyo: true,
@@ -486,7 +491,7 @@ export class ShopOverlay {
                 this.scene.tweens.add({
                     targets: successText,
                     alpha: 0,
-                    y: successText.y - 100,
+                    y: feedback.y + feedback.fadeOffsetY,
                     duration: 600,
                     onComplete: () => successText.destroy(),
                 })
@@ -498,9 +503,10 @@ export class ShopOverlay {
     }
 
     private showPurchaseError(): void {
+        const feedback = UI_POSITIONS.feedback
         const errorText = this.scene.add.text(
-            960,
-            540,
+            feedback.x,
+            feedback.y,
             'Purchase failed!',
             UI_TEXT_STYLES.purchaseError
         )

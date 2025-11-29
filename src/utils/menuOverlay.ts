@@ -6,6 +6,7 @@ import {
     createHoverHandlers,
     clearTextStyle,
 } from './uiStyles'
+import {UI_POSITIONS} from './uiPositions'
 
 interface MenuItem {
     label: string
@@ -39,15 +40,6 @@ export class MenuOverlay {
     private enterKey?: Phaser.Input.Keyboard.Key
     private wKey?: Phaser.Input.Keyboard.Key
     private sKey?: Phaser.Input.Keyboard.Key
-
-    // Menu position config (relative to screen)
-    private readonly MENU_POSITIONS = [
-        {x: 870, y: 315}, // REWARDS
-        {x: 870, y: 425}, // ACHIEVEMENTS
-        {x: 870, y: 540}, // BADGES
-        {x: 870, y: 650}, // SHOP
-        {x: 870, y: 760}, // LOGOUT
-    ]
 
     private readonly MENU_OPTIONS: MenuItem[] = [
         {label: 'REWARDS', action: () => this.openSubScreen('REWARDS')},
@@ -146,7 +138,7 @@ export class MenuOverlay {
         // Menu items at specific positions
         this.menuItems = []
         this.MENU_OPTIONS.forEach((option, i) => {
-            const pos = this.MENU_POSITIONS[i]
+            const pos = UI_POSITIONS.menu.items[i]
             const item = this.scene.add.text(
                 pos.x,
                 pos.y,
@@ -172,11 +164,12 @@ export class MenuOverlay {
     }
 
     private createDimOverlay(): void {
+        const dim = UI_POSITIONS.dimOverlay
         this.dimOverlay = this.scene.add.rectangle(
-            960,
-            540,
-            1920,
-            1080,
+            dim.x,
+            dim.y,
+            dim.width,
+            dim.height,
             UI_COLORS.dimOverlay,
             UI_COLORS.dimOverlayAlpha
         )
@@ -204,9 +197,10 @@ export class MenuOverlay {
             0
         )
         if (this.rewardsLayer) {
+            const bg = UI_POSITIONS.menu.background
             this.rewardsLayer.setScrollFactor(0)
-            this.rewardsLayer.setScale(2.5)
-            this.rewardsLayer.setPosition(700, 100)
+            this.rewardsLayer.setScale(bg.scale)
+            this.rewardsLayer.setPosition(bg.x, bg.y)
             this.rewardsLayer.setDepth(UI_DEPTH.menuBackground)
         }
     }
@@ -244,18 +238,25 @@ export class MenuOverlay {
             this.rewardsLayer.setVisible(false)
         }
 
-        this.subScreenContainer = this.scene.add.container(700, 80)
+        const sub = UI_POSITIONS.subScreen
+        this.subScreenContainer = this.scene.add.container(
+            sub.container.x,
+            sub.container.y
+        )
         this.subScreenContainer.setScrollFactor(0)
-        this.subScreenContainer.setDepth(UI_DEPTH.menuContent)
+        this.subScreenContainer.setDepth(UI_DEPTH.subScreenContent)
 
         // Create tilemap background for sub-screen
         this.createSubScreenBackground()
 
         // Title
-        const titleX = category === 'ACHIEVEMENTS' ? 130 : 200
+        const titlePos =
+            category === 'ACHIEVEMENTS' ?
+                sub.title.achievements
+            :   sub.title.default
         const title = this.scene.add.text(
-            titleX,
-            60,
+            titlePos.x,
+            titlePos.y,
             category,
             UI_TEXT_STYLES.title
         )
@@ -264,15 +265,14 @@ export class MenuOverlay {
 
         // Content based on category
         const data = this.getDataForCategory(category)
-        const startY = 150
-        const lineHeight = 60
+        const content = sub.content
 
         data.forEach((item, i) => {
             const text = this.scene.add.text(
-                70,
-                startY + i * lineHeight,
+                content.startX,
+                content.startY + i * content.lineHeight,
                 `• ${item}`,
-                UI_TEXT_STYLES.bodyWithWrap(400)
+                UI_TEXT_STYLES.bodyWithWrap(content.wrapWidth)
             )
             text.setScrollFactor(0)
             this.subScreenContainer!.add(text)
@@ -281,8 +281,8 @@ export class MenuOverlay {
 
         // Back button
         const backBtn = this.scene.add.text(
-            310,
-            760,
+            sub.backButton.x,
+            sub.backButton.y,
             'BACK',
             UI_TEXT_STYLES.backButton
         )
@@ -316,9 +316,10 @@ export class MenuOverlay {
             0
         )
         if (this.subScreenLayer) {
+            const bg = UI_POSITIONS.subScreen.background
             this.subScreenLayer.setScrollFactor(0)
-            this.subScreenLayer.setScale(2.5)
-            this.subScreenLayer.setPosition(700, 100)
+            this.subScreenLayer.setScale(bg.scale)
+            this.subScreenLayer.setPosition(bg.x, bg.y)
             this.subScreenLayer.setDepth(UI_DEPTH.subScreenBackground)
         }
     }
@@ -371,11 +372,12 @@ export class MenuOverlay {
 
     private handleLogout(): void {
         const returnUrl = window.location.origin
+        const feedback = UI_POSITIONS.feedback
 
         // Visual feedback
         const logoutText = this.scene.add.text(
-            this.scene.cameras.main.width / 2,
-            this.scene.cameras.main.height / 2,
+            feedback.x,
+            feedback.y,
             'Logging out...',
             UI_TEXT_STYLES.logoutFeedback
         )

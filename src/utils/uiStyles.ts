@@ -7,6 +7,7 @@ export const UI_COLORS = {
     yellow: '#ffff00',
     green: '#00ff00',
     red: '#ff0000',
+    orange: '#ff4800',
     dimOverlay: 0x000000,
     dimOverlayAlpha: 0.3,
     selectedBg: '#00000088',
@@ -17,8 +18,10 @@ export const UI_COLORS = {
     itemBorder: 0x444444,
     buyButtonBg: '#00ff0088',
     cantAffordBg: '#ff444488',
+    buyButtonHover: '#ffffff44',
     stockHigh: '#88ff88',
     stockLow: '#ff8888',
+    logoutBg: '#000000dd',
 }
 
 export const UI_FONTS = {
@@ -144,6 +147,7 @@ export const UI_DEPTH = {
     dimOverlay: 998,
     menuBackground: 999,
     subScreenBackground: 1000,
+    subScreenContent: 1001,
     menuContent: 1001,
     shopBackground: 1099,
     shopContent: 1100,
