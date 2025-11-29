@@ -29,11 +29,13 @@ export class ShopOverlay {
     private itemsContainer: Phaser.GameObjects.Container | null = null
     private loadingText: Phaser.GameObjects.Text | null = null
 
+    private shopBg: Phaser.GameObjects.Image | null = null
+
+    private btnLeft: Phaser.GameObjects.Image | null = null
+    private btnRight: Phaser.GameObjects.Image | null = null
+
     private shopItems: ShopItem[] = []
     private itemButtons: Phaser.GameObjects.Container[] = []
-
-    private shopMap?: Phaser.Tilemaps.Tilemap
-    private shopLayer?: Phaser.Tilemaps.TilemapLayer | null
 
     constructor(scene: UIScene) {
         this.scene = scene
@@ -173,35 +175,34 @@ export class ShopOverlay {
     }
 
     private createShopBackground(): void {
-        if (!this.scene.textures.exists('FrameMap')) {
-            return
-        }
+        const bg = UI_POSITIONS.shop.background
+        const btnPos = UI_POSITIONS.shop.backButton
+        const btnDecor = UI_POSITIONS.shop.backButtonDecor
 
-        this.shopMap = this.scene.make.tilemap({key: 'shopMap'})
+        // window bg
+        this.shopBg = this.scene.add.image(bg.x, bg.y, 'shopMenu')
+        this.shopBg.setOrigin(0, 0)
+        this.shopBg.setDisplaySize(bg.width, bg.height)
 
-        const tilesets = [
-            this.shopMap.addTilesetImage('FrameMap'),
-            this.shopMap.addTilesetImage('button_yellow_left'),
-            this.shopMap.addTilesetImage('button_yellow_right'),
-        ]
+        this.shopBg.setScrollFactor(0)
+        this.shopBg.setDepth(UI_DEPTH.shopBackground)
 
-        const validTilesets = tilesets.filter(
-            (t): t is Phaser.Tilemaps.Tileset => Boolean(t)
-        )
+        // buttons
+        const halfTotalWidth = btnDecor.totalWidth / 2
 
-        if (validTilesets.length < 1) {
-            console.error('Shop tilesets missing!')
-            return
-        }
+        const leftX = btnPos.x - halfTotalWidth * btnDecor.scale
+        this.btnLeft = this.scene.add.image(leftX, btnPos.y, 'btn_yellow_l')
+        this.btnLeft.setOrigin(0, 0.5)
+        this.btnLeft.setScale(btnDecor.scale)
+        this.btnLeft.setScrollFactor(0)
+        this.btnLeft.setDepth(UI_DEPTH.shopBackground + 1)
+        const rightX = leftX + btnDecor.leftWidth * btnDecor.scale
 
-        this.shopLayer = this.shopMap.createLayer('base layer', validTilesets)
-        if (this.shopLayer) {
-            const bg = UI_POSITIONS.shop.background
-            this.shopLayer.setScrollFactor(0)
-            this.shopLayer.setScale(bg.scale)
-            this.shopLayer.setPosition(bg.x, bg.y)
-            this.shopLayer.setDepth(UI_DEPTH.shopBackground)
-        }
+        this.btnRight = this.scene.add.image(rightX, btnPos.y, 'btn_yellow_r')
+        this.btnRight.setOrigin(0, 0.5)
+        this.btnRight.setScale(btnDecor.scale)
+        this.btnRight.setScrollFactor(0)
+        this.btnRight.setDepth(UI_DEPTH.shopBackground + 1)
     }
 
     public hide(): void {
@@ -210,20 +211,21 @@ export class ShopOverlay {
 
         this.scene.getInputHandler().unblockMovement()
 
-        if (this.shopLayer) {
-            this.shopLayer.destroy()
-            this.shopLayer = null
-        }
-        if (this.shopMap) {
-            this.shopMap.destroy()
-            this.shopMap = undefined
-        }
+        this.shopBg?.destroy()
+        this.shopBg = null
+
+        this.btnLeft?.destroy()
+        this.btnLeft = null
+
+        this.btnRight?.destroy()
+        this.btnRight = null
 
         this.dimOverlay?.destroy()
         this.dimOverlay = null
 
         this.container?.destroy()
         this.container = null
+
         this.itemsContainer = null
         this.coinsText = null
         this.loadingText = null

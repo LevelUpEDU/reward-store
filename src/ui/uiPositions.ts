@@ -16,11 +16,11 @@ export const UI_POSITIONS = {
     menu: {
         background: {x: 700, y: 100, scale: 2.5},
         items: [
-            {x: 870, y: 315}, // REWARDS
-            {x: 870, y: 425}, // ACHIEVEMENTS
-            {x: 870, y: 540}, // BADGES
-            {x: 870, y: 650}, // SHOP
-            {x: 870, y: 760}, // LOGOUT
+            {x: 775, y: 245}, // REWARDS
+            {x: 775, y: 355}, // ACHIEVEMENTS
+            {x: 775, y: 465}, // BADGES
+            {x: 775, y: 575}, // SHOP
+            {x: 775, y: 685}, // LOGOUT
         ],
     },
 
@@ -28,8 +28,8 @@ export const UI_POSITIONS = {
         container: {x: 700, y: 80},
         background: {x: 700, y: 100, scale: 2.5},
         title: {
-            default: {x: 200, y: 60},
-            achievements: {x: 130, y: 60},
+            default: {x: 170, y: 25},
+            achievements: {x: 95, y: 25},
         },
         content: {
             startX: 70,
@@ -37,11 +37,17 @@ export const UI_POSITIONS = {
             lineHeight: 60,
             wrapWidth: 400,
         },
-        backButton: {x: 310, y: 760},
+        backButton: {x: 300, y: 720},
     },
 
     shop: {
-        background: {x: 460, y: 100, scale: 2.5},
+        background: {
+            x: 460,
+            y: 100,
+            scale: 2.5,
+            width: 960,
+            height: 800,
+        },
         title: {x: 630, y: 170},
         coins: {x: 645, y: 230},
         items: {
@@ -57,6 +63,12 @@ export const UI_POSITIONS = {
             buyButtonOffsetX: 680,
         },
         backButton: {x: 940, y: 850},
+        // NEW: Configuration for the split yellow button
+        backButtonDecor: {
+            scale: 2.5,
+            totalWidth: 96, // 64 + 32
+            leftWidth: 64,
+        },
         loading: {x: 630, y: 450},
         noItems: {x: 630, y: 450},
     },

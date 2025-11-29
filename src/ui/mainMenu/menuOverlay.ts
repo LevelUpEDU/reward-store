@@ -21,13 +21,11 @@ export class MenuOverlay {
     private isVisible: boolean = false
     private selectedIndex: number = 0
 
-    private rewardsMap?: Phaser.Tilemaps.Tilemap
-    private rewardsLayer?: Phaser.Tilemaps.TilemapLayer | null
+    private menuBg: Phaser.GameObjects.Image | null = null
+    private subScreenBg: Phaser.GameObjects.Image | null = null
 
     private subScreenContainer: Phaser.GameObjects.Container | null = null
     private subScreenVisible: boolean = false
-    private subScreenMap?: Phaser.Tilemaps.Tilemap
-    private subScreenLayer?: Phaser.Tilemaps.TilemapLayer | null
 
     private readonly MENU_OPTIONS: MenuItem[] = [
         {label: 'REWARDS', action: () => this.openSubScreen('REWARDS')},
@@ -75,20 +73,15 @@ export class MenuOverlay {
         if (!this.subScreenVisible) return
         this.subScreenVisible = false
 
-        if (this.subScreenLayer) {
-            this.subScreenLayer.destroy()
-            this.subScreenLayer = null
-        }
-        if (this.subScreenMap) {
-            this.subScreenMap.destroy()
-            this.subScreenMap = undefined
-        }
+        this.subScreenBg?.destroy()
+        this.subScreenBg = null
 
         this.subScreenContainer?.destroy()
         this.subScreenContainer = null
+
         this.menuItems.forEach((item) => item.setVisible(true))
-        if (this.rewardsLayer) {
-            this.rewardsLayer.setVisible(true)
+        if (this.menuBg) {
+            this.menuBg.setVisible(true)
         }
     }
 
@@ -161,27 +154,13 @@ export class MenuOverlay {
     }
 
     private createMenuBackground(): void {
-        this.rewardsMap = this.scene.make.tilemap({key: 'rewardsMap'})
-        const tileset = this.rewardsMap.addTilesetImage('Interface windows')
+        const bg = UI_POSITIONS.menu.background
 
-        if (!tileset) {
-            console.error('Menu tileset missing')
-            return
-        }
-
-        this.rewardsLayer = this.rewardsMap.createLayer(
-            'base_layer',
-            tileset,
-            0,
-            0
-        )
-        if (this.rewardsLayer) {
-            const bg = UI_POSITIONS.menu.background
-            this.rewardsLayer.setScrollFactor(0)
-            this.rewardsLayer.setScale(bg.scale)
-            this.rewardsLayer.setPosition(bg.x, bg.y)
-            this.rewardsLayer.setDepth(UI_DEPTH.menuBackground)
-        }
+        this.menuBg = this.scene.add.image(bg.x, bg.y, 'mainMenu')
+        this.menuBg.setOrigin(0, 0)
+        this.menuBg.setScale(bg.scale)
+        this.menuBg.setScrollFactor(0)
+        this.menuBg.setDepth(UI_DEPTH.menuBackground)
     }
 
     public hide(): void {
@@ -190,14 +169,9 @@ export class MenuOverlay {
 
         this.closeSubScreen()
 
-        if (this.rewardsLayer) {
-            this.rewardsLayer.destroy()
-            this.rewardsLayer = null
-        }
-        if (this.rewardsMap) {
-            this.rewardsMap.destroy()
-            this.rewardsMap = undefined
-        }
+        // CLEANUP: Destroy Main Menu BG
+        this.menuBg?.destroy()
+        this.menuBg = null
 
         this.dimOverlay?.destroy()
         this.dimOverlay = null
@@ -212,8 +186,8 @@ export class MenuOverlay {
         this.subScreenVisible = true
 
         this.menuItems.forEach((item) => item.setVisible(false))
-        if (this.rewardsLayer) {
-            this.rewardsLayer.setVisible(false)
+        if (this.menuBg) {
+            this.menuBg.setVisible(false)
         }
 
         const sub = UI_POSITIONS.subScreen
@@ -272,28 +246,16 @@ export class MenuOverlay {
         this.subScreenContainer.add(backBtn)
     }
 
+    // REFACTORED: Use Image instead of Tilemap
     private createSubScreenBackground(): void {
-        this.subScreenMap = this.scene.make.tilemap({key: 'subScreenMap'})
-        const tileset = this.subScreenMap.addTilesetImage('Interface windows')
+        const bg = UI_POSITIONS.subScreen.background
 
-        if (!tileset) {
-            console.error('Sub-screen tileset missing')
-            return
-        }
-
-        this.subScreenLayer = this.subScreenMap.createLayer(
-            'base_layer',
-            tileset,
-            0,
-            0
-        )
-        if (this.subScreenLayer) {
-            const bg = UI_POSITIONS.subScreen.background
-            this.subScreenLayer.setScrollFactor(0)
-            this.subScreenLayer.setScale(bg.scale)
-            this.subScreenLayer.setPosition(bg.x, bg.y)
-            this.subScreenLayer.setDepth(UI_DEPTH.subScreenBackground)
-        }
+        // Uses 'infoWindow' which is the square box image
+        this.subScreenBg = this.scene.add.image(bg.x, bg.y, 'infoWindow')
+        this.subScreenBg.setOrigin(0, 0)
+        this.subScreenBg.setScale(bg.scale)
+        this.subScreenBg.setScrollFactor(0)
+        this.subScreenBg.setDepth(UI_DEPTH.subScreenBackground)
     }
 
     private getDataForCategory(category: string): string[] {

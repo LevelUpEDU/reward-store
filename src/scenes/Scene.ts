@@ -23,7 +23,6 @@ export class Scene extends Phaser.Scene implements GameScene {
     protected mapConfig: MapConfig
     protected spriteObjects: Set<string> = new Set()
     public collisionGroup!: Phaser.Physics.Arcade.StaticGroup
-    // Array to hold custom collision objects (bypassing the buggy Group)
     protected customColliders: Phaser.GameObjects.GameObject[] = []
 
     protected inputHandler!: InputHandler
@@ -101,6 +100,16 @@ export class Scene extends Phaser.Scene implements GameScene {
             '/assets/sprites/Bob_run_16x16.json'
         )
 
+        // main menu assets
+        this.load.image('mainMenu', 'assets/sprites/mainMenu.png')
+        this.load.image('infoWindow', 'assets/sprites/infoWindow.png')
+        this.load.image('shopMenu', 'assets/sprites/shopMenu.png')
+        this.load.image('btn_yellow_l', 'assets/sprites/button_yellow_left.png')
+        this.load.image(
+            'btn_yellow_r',
+            'assets/sprites/button_yellow_right.png'
+        )
+
         // UI assets
         this.load.image('coin-icon', '/assets/sprites/coin.png')
 
@@ -117,30 +126,6 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.load.font(
             'CyberPunkFont',
             '/assets/fonts/CyberpunkCraftpixPixel.otf'
-        )
-
-        // Menu tilemap backgrounds
-        this.load.tilemapTiledJSON('rewardsMap', '/assets/rewards/rewards.json')
-        this.load.image(
-            'Interface windows',
-            '/assets/tilemaps/Interface windows.png'
-        )
-        this.load.tilemapTiledJSON(
-            'subScreenMap',
-            '/assets/rewards/rewards_subscreen.json'
-        )
-        this.load.tilemapTiledJSON('shopMap', '/assets/rewards/shop.json')
-
-        // Shop tilesets
-        this.load.image('FrameMap', '/assets/tilemaps/FrameMap.png')
-        this.load.spritesheet(
-            'button_yellow_left',
-            '/assets/tilemaps/button_yellow_left.png',
-            {frameWidth: 32, frameHeight: 32}
-        )
-        this.load.image(
-            'button_yellow_right',
-            '/assets/tilemaps/button_yellow_right.png'
         )
     }
 
@@ -289,7 +274,6 @@ export class Scene extends Phaser.Scene implements GameScene {
 
         objectLayer.objects.forEach((obj) => {
             if (obj.gid === undefined) return
-            if (obj.gid >= 2216) return // Skip furniture (handled in Lobby)
 
             const tileset = this.map.tilesets.find(
                 (t) => obj.gid! >= t.firstgid && obj.gid! < t.firstgid + t.total
