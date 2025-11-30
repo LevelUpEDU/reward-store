@@ -2,8 +2,8 @@
 
 export const chalkboardStyles = {
     // Screen dimensions
-    interfaceWidthRatio: 0.8,
-    interfaceHeightRatio: 0.8,
+    interfaceWidthRatio: 0.6,
+    interfaceHeightRatio: 0.7,
 
     // Colors
     colors: {
@@ -28,13 +28,13 @@ export const chalkboardStyles = {
     // Layout
     layout: {
         borderWidth: 16,
-        padding: 36,
-        titleOffsetX: 24,
-        titleOffsetY: 40,
-        subtitleOffsetY: 60, // Distance from top to subtitle
-        listStartY: 140, // offset from top
+        padding: 120,
+        titleOffsetX: 300, // Distance from left edge to title
+        titleOffsetY: 60,
+        subtitleOffsetY: 120, // Distance from top to subtitle
+        listStartY: 220, // offset from top
         rowSpacing: 70,
-        doneColumnOffsetX: 20, // offset from right edge
+        doneColumnOffsetX: 70, // offset from right edge
         doneLabelOffsetY: 35, // offset above first row (rowSpacing / 2)
         maxTextMargin: 40, // space between text and Done column
         emptyMessageOffsetY: 60, // Offset for "No quests available" message
@@ -45,16 +45,16 @@ export const chalkboardStyles = {
 
     // Board selector (arrows)
     boardSelector: {
-        arrowOffset: 300, // Distance from center to arrows
-        arrowSize: '48px',
+        arrowOffset: 530, // Distance from center to arrows
+        arrowSize: '72px',
         labelSize: '18px',
-        adjacentLabelSize: '14px',
+        adjacentLabelSize: '20px',
     },
 
     // Typography
     typography: {
-        titleSize: '36px',
-        subtitleSize: '18px',
+        titleSize: '54px',
+        subtitleSize: '36px',
         questSize: '28px',
         doneLabelSize: '28px',
         emptyMessageSize: '28px',

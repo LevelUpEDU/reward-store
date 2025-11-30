@@ -25,7 +25,7 @@ import {createQuestList, type QuestListControls} from './chalkboard/questList'
 // CONSTANTS
 // ============================================================================
 
-const VISIBLE_QUEST_COUNT = 5
+const VISIBLE_QUEST_COUNT = 7
 
 // ============================================================================
 // MAIN CHALKBOARD INTERACTION
@@ -116,7 +116,7 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
 
     const title = scene.add
         .text(
-            centerX - interfaceWidth / 2 + styles.layout.titleOffsetX,
+            centerX,
             centerY - interfaceHeight / 2 + styles.layout.titleOffsetY,
             'Loading...',
             {
@@ -127,6 +127,8 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
         )
         .setOrigin(0, 0.5)
         .setDepth(styles.depths.text)
+
+    title.x = centerX - title.width / 2 // Center Loading...
 
     const subtitle = scene.add
         .text(
@@ -174,6 +176,7 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
     // Set title with fallback
     const courseTitle = course?.title || `Course ${courseId}`
     title.setText(`Quests for ${courseTitle}`)
+    title.x = centerX - title.width / 2
 
     // Group into boards
     boards = [

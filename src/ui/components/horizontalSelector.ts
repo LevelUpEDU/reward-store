@@ -117,11 +117,6 @@ export function createHorizontalSelector(
         .setOrigin(0.5)
         .setInteractive({cursor: 'pointer'})
 
-    // Center label (current item)
-    const centerLabel = scene.add
-        .text(centerX, centerY, items[currentIndex] || '', labelStyle)
-        .setOrigin(0.5)
-
     // Optional: Small labels under arrows showing adjacent items
     const leftLabel = scene.add
         .text(centerX - arrowOffset, centerY + 34, '', adjacentLabelStyle)
@@ -131,18 +126,15 @@ export function createHorizontalSelector(
         .text(centerX + arrowOffset, centerY + 34, '', adjacentLabelStyle)
         .setOrigin(0.5, 0)
 
-    container.add([leftArrow, rightArrow, centerLabel, leftLabel, rightLabel])
+    container.add([leftArrow, rightArrow, leftLabel, rightLabel])
 
     // Update all labels based on current index
     const updateLabels = () => {
         if (itemList.length === 0) {
-            centerLabel.setText('')
             leftLabel.setText('')
             rightLabel.setText('')
             return
         }
-
-        centerLabel.setText(itemList[currentIndex])
 
         // Show adjacent items in small labels
         const leftIndex = (currentIndex - 1 + itemList.length) % itemList.length
