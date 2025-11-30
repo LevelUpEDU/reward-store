@@ -3,7 +3,11 @@
 import React, {useState, useEffect} from 'react'
 import CourseCard from '../CourseCard/CourseCard'
 import {useAuth} from '@/app/hooks/useAuth'
-import {getCoursesByInstructor, getQuestsByCourse} from '@/db'
+import {
+    getCoursesByInstructor,
+    getInstructorByEmail,
+    getQuestsByCourse,
+} from '@/db'
 
 type Course = {
     id: number
@@ -33,20 +37,27 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
     const {email, user} = useAuth()
     const [courses, setCourses] = useState<Course[]>([])
     const [quests, setQuests] = useState<Quest[]>([])
+    const [realName, setRealName] = useState<string>('')
     const [_error, _setError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchData = async () => {
             // this will never be true since we are always logged in here
             if (!email) return
+
+            const instructor = await getInstructorByEmail(email)
+            if (instructor) {
+                setRealName(instructor.name)
+            }
+
             const courses = await getCoursesByInstructor(email)
 
             /*
-               returns all quests by course with the structure:
-              {
-                 "Computer Science": [quest1, quest2, quest3],
-                 "Math": [quest1, quest2, quest3]
-              }
+                returns all quests by course with the structure:
+                {
+                    "Computer Science": [quest1, quest2, quest3],
+                    "Math": [quest1, quest2, quest3]
+                }
              */
             const quests = Object.fromEntries(
                 await Promise.all(
@@ -87,11 +98,7 @@ const HomeDashboard = ({setActiveTab}: HomeDashboardProps) => {
         setActiveTab(`course_detail_${courseId}`)
     }
 
-    const displayName =
-        user?.name && !user.name.includes('@') ? user.name
-        : user?.nickname && !user.nickname.includes('@') ? user.nickname
-        : user?.given_name && !user.given_name.includes('@') ? user.given_name
-        : 'Instructor'
+    const displayName = realName || user?.name || 'Instructor'
 
     return (
         <div className="dashboard-home">

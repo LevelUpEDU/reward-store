@@ -1,5 +1,4 @@
 'use client'
-
 import {useEffect, useState, Suspense} from 'react'
 import {useRouter, useSearchParams} from 'next/navigation'
 import Link from 'next/link'
@@ -14,23 +13,19 @@ function RegisterContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const role = searchParams.get('role') as 'student' | 'instructor' | null
-
     const [error, setError] = useState<string>('')
     const [registering, setRegistering] = useState<boolean>(false)
 
     useEffect(() => {
         if (isLoading) return
-
         if (!user) {
             router.push('/')
             return
         }
-
         if (!role) {
             setError('No role specified')
             return
         }
-
         if (registering) return
 
         const handleRegistration = async () => {
@@ -65,9 +60,8 @@ function RegisterContent() {
                     throw new Error(data.error || 'Registration failed')
                 }
 
-                const redirectUrl =
-                    role === 'instructor' ? '/instructor/dashboard' : '/game'
-                router.push(redirectUrl)
+                // force reauthentication after register
+                window.location.href = '/auth/logout'
             } catch (err) {
                 setError(
                     err instanceof Error ? err.message : 'An error occurred'
@@ -96,7 +90,7 @@ function RegisterContent() {
                             </Link>
                         </div>
                     :   <div style={{textAlign: 'center', color: '#ffffff'}}>
-                            <p>Setting up your account...</p>
+                            <p>Loading...</p>
                         </div>
                     }
                 </div>

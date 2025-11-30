@@ -152,7 +152,7 @@ export default function PixelatedBackground({
             ctx.fillRect(0, 0, canvasDimensions.width, canvasDimensions.height)
             ctx.globalCompositeOperation = 'soft-light'
             ctx.globalAlpha = filterOpacity
-            ctx.fillStyle = '#44316Fff'
+            ctx.fillStyle = '#003c71ff'
             ctx.fillRect(
                 canvasDimensions.offsetX,
                 canvasDimensions.offsetY,
