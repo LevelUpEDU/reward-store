@@ -7,8 +7,6 @@ import {
 } from '@/db/queries/submission'
 import {db, getQuestsByCourse} from '@/db'
 
-// We will use the project's existing Drizzle/Neon helpers when DATABASE_URL is set.
-// The project exposes queries in src/db/queries; import the helper to read quests.
 const useDb = Boolean(process.env.DATABASE_URL)
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore

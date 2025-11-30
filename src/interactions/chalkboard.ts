@@ -4,6 +4,14 @@ import {
     createInteractionInput,
     type InteractionInputControls,
 } from '@/ui/input/interactionInputHandler'
+import {
+    createHorizontalSelector,
+    type HorizontalSelectorControls,
+} from '@/ui/components/horizontalSelector'
+import {
+    createScrollWindow,
+    type ScrollWindowControls,
+} from '@/ui/components/scrollWindow'
 
 // ============================================================================
 // TYPES
@@ -29,6 +37,13 @@ interface Board {
 }
 
 // ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const VISIBLE_QUEST_COUNT = 5
+const ARROW_OFFSET = 300 // Distance from center to arrows
+
+// ============================================================================
 // API
 // ============================================================================
 
@@ -36,31 +51,15 @@ async function loadQuests(
     courseId: number,
     studentEmail?: string
 ): Promise<{course: Course; quests: Quest[]}> {
-    try {
-        const qs = new URLSearchParams({courseId: String(courseId)})
-        if (studentEmail) qs.set('studentEmail', studentEmail)
-        const res = await fetch(`/api/quests?${qs.toString()}`)
-        if (!res.ok) return {course: {}, quests: []}
-        const data = await res.json()
+    const url =
+        studentEmail ?
+            `/api/quests?courseId=${courseId}&studentEmail=${encodeURIComponent(studentEmail)}`
+        :   `/api/quests?courseId=${courseId}`
 
-        const rawQuests =
-            Array.isArray(data?.quests) ? data.quests
-            : Array.isArray(data) ? data
-            : []
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('Failed to load quests')
 
-        const mapped: Quest[] = rawQuests.map((q: Quest, i: number) => ({
-            id: q.id,
-            title: q.title ?? `Quest ${i + 1}`,
-            points: typeof q.points === 'number' ? q.points : 0,
-            done: Boolean(q.done),
-            submissionId: q.submissionId ?? null,
-            submissionStatus: q.submissionStatus ?? null,
-        }))
-
-        return {course: data?.course ?? {}, quests: mapped}
-    } catch {
-        return {course: {}, quests: []}
-    }
+    return await res.json()
 }
 
 async function persistToggle(
@@ -221,6 +220,7 @@ interface QuestListOptions {
     boardName: string
     userEmail: string
     claimedIds: number[]
+    scrollWindow: ScrollWindowControls<Quest>
     onQuestSubmitted?: () => Promise<void>
 }
 
@@ -234,6 +234,7 @@ function createQuestList(opts: QuestListOptions) {
         boardName,
         userEmail,
         claimedIds,
+        scrollWindow,
         onQuestSubmitted,
     } = opts
 
@@ -244,8 +245,6 @@ function createQuestList(opts: QuestListOptions) {
 
     let _selectedIndex = 0
     let dialogActive = false
-    const windowStart = 0
-    const VISIBLE_COUNT = 5
 
     const questTexts: Phaser.GameObjects.Text[] = []
     const doneMarks: Phaser.GameObjects.Text[] = []
@@ -295,7 +294,7 @@ function createQuestList(opts: QuestListOptions) {
     const toggleDone = (relativeIndex: number) => {
         if (!isAvailable || dialogActive) return
 
-        const absoluteIndex = windowStart + relativeIndex
+        const absoluteIndex = scrollWindow.getOffset() + relativeIndex
         const quest = quests[absoluteIndex]
         const mark = doneMarks[relativeIndex]
         if (!mark) return
@@ -390,11 +389,11 @@ function createQuestList(opts: QuestListOptions) {
         questTexts.length = 0
         doneMarks.length = 0
 
-        const endIndex = Math.min(windowStart + VISIBLE_COUNT, quests.length)
+        const visibleQuests = scrollWindow.getVisibleItems()
 
-        for (let i = 0; i < endIndex - windowStart; i++) {
-            const questIndex = windowStart + i
-            const quest = quests[questIndex]
+        for (let i = 0; i < visibleQuests.length; i++) {
+            const questIndex = scrollWindow.getOffset() + i
+            const quest = visibleQuests[i]
             const y = startY + i * styles.layout.rowSpacing
 
             // Quest text
@@ -464,7 +463,7 @@ function createQuestList(opts: QuestListOptions) {
         }
 
         // Scroll arrows
-        if (windowStart > 0) {
+        if (scrollWindow.canScrollUp()) {
             const arrow = scene.add
                 .text(startX + (doneX - startX) / 2, startY - 12, '▲', {
                     fontSize: '32px',
@@ -476,11 +475,12 @@ function createQuestList(opts: QuestListOptions) {
             elements.push(arrow)
         }
 
-        if (windowStart + VISIBLE_COUNT < quests.length) {
+        if (scrollWindow.canScrollDown()) {
             const arrow = scene.add
                 .text(
                     startX + (doneX - startX) / 2,
-                    startY + (VISIBLE_COUNT - 0.6) * styles.layout.rowSpacing,
+                    startY +
+                        (VISIBLE_QUEST_COUNT - 0.6) * styles.layout.rowSpacing,
                     '▼',
                     {
                         fontSize: '32px',
@@ -500,103 +500,11 @@ function createQuestList(opts: QuestListOptions) {
         elements,
         updateVisuals,
         toggleDone,
-        getVisibleCount: () =>
-            Math.min(VISIBLE_COUNT, quests.length - windowStart),
+        getVisibleCount: () => scrollWindow.getVisibleItems().length,
         isDialogActive: () => dialogActive,
+        renderWindow,
         destroy: () => elements.forEach((el) => el.destroy()),
     }
-}
-
-// ============================================================================
-// ARROWS
-// ============================================================================
-
-interface ArrowsOptions {
-    scene: Phaser.Scene
-    centerX: number
-    centerY: number
-    onLeft: () => void
-    onRight: () => void
-    boardNames: string[]
-}
-
-function createArrows(opts: ArrowsOptions) {
-    const {scene, centerX, centerY, onLeft, onRight, boardNames} = opts
-
-    const arrowOffset =
-        (scene.scale.width * styles.interfaceWidthRatio) / 2 -
-        styles.layout.padding / 2 +
-        24
-    const elements: Phaser.GameObjects.GameObject[] = []
-
-    const leftArrow = scene.add
-        .text(centerX - arrowOffset, centerY, '◀', {
-            fontSize: '48px',
-            color: styles.colors.questText,
-            fontFamily: styles.typography.fontFamily,
-        })
-        .setOrigin(0.5)
-        .setDepth(styles.depths.selector + 2)
-        .setInteractive({cursor: 'pointer'})
-
-    const rightArrow = scene.add
-        .text(centerX + arrowOffset, centerY, '▶', {
-            fontSize: '48px',
-            color: styles.colors.questText,
-            fontFamily: styles.typography.fontFamily,
-        })
-        .setOrigin(0.5)
-        .setDepth(styles.depths.selector + 2)
-        .setInteractive({cursor: 'pointer'})
-
-    const leftLabel = scene.add
-        .text(centerX - arrowOffset, centerY + 34, '', {
-            fontSize: '14px',
-            color: styles.colors.questText,
-            fontFamily: styles.typography.fontFamily,
-        })
-        .setOrigin(0.5, 0)
-        .setDepth(styles.depths.selector + 2)
-
-    const rightLabel = scene.add
-        .text(centerX + arrowOffset, centerY + 34, '', {
-            fontSize: '14px',
-            color: styles.colors.questText,
-            fontFamily: styles.typography.fontFamily,
-        })
-        .setOrigin(0.5, 0)
-        .setDepth(styles.depths.selector + 2)
-
-    elements.push(leftArrow, rightArrow, leftLabel, rightLabel)
-
-    leftArrow.on('pointerover', () => leftArrow.setScale(1.08))
-    leftArrow.on('pointerout', () => leftArrow.setScale(1))
-    leftArrow.on('pointerdown', onLeft)
-
-    rightArrow.on('pointerover', () => rightArrow.setScale(1.08))
-    rightArrow.on('pointerout', () => rightArrow.setScale(1))
-    rightArrow.on('pointerdown', onRight)
-
-    const updateLabels = (activeIndex: number) => {
-        const leftIndex =
-            (activeIndex - 1 + boardNames.length) % boardNames.length
-        const rightIndex = (activeIndex + 1) % boardNames.length
-        leftLabel.setText(boardNames[leftIndex])
-        rightLabel.setText(boardNames[rightIndex])
-    }
-
-    const highlight = (which: 'left' | 'right') => {
-        const arrow = which === 'left' ? leftArrow : rightArrow
-        scene.tweens.add({
-            targets: arrow,
-            scale: 1.18,
-            duration: 80,
-            yoyo: true,
-            ease: 'Quad.Out',
-        })
-    }
-
-    return {elements, updateLabels, highlight}
 }
 
 // ============================================================================
@@ -622,6 +530,8 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
     const elements: Phaser.GameObjects.GameObject[] = []
     let inputControls: InteractionInputControls | null = null
     let questList: ReturnType<typeof createQuestList> | null = null
+    let boardSelector: HorizontalSelectorControls | null = null
+    let scrollWindow: ScrollWindowControls<Quest> | null = null
     let selectedQuestIndex = 0
     let activeBoard = 0
     let boards: Board[] = []
@@ -636,6 +546,7 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
         cleaned = true
         inputControls?.cleanup()
         questList?.destroy()
+        boardSelector?.destroy()
         elements.forEach((el) => el.destroy())
         scene.interactionHandler.unblockMovement()
     }
@@ -778,9 +689,43 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
         showBoard(activeBoard)
     }
 
+    // Create board selector (horizontal arrows)
+    boardSelector = createHorizontalSelector({
+        scene,
+        centerX,
+        centerY,
+        arrowOffset: ARROW_OFFSET,
+        items: boards.map((b) => b.name),
+        initialIndex: 0,
+        depth: styles.depths.selector + 2,
+        onIndexChange: (index) => {
+            showBoard(index)
+        },
+        arrowStyle: {
+            fontSize: '48px',
+            color: styles.colors.questText,
+            fontFamily: styles.typography.fontFamily,
+        },
+        labelStyle: {
+            fontSize: '18px',
+            color: styles.colors.titleText,
+            fontFamily: styles.typography.fontFamily,
+        },
+        adjacentLabelStyle: {
+            fontSize: '14px',
+            color: styles.colors.questText,
+            fontFamily: styles.typography.fontFamily,
+        },
+    })
+
+    elements.push(boardSelector.container)
+
     const showBoard = async (index: number) => {
         activeBoard = ((index % boards.length) + boards.length) % boards.length
         selectedQuestIndex = 0
+
+        // Update selector
+        boardSelector?.setIndex(activeBoard)
 
         // Destroy old quest list
         questList?.destroy()
@@ -788,7 +733,6 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
 
         const board = boards[activeBoard]
         subtitle.setText(`${board.name} (${board.quests.length})`)
-        arrows.updateLabels(activeBoard)
 
         if (board.quests.length === 0) {
             const msg = scene.add
@@ -827,6 +771,15 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
             elements.push(doneLabel)
         }
 
+        // Create scroll window
+        scrollWindow = createScrollWindow({
+            items: board.quests,
+            maxVisible: VISIBLE_QUEST_COUNT,
+            onScrollChange: () => {
+                questList?.renderWindow()
+            },
+        })
+
         questList = createQuestList({
             scene,
             quests: board.quests,
@@ -836,6 +789,7 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
             boardName: board.name,
             userEmail: studentEmail,
             claimedIds,
+            scrollWindow,
             onQuestSubmitted: async () => {
                 await refreshBoards()
             },
@@ -843,26 +797,6 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
 
         questList.updateVisuals(0)
     }
-
-    // Create arrows
-    const arrows = createArrows({
-        scene,
-        centerX,
-        centerY,
-        onLeft: () => {
-            if (questList?.isDialogActive()) return
-            arrows.highlight('left')
-            showBoard(activeBoard - 1)
-        },
-        onRight: () => {
-            if (questList?.isDialogActive()) return
-            arrows.highlight('right')
-            showBoard(activeBoard + 1)
-        },
-        boardNames: boards.map((b) => b.name),
-    })
-
-    elements.push(...arrows.elements)
 
     // Input handling
     inputControls = createInteractionInput({
@@ -873,6 +807,13 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
                 if (!questList || questList.isDialogActive()) return
                 const count = questList.getVisibleCount()
                 if (count === 0) return
+
+                if (selectedQuestIndex === 0 && scrollWindow?.canScrollUp()) {
+                    scrollWindow.scrollUp()
+                    questList.updateVisuals(0) // Keep highlight on first item
+                    return
+                }
+
                 selectedQuestIndex = Math.max(0, selectedQuestIndex - 1)
                 questList.updateVisuals(selectedQuestIndex)
             },
@@ -880,18 +821,28 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
                 if (!questList || questList.isDialogActive()) return
                 const count = questList.getVisibleCount()
                 if (count === 0) return
+
+                if (
+                    selectedQuestIndex === count - 1 &&
+                    scrollWindow?.canScrollDown()
+                ) {
+                    scrollWindow.scrollDown()
+                    questList.updateVisuals(count - 1) // Keep highlight on last item
+                    return
+                }
+
                 selectedQuestIndex = Math.min(count - 1, selectedQuestIndex + 1)
                 questList.updateVisuals(selectedQuestIndex)
             },
             onNavigateLeft: () => {
                 if (questList?.isDialogActive()) return
-                arrows.highlight('left')
-                showBoard(activeBoard - 1)
+                boardSelector?.highlightArrow('left')
+                boardSelector?.navigateLeft()
             },
             onNavigateRight: () => {
                 if (questList?.isDialogActive()) return
-                arrows.highlight('right')
-                showBoard(activeBoard + 1)
+                boardSelector?.highlightArrow('right')
+                boardSelector?.navigateRight()
             },
             onSelect: () => {
                 if (!questList || questList.isDialogActive()) return
@@ -902,6 +853,5 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
     })
 
     // Show first board
-    arrows.updateLabels(0)
     await showBoard(0)
 })
