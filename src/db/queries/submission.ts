@@ -106,7 +106,6 @@ export async function verifySubmission(
     approved: boolean
 ): Promise<{
     submission: Submission
-    transaction: Transaction | null
 }> {
     const currentSubmission = await getSubmissionById(submissionId)
     if (!currentSubmission) {
@@ -125,17 +124,7 @@ export async function verifySubmission(
         .where(eq(submission.id, submissionId))
         .returning()
 
-    let transactionResult = null
-    if (approved) {
-        transactionResult = await createTransaction({
-            email: currentSubmission.studentId,
-            points: questData.points,
-            submissionId: submissionId,
-        })
-    }
-
     return {
         submission: updatedSubmission[0],
-        transaction: transactionResult,
     }
 }
