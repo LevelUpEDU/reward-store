@@ -9,6 +9,7 @@ import {createCollisionBox} from '@/utils/physics'
 import {addPulseEffect} from '@/utils/sprites'
 import {InputHandler} from '@/utils/inputHandler'
 import {InteractionHandler} from '@/interactions/interactionHandler'
+import {SCENE_DEFAULTS} from './constants'
 import '@/interactions'
 
 interface SpriteManifest {
@@ -23,7 +24,6 @@ export class Scene extends Phaser.Scene implements GameScene {
     protected mapConfig: MapConfig
     protected spriteObjects: Set<string> = new Set()
     public collisionGroup!: Phaser.Physics.Arcade.StaticGroup
-    protected customColliders: Phaser.GameObjects.GameObject[] = []
 
     protected inputHandler!: InputHandler
     public interactionHandler!: InteractionHandler
@@ -47,7 +47,6 @@ export class Scene extends Phaser.Scene implements GameScene {
         // get the list of sprite objects for this scene
         const manifestKey = `${this.sceneName}-sprites`
 
-        // TODO: replace with build-time version numbers in production
         // invalidates cache and forces reload of assets
         const cacheBuster =
             process.env.NODE_ENV === 'development' ? `?v=${Date.now()}` : ''
@@ -74,44 +73,13 @@ export class Scene extends Phaser.Scene implements GameScene {
             }
         })
 
-        // UPDATED TILESET LOADING LOOP
+        // tileset
         this.mapConfig.tilesets.forEach((tileset) => {
-            // Check if frame dimensions are provided in the config
-            // We cast to 'any' here to avoid TypeScript errors if MapConfig interface isn't updated yet
-            const ts = tileset as any
-
-            if (ts.frameWidth && ts.frameHeight) {
-                this.load.spritesheet(tileset.key, tileset.imagePath, {
-                    frameWidth: ts.frameWidth,
-                    frameHeight: ts.frameHeight,
-                })
-            } else {
-                this.load.image(tileset.key, tileset.imagePath)
-            }
+            this.load.image(tileset.key, tileset.imagePath)
         })
 
         // tilemap
         this.load.tilemapTiledJSON(this.sceneName, this.mapConfig.tilemapPath)
-
-        // player
-        this.load.aseprite(
-            'bob',
-            '/assets/sprites/Bob_run_16x16-sheet.png',
-            '/assets/sprites/Bob_run_16x16.json'
-        )
-
-        // main menu assets
-        this.load.image('mainMenu', 'assets/sprites/mainMenu.png')
-        this.load.image('infoWindow', 'assets/sprites/infoWindow.png')
-        this.load.image('shopMenu', 'assets/sprites/shopMenu.png')
-        this.load.image('btn_yellow_l', 'assets/sprites/button_yellow_left.png')
-        this.load.image(
-            'btn_yellow_r',
-            'assets/sprites/button_yellow_right.png'
-        )
-
-        // UI assets
-        this.load.image('coin-icon', '/assets/sprites/coin.png')
 
         this.load.on('complete', () => {
             this.mapConfig.tilesets.forEach((tileset) => {
@@ -121,12 +89,6 @@ export class Scene extends Phaser.Scene implements GameScene {
                 }
             })
         })
-
-        // menu assets
-        this.load.font(
-            'CyberPunkFont',
-            '/assets/fonts/CyberpunkCraftpixPixel.otf'
-        )
     }
 
     create(): void {
@@ -145,15 +107,10 @@ export class Scene extends Phaser.Scene implements GameScene {
                 .events.emit('update-world-reference', this)
         }
 
-        this.createTiledObjects('object')
-
+        this.createCollisions()
         this.createInteractables()
-        if (this.customColliders.length > 0) {
-            this.physics.add.collider(this.player, this.customColliders)
-        }
 
         this.setupInput()
-        this.createCollisions()
     }
 
     /* for adding images - images are stored in /public/assets/sprites/{sceneName}/
@@ -192,7 +149,6 @@ export class Scene extends Phaser.Scene implements GameScene {
     }
 
     protected createMap(): void {
-        // this.map = this.add.tilemap('map')
         this.map = this.add.tilemap(this.sceneName)
 
         // Populate all tilesets into an array
@@ -214,8 +170,7 @@ export class Scene extends Phaser.Scene implements GameScene {
             }
         })
 
-        // 2. SET PHYSICS WORLD BOUNDS TO MATCH MAP
-        // This stops the player from walking "outside the frame"
+        // stop player from walking out of bounds
         this.physics.world.setBounds(
             0,
             0,
@@ -225,14 +180,10 @@ export class Scene extends Phaser.Scene implements GameScene {
     }
 
     protected createPlayer(
-        x: number = 400,
-        y: number = 300,
-        scale: number = 2
+        x: number = SCENE_DEFAULTS.player.x,
+        y: number = SCENE_DEFAULTS.player.y,
+        scale: number = SCENE_DEFAULTS.player.scale
     ): void {
-        // Check if animations for 'bob' already exist
-        if (!this.anims.exists('walk_right')) {
-            this.anims.createFromAseprite('bob')
-        }
         this.player = this.physics.add.sprite(x, y, 'bob')
         this.player.setScale(scale)
     }
@@ -262,68 +213,6 @@ export class Scene extends Phaser.Scene implements GameScene {
         }
     }
 
-    /**
-     * Handles visual objects defined in Tiled Object Layers (e.g. furniture with GIDs)
-     */
-    // Updated createTiledObjects using customColliders (Safe Mode)
-    protected createTiledObjects(layerName: string): void {
-        const objectLayer = this.map.getObjectLayer(
-            layerName
-        ) as TiledObjectLayer | null
-        if (!objectLayer) return
-
-        objectLayer.objects.forEach((obj) => {
-            if (obj.gid === undefined) return
-
-            const tileset = this.map.tilesets.find(
-                (t) => obj.gid! >= t.firstgid && obj.gid! < t.firstgid + t.total
-            )
-
-            if (!tileset) return
-
-            if (tileset.image && this.textures.exists(tileset.name)) {
-                try {
-                    const relativeId = obj.gid - tileset.firstgid
-                    const sprite = this.add.sprite(
-                        obj.x!,
-                        obj.y!,
-                        tileset.name,
-                        relativeId
-                    )
-
-                    if (sprite) {
-                        sprite.setOrigin(0, 1)
-                        if (obj.width && obj.height)
-                            sprite.setDisplaySize(obj.width, obj.height)
-                        sprite.setDepth(sprite.y)
-
-                        // Collision Box
-                        const width = obj.width || sprite.width
-                        const height = obj.height || sprite.height
-                        const collisionHeight = height * 0.3
-                        const collisionY = obj.y! - collisionHeight / 2
-                        const collisionX = obj.x! + width / 2
-
-                        const collider = this.add.rectangle(
-                            collisionX,
-                            collisionY,
-                            width,
-                            collisionHeight,
-                            0x000000,
-                            0
-                        )
-
-                        this.physics.add.existing(collider, true)
-                        this.customColliders.push(collider)
-                    }
-                } catch (err) {
-                    console.warn(`Failed object GID ${obj.gid}`, err)
-                }
-            }
-        })
-    }
-
-    // Updated createInteractables using customColliders (Safe Mode)
     protected createInteractables(): void {
         const interactableLayer = this.map.getObjectLayer(
             'Interactable'
@@ -356,6 +245,15 @@ export class Scene extends Phaser.Scene implements GameScene {
                     const isPassable = obj.properties?.passable ?? true
 
                     if (!isPassable) {
+                        if (!this.collisionGroup) {
+                            this.collisionGroup = this.physics.add.staticGroup()
+                            this.physics.add.collider(
+                                this.player,
+                                this.collisionGroup
+                            )
+                        }
+
+                        // create a rect overtop of the object and use it to create a collision box
                         const bounds = sprite.getBounds()
                         const collisionRect = createCollisionBox(
                             this,
@@ -364,10 +262,8 @@ export class Scene extends Phaser.Scene implements GameScene {
                             bounds.width,
                             bounds.height
                         )
-                        if (!collisionRect.body) {
-                            this.physics.add.existing(collisionRect, true)
-                        }
-                        this.customColliders.push(collisionRect)
+
+                        this.collisionGroup.add(collisionRect)
                     }
                 }
             })
@@ -411,9 +307,14 @@ export class Scene extends Phaser.Scene implements GameScene {
         })
     }
 
-    protected setCamera(scale: number = 1): void {
+    protected setCamera(scale: number = SCENE_DEFAULTS.camera.zoom): void {
         const camera = this.cameras.main
-        camera.startFollow(this.player, true, 0.1, 0.1) // smooth follow
+        camera.startFollow(
+            this.player,
+            true,
+            SCENE_DEFAULTS.camera.smoothing,
+            SCENE_DEFAULTS.camera.smoothing
+        ) // smooth follow
         camera.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
         camera.setZoom(scale) // adjust zoom for how close/far you want it
         camera.roundPixels = true // keeps pixel art crisp
@@ -443,14 +344,6 @@ export class Scene extends Phaser.Scene implements GameScene {
         this.events.emit('request-point-refresh')
     }
 
-    shutdown(): void {
-        // Remove animations for 'bob'
-        this.anims.remove('walk_right')
-        this.anims.remove('walk_up')
-        this.anims.remove('walk_left')
-        this.anims.remove('walk_down')
-    }
-
     update(): void {
         if (!this.player) return
         if (this.interactionHandler.isMovementBlocked()) {
@@ -465,6 +358,6 @@ export class Scene extends Phaser.Scene implements GameScene {
     }
 
     protected getMovementSpeed(): number {
-        return 100
+        return SCENE_DEFAULTS.player.speed
     }
 }
