@@ -1,85 +1,52 @@
-import {NextResponse} from 'next/server'
-import {quest} from '@/db/schema'
+import {auth0} from '@/lib/auth0'
+import {NextResponse, type NextRequest} from 'next/server'
+import {getQuestsByCourse} from '@/db/queries/quest'
+import {getCourseById} from '@/db/queries/course'
 import {
     createSubmission,
     deleteSubmission,
     getSubmissionsByStudent,
 } from '@/db/queries/submission'
-import {db, getQuestsByCourse} from '@/db'
 
-const useDb = Boolean(process.env.DATABASE_URL)
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-
-export async function POST(request: Request) {
+/**
+ * GET /api/quests
+ * Fetch quests for a course with optional student submission status
+ *
+ * Query params:
+ * - courseId (required): Course ID to fetch quests for
+ * - studentEmail (optional): Student email to get personalized quest status
+ */
+export async function GET(req: NextRequest) {
     try {
-        // placeholder until auth0 is integrated
-        const userEmail = 'awei@bcit.ca'
-
-        const {title, points, courseId, expirationDate} = await request.json()
-
-        if (!title || !points || !courseId) {
+        const session = await auth0.getSession()
+        if (!session?.user?.email) {
             return NextResponse.json(
-                {message: 'Title, points, and courseId are required'},
-                {status: 400}
+                {error: 'Not authenticated'},
+                {status: 401}
             )
         }
 
-        // Create quest in database
-        const newQuest = await db
-            .insert(quest)
-            .values({
-                title,
-                points: parseInt(points),
-                courseId: parseInt(courseId),
-                createdBy: userEmail,
-                createdDate: new Date(),
-                expirationDate:
-                    expirationDate ? new Date(expirationDate) : null,
-            })
-            .returning()
+        const courseIdParam = req.nextUrl.searchParams.get('courseId')
+        const studentEmail = req.nextUrl.searchParams.get('studentEmail')
 
-        return NextResponse.json(
-            {
-                message: 'Quest created successfully',
-                quest: newQuest[0],
-            },
-            {status: 201}
-        )
-    } catch (error) {
-        return NextResponse.json(
-            {message: `Internal Server Error: ${error}`},
-            {status: 500}
-        )
-    }
-}
-
-// GET: return quests from DB when available, otherwise from the local JSON
-export async function GET(request: Request) {
-    try {
-        const {searchParams} = new URL(request.url)
-        const courseIdParam = searchParams.get('courseId')
-        const studentEmail = searchParams.get('studentEmail')
-
-        if (!courseIdParam)
+        if (!courseIdParam) {
             return NextResponse.json({error: 'Missing courseId'}, {status: 400})
-        const courseId = parseInt(courseIdParam)
+        }
 
-        if (!useDb)
-            return NextResponse.json(
-                {error: 'DB not configured'},
-                {status: 500}
-            )
+        const courseId = Number(courseIdParam)
 
-        // 2. PARALLEL FETCH
-        // We get the definitions from the Quest table...
-        // ...and the status from the Submission table.
-        const [courseQuests, studentSubmissions] = await Promise.all([
+        // Parallel fetch: course data, quests, and student submissions
+        const [course, courseQuests, studentSubmissions] = await Promise.all([
+            getCourseById(courseId),
             getQuestsByCourse(courseId),
             studentEmail ? getSubmissionsByStudent(studentEmail) : [],
         ])
 
-        // 3. MERGE
+        if (!course) {
+            return NextResponse.json({error: 'Course not found'}, {status: 404})
+        }
+
+        // Merge quest data with submission status
         const formattedQuests = courseQuests.map((q) => {
             const matchedSubmission = studentSubmissions.find(
                 (s) => s.questId === q.id
@@ -92,34 +59,95 @@ export async function GET(request: Request) {
             }
         })
 
-        // (Optional) You can fetch the real course title here if you have a getCourseById query
-        const courseData = {id: courseId, title: 'Course'}
-
         return NextResponse.json({
-            course: courseData,
+            course: {
+                id: course.id,
+                title: course.title,
+                courseCode: course.courseCode,
+            },
             quests: formattedQuests,
         })
     } catch (err) {
-        return NextResponse.json(
-            {error: `Internal Server Error: ${err}`},
-            {status: 500}
-        )
+        console.error('Failed to fetch quests:', err)
+        return NextResponse.json({error: (err as Error).message}, {status: 500})
     }
 }
 
-// PATCH: marking done/confirmed requires student/instructor context and transactions.
-// For now we keep the file-based PATCH behavior as a fallback; if DATABASE_URL is set
-// you should implement server-side logic that maps student -> submission rows.
-export async function PATCH(request: Request) {
+/**
+ * POST /api/quests
+ * Create a new quest (instructor only)
+ *
+ * Body:
+ * - title: Quest title
+ * - points: Points awarded for completion
+ * - courseId: Course ID
+ * - expirationDate (optional): Quest expiration date
+ */
+export async function POST(req: NextRequest) {
     try {
-        if (!useDb)
+        const session = await auth0.getSession()
+        if (!session?.user?.email) {
             return NextResponse.json(
-                {error: 'Database not configured'},
-                {status: 500}
+                {error: 'Not authenticated'},
+                {status: 401}
             )
+        }
 
-        const body = await request.json()
-        const {done, questId, studentEmail} = body
+        const {title, points, courseId, expirationDate} = await req.json()
+
+        if (!title || !points || !courseId) {
+            return NextResponse.json(
+                {error: 'Title, points, and courseId are required'},
+                {status: 400}
+            )
+        }
+
+        // Note: You might want to add instructor verification here
+        // to ensure the user is actually an instructor for this course
+
+        const {createQuest} = await import('@/db/queries/quest')
+        const newQuest = await createQuest({
+            courseId: Number(courseId),
+            createdBy: session.user.email,
+            title,
+            points: Number(points),
+            expirationDate:
+                expirationDate ? new Date(expirationDate) : undefined,
+        })
+
+        return NextResponse.json(
+            {
+                message: 'Quest created successfully',
+                quest: newQuest,
+            },
+            {status: 201}
+        )
+    } catch (err) {
+        console.error('Failed to create quest:', err)
+        return NextResponse.json({error: (err as Error).message}, {status: 500})
+    }
+}
+
+/**
+ * PATCH /api/quests
+ * Mark a quest as done/undone (creates/deletes submission)
+ *
+ * Body:
+ * - questId: Quest ID
+ * - done: true to mark done, false to unmark
+ * - studentEmail: Student email
+ */
+export async function PATCH(req: NextRequest) {
+    try {
+        const session = await auth0.getSession()
+        if (!session?.user?.email) {
+            return NextResponse.json(
+                {error: 'Not authenticated'},
+                {status: 401}
+            )
+        }
+
+        const {done, questId, studentEmail} = await req.json()
 
         if (
             !studentEmail ||
@@ -129,23 +157,32 @@ export async function PATCH(request: Request) {
             return NextResponse.json({error: 'Invalid payload'}, {status: 400})
         }
 
+        // Security: Ensure user can only modify their own submissions
+        // (or is an instructor for the course)
+        if (session.user.email !== studentEmail) {
+            // TODO: Add instructor verification here
+            return NextResponse.json({error: 'Unauthorized'}, {status: 403})
+        }
+
         if (done) {
-            // MARK DONE: Create row
+            // Mark as done: Create submission
             try {
-                await createSubmission({email: studentEmail, questId})
+                await createSubmission({
+                    email: studentEmail,
+                    questId,
+                })
             } catch (e) {
-                console.warn(`[API] Duplicate submission ignored: ${e}`)
+                // Ignore duplicate submission errors
+                console.warn(`Duplicate submission ignored: ${e}`)
             }
         } else {
-            // UNMARK: Delete row
+            // Unmark: Delete submission
             await deleteSubmission(studentEmail, questId)
         }
 
         return NextResponse.json({ok: true})
     } catch (err) {
-        return NextResponse.json(
-            {error: `Internal Server Error: ${err}`},
-            {status: 500}
-        )
+        console.error('Failed to update quest status:', err)
+        return NextResponse.json({error: (err as Error).message}, {status: 500})
     }
 }

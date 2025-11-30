@@ -32,47 +32,71 @@ export function createConfirmDialog(
     let onKeyDown: ((e: KeyboardEvent) => void) | null = null
 
     const bg = scene.add
-        .rectangle(x, y, 360, 120, 0x222222)
-        .setDepth(styles.depths.selector + 10)
-        .setStrokeStyle(2, 0xffffff)
+        .rectangle(
+            x,
+            y,
+            styles.confirmDialog.width,
+            styles.confirmDialog.height,
+            styles.colors.confirmDialogBg
+        )
+        .setDepth(styles.depths.confirmDialog)
+        .setStrokeStyle(2, styles.colors.confirmDialogBorder)
         .setInteractive()
 
     const txt = scene.add
-        .text(x, y - 20, title, {
+        .text(x, y - styles.confirmDialog.titleOffsetY, title, {
             fontSize: styles.typography.questSize,
             color: '#ffffff',
             fontFamily: styles.typography.fontFamily,
         })
         .setOrigin(0.5)
-        .setDepth(styles.depths.selector + 11)
+        .setDepth(styles.depths.confirmDialogText)
 
     const btnYes = scene.add
-        .text(x - 60, y + 24, 'Yes', {
-            fontSize: styles.typography.questSize,
-            color: styles.colors.tickMark,
-            fontFamily: styles.typography.fontFamily,
-        })
+        .text(
+            x - styles.confirmDialog.buttonSpacing,
+            y + styles.confirmDialog.buttonOffsetY,
+            'Yes',
+            {
+                fontSize: styles.typography.questSize,
+                color: styles.colors.tickMark,
+                fontFamily: styles.typography.fontFamily,
+            }
+        )
         .setOrigin(0.5)
-        .setDepth(styles.depths.selector + 11)
+        .setDepth(styles.depths.confirmDialogText)
         .setInteractive({cursor: 'pointer'})
 
     const btnNo = scene.add
-        .text(x + 60, y + 24, 'No', {
-            fontSize: styles.typography.questSize,
-            color: styles.colors.questText,
-            fontFamily: styles.typography.fontFamily,
-        })
+        .text(
+            x + styles.confirmDialog.buttonSpacing,
+            y + styles.confirmDialog.buttonOffsetY,
+            'No',
+            {
+                fontSize: styles.typography.questSize,
+                color: styles.colors.questText,
+                fontFamily: styles.typography.fontFamily,
+            }
+        )
         .setOrigin(0.5)
-        .setDepth(styles.depths.selector + 11)
+        .setDepth(styles.depths.confirmDialogText)
         .setInteractive({cursor: 'pointer'})
 
     const updateVisual = () => {
         if (selectionIndex === 0) {
-            btnYes.setColor(styles.colors.tickMark).setScale(1.06)
-            btnNo.setColor(styles.colors.questText).setScale(1)
+            btnYes
+                .setColor(styles.colors.tickMark)
+                .setScale(styles.confirmDialog.selectedScale)
+            btnNo
+                .setColor(styles.colors.questText)
+                .setScale(styles.confirmDialog.normalScale)
         } else {
-            btnNo.setColor(styles.colors.tickMark).setScale(1.06)
-            btnYes.setColor(styles.colors.questText).setScale(1)
+            btnNo
+                .setColor(styles.colors.tickMark)
+                .setScale(styles.confirmDialog.selectedScale)
+            btnYes
+                .setColor(styles.colors.questText)
+                .setScale(styles.confirmDialog.normalScale)
         }
     }
 

@@ -26,7 +26,6 @@ import {createQuestList, type QuestListControls} from './chalkboard/questList'
 // ============================================================================
 
 const VISIBLE_QUEST_COUNT = 5
-const ARROW_OFFSET = 300
 
 // ============================================================================
 // MAIN CHALKBOARD INTERACTION
@@ -53,10 +52,12 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
     let questList: QuestListControls | null = null
     let boardSelector: HorizontalSelectorControls | null = null
     let scrollWindow: ScrollWindowControls<Quest> | null = null
+    let boardElements: Phaser.GameObjects.GameObject[] = [] // Track board-specific elements
     let selectedQuestIndex = 0
     let activeBoard = 0
     let boards: Board[] = []
     let cleaned = false
+    let loadingBoard = false // Prevent concurrent board switches
 
     // Get data
     const courseId = scene.registry.get('courseId')
@@ -68,6 +69,7 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
         inputControls?.cleanup()
         questList?.destroy()
         boardSelector?.destroy()
+        boardElements.forEach((el) => el.destroy())
         elements.forEach((el) => el.destroy())
         scene.interactionHandler.unblockMovement()
     }
@@ -127,11 +129,16 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
         .setDepth(styles.depths.text)
 
     const subtitle = scene.add
-        .text(centerX, centerY - interfaceHeight / 2 + 60, '', {
-            fontSize: '18px',
-            color: styles.colors.titleText,
-            fontFamily: styles.typography.fontFamily,
-        })
+        .text(
+            centerX,
+            centerY - interfaceHeight / 2 + styles.layout.subtitleOffsetY,
+            '',
+            {
+                fontSize: styles.typography.subtitleSize,
+                color: styles.colors.titleText,
+                fontFamily: styles.typography.fontFamily,
+            }
+        )
         .setOrigin(0.5)
         .setDepth(styles.depths.text)
 
@@ -164,7 +171,9 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
     // Load quests
     const {course, quests} = await loadQuests(courseId, studentEmail)
 
-    title.setText(course.title ? `Quests for ${course.title}` : 'Quests')
+    // Set title with fallback
+    const courseTitle = course?.title || `Course ${courseId}`
+    title.setText(`Quests for ${courseTitle}`)
 
     // Group into boards
     boards = [
@@ -191,7 +200,9 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
             courseId,
             studentEmail
         )
-        if (freshCourse.title) title.setText(`Quests for ${freshCourse.title}`)
+        const courseTitle = freshCourse?.title || `Course ${courseId}`
+        title.setText(`Quests for ${courseTitle}`)
+
         boards = [
             {
                 name: 'Available',
@@ -218,7 +229,7 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
         scene,
         centerX,
         centerY,
-        arrowOffset: ARROW_OFFSET,
+        arrowOffset: styles.boardSelector.arrowOffset,
         items: boards.map((b) => b.name),
         initialIndex: 0,
         depth: styles.depths.selector + 2,
@@ -226,17 +237,17 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
             showBoard(index)
         },
         arrowStyle: {
-            fontSize: '48px',
+            fontSize: styles.boardSelector.arrowSize,
             color: styles.colors.questText,
             fontFamily: styles.typography.fontFamily,
         },
         labelStyle: {
-            fontSize: '18px',
+            fontSize: styles.boardSelector.labelSize,
             color: styles.colors.titleText,
             fontFamily: styles.typography.fontFamily,
         },
         adjacentLabelStyle: {
-            fontSize: '14px',
+            fontSize: styles.boardSelector.adjacentLabelSize,
             color: styles.colors.questText,
             fontFamily: styles.typography.fontFamily,
         },
@@ -248,81 +259,99 @@ interactionRegistry.register('chalkboard', async (worldScene, _data?) => {
      * Show a specific board (Available, Submitted, or Approved)
      */
     const showBoard = async (index: number) => {
-        activeBoard = ((index % boards.length) + boards.length) % boards.length
-        selectedQuestIndex = 0
+        // Prevent concurrent board switches
+        if (loadingBoard) return
+        loadingBoard = true
 
-        // Update selector
-        boardSelector?.setIndex(activeBoard)
+        try {
+            activeBoard =
+                ((index % boards.length) + boards.length) % boards.length
+            selectedQuestIndex = 0
 
-        // Destroy old quest list
-        questList?.destroy()
-        questList = null
+            // Update selector
+            boardSelector?.setIndex(activeBoard)
 
-        const board = boards[activeBoard]
-        subtitle.setText(`${board.name} (${board.quests.length})`)
+            // Clean up previous board elements
+            boardElements.forEach((el) => el.destroy())
+            boardElements = []
 
-        if (board.quests.length === 0) {
-            const msg = scene.add
-                .text(centerX, listStartY + 60, 'No quests available', {
-                    fontSize: styles.typography.emptyMessageSize,
-                    color: styles.colors.titleText,
-                    fontFamily: styles.typography.fontFamily,
-                })
-                .setOrigin(0.5)
-                .setDepth(styles.depths.text)
-            elements.push(msg)
-            return
+            // Destroy old quest list
+            questList?.destroy()
+            questList = null
+
+            const board = boards[activeBoard]
+            subtitle.setText(`${board.name} (${board.quests.length})`)
+
+            if (board.quests.length === 0) {
+                const msg = scene.add
+                    .text(
+                        centerX,
+                        listStartY + styles.layout.emptyMessageOffsetY,
+                        'No quests available',
+                        {
+                            fontSize: styles.typography.emptyMessageSize,
+                            color: styles.colors.titleText,
+                            fontFamily: styles.typography.fontFamily,
+                        }
+                    )
+                    .setOrigin(0.5)
+                    .setDepth(styles.depths.text)
+                boardElements.push(msg) // Add to boardElements instead of elements
+                return
+            }
+
+            // Get claimed IDs for Approved board
+            const claimedIds =
+                board.name === 'Approved' ?
+                    await fetchClaimedSubmissions(studentEmail)
+                :   []
+
+            // Done label for Available board ONLY
+            if (board.name === 'Available') {
+                const doneLabel = scene.add
+                    .text(
+                        doneX,
+                        listStartY - (styles.layout.doneLabelOffsetY || 0),
+                        'Done',
+                        {
+                            fontSize: styles.typography.doneLabelSize,
+                            color: styles.colors.doneLabel,
+                            fontFamily: styles.typography.fontFamily,
+                        }
+                    )
+                    .setOrigin(0.5)
+                    .setDepth(styles.depths.text)
+                boardElements.push(doneLabel) // Add to boardElements instead of elements
+            }
+
+            // Create scroll window
+            scrollWindow = createScrollWindow({
+                items: board.quests,
+                maxVisible: VISIBLE_QUEST_COUNT,
+                onScrollChange: () => {
+                    questList?.renderWindow()
+                },
+            })
+
+            questList = createQuestList({
+                scene,
+                quests: board.quests,
+                startX: listStartX,
+                startY: listStartY,
+                doneX,
+                boardName: board.name,
+                userEmail: studentEmail,
+                claimedIds,
+                scrollWindow,
+                onQuestSubmitted: async () => {
+                    await refreshBoards()
+                },
+            })
+
+            questList.updateVisuals(0)
+        } finally {
+            loadingBoard = false
         }
-
-        // Get claimed IDs for Approved board
-        const claimedIds =
-            board.name === 'Approved' ?
-                await fetchClaimedSubmissions(studentEmail)
-            :   []
-
-        // Done label for Available board
-        if (board.name === 'Available') {
-            const doneLabel = scene.add
-                .text(
-                    doneX,
-                    listStartY - (styles.layout.doneLabelOffsetY || 0),
-                    'Done',
-                    {
-                        fontSize: styles.typography.doneLabelSize,
-                        color: styles.colors.doneLabel,
-                        fontFamily: styles.typography.fontFamily,
-                    }
-                )
-                .setOrigin(0.5)
-                .setDepth(styles.depths.text)
-            elements.push(doneLabel)
-        }
-
-        // Create scroll window
-        scrollWindow = createScrollWindow({
-            items: board.quests,
-            maxVisible: VISIBLE_QUEST_COUNT,
-            onScrollChange: () => {
-                questList?.renderWindow()
-            },
-        })
-
-        questList = createQuestList({
-            scene,
-            quests: board.quests,
-            startX: listStartX,
-            startY: listStartY,
-            doneX,
-            boardName: board.name,
-            userEmail: studentEmail,
-            claimedIds,
-            scrollWindow,
-            onQuestSubmitted: async () => {
-                await refreshBoards()
-            },
-        })
-
-        questList.updateVisuals(0)
     }
 
     // Input handling

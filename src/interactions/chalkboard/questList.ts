@@ -99,9 +99,12 @@ export function createQuestList(opts: QuestListOptions): QuestListControls {
             scene.tweens.killTweensOf(qt)
             scene.tweens.add({
                 targets: qt,
-                scale: isSelected ? 1.06 : 1,
-                duration: 120,
-                ease: 'Quad.Out',
+                scale:
+                    isSelected ?
+                        styles.animations.questScale.selected
+                    :   styles.animations.questScale.normal,
+                duration: styles.animations.questScaleDuration,
+                ease: styles.animations.questScaleEase,
             })
         })
         if (selector) {
@@ -137,9 +140,12 @@ export function createQuestList(opts: QuestListOptions): QuestListControls {
                 mark.setVisible(true)
                 scene.tweens.add({
                     targets: mark,
-                    scale: {from: 0.5, to: 1},
-                    duration: 200,
-                    ease: 'Back.Out',
+                    scale: {
+                        from: styles.animations.tickScale.from,
+                        to: styles.animations.tickScale.to,
+                    },
+                    duration: styles.animations.tickDuration,
+                    ease: styles.animations.tickEase,
                 })
 
                 const ok = await persistToggle(
@@ -186,12 +192,12 @@ export function createQuestList(opts: QuestListOptions): QuestListControls {
                 btn.destroy()
                 const label = scene.add
                     .text(
-                        doneX - 72,
+                        doneX - styles.layout.claimButtonOffsetX,
                         startY + index * styles.layout.rowSpacing,
                         'Claimed',
                         {
                             fontSize: styles.typography.questSize,
-                            color: '#bdbdbd',
+                            color: styles.colors.claimedText,
                             fontFamily: styles.typography.fontFamily,
                         }
                     )
@@ -262,23 +268,33 @@ export function createQuestList(opts: QuestListOptions): QuestListControls {
                 const isClaimed = claimedIds.includes(quest.submissionId)
                 if (isClaimed) {
                     const label = scene.add
-                        .text(doneX - 72, y, 'Claimed', {
-                            fontSize: styles.typography.questSize,
-                            color: '#bdbdbd',
-                            fontFamily: styles.typography.fontFamily,
-                        })
+                        .text(
+                            doneX - styles.layout.claimButtonOffsetX,
+                            y,
+                            'Claimed',
+                            {
+                                fontSize: styles.typography.questSize,
+                                color: styles.colors.claimedText,
+                                fontFamily: styles.typography.fontFamily,
+                            }
+                        )
                         .setOrigin(0, 0.5)
                         .setDepth(styles.depths.text + 2)
                     elements.push(label)
                 } else {
                     const btn = scene.add
-                        .text(doneX - 72, y, 'Claim', {
-                            fontSize: styles.typography.questSize,
-                            color: '#fff',
-                            backgroundColor: '#2e7d32',
-                            fontFamily: styles.typography.fontFamily,
-                            padding: {left: 12, right: 12, top: 2, bottom: 2},
-                        })
+                        .text(
+                            doneX - styles.layout.claimButtonOffsetX,
+                            y,
+                            'Claim',
+                            {
+                                fontSize: styles.typography.questSize,
+                                color: styles.colors.claimButtonText,
+                                backgroundColor: styles.colors.claimButtonBg,
+                                fontFamily: styles.typography.fontFamily,
+                                padding: styles.claimButton.padding,
+                            }
+                        )
                         .setOrigin(0, 0.5)
                         .setDepth(styles.depths.text + 2)
                         .setInteractive({cursor: 'pointer'})
@@ -292,11 +308,16 @@ export function createQuestList(opts: QuestListOptions): QuestListControls {
         // Scroll arrows
         if (scrollWindow.canScrollUp()) {
             const arrow = scene.add
-                .text(startX + (doneX - startX) / 2, startY - 12, '▲', {
-                    fontSize: '32px',
-                    color: '#fff',
-                    fontFamily: styles.typography.fontFamily,
-                })
+                .text(
+                    startX + (doneX - startX) / 2,
+                    startY - styles.layout.scrollArrowTopOffset,
+                    '▲',
+                    {
+                        fontSize: styles.typography.scrollArrowSize,
+                        color: styles.colors.titleText,
+                        fontFamily: styles.typography.fontFamily,
+                    }
+                )
                 .setOrigin(0.5, 1)
                 .setDepth(styles.depths.text + 3)
                 .setInteractive({cursor: 'pointer'})
@@ -304,7 +325,6 @@ export function createQuestList(opts: QuestListOptions): QuestListControls {
             arrow.on('pointerdown', () => {
                 if (scrollWindow.canScrollUp()) {
                     scrollWindow.scrollUp()
-                    updateVisuals(0)
                 }
             })
 
@@ -316,11 +336,13 @@ export function createQuestList(opts: QuestListOptions): QuestListControls {
                 .text(
                     startX + (doneX - startX) / 2,
                     startY +
-                        (VISIBLE_QUEST_COUNT - 0.6) * styles.layout.rowSpacing,
+                        (VISIBLE_QUEST_COUNT -
+                            styles.layout.scrollArrowBottomOffset) *
+                            styles.layout.rowSpacing,
                     '▼',
                     {
-                        fontSize: '32px',
-                        color: '#fff',
+                        fontSize: styles.typography.scrollArrowSize,
+                        color: styles.colors.titleText,
                         fontFamily: styles.typography.fontFamily,
                     }
                 )
@@ -330,9 +352,7 @@ export function createQuestList(opts: QuestListOptions): QuestListControls {
 
             arrow.on('pointerdown', () => {
                 if (scrollWindow.canScrollDown()) {
-                    const count = scrollWindow.getVisibleItems().length
                     scrollWindow.scrollDown()
-                    updateVisuals(count - 1)
                 }
             })
 
