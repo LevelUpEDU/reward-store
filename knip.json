@@ -1,0 +1,34 @@
+{
+    "$schema": "https://unpkg.com/knip@5/schema.json",
+    "entry": [
+        "src/app/manifest.ts",
+        "src/middleware.ts",
+        "src/components/GameComponent.tsx",
+        "src/app/api/**/{route,middleware}.ts",
+        "src/scenes/**/*.ts",
+        "src/interactions/index.ts"
+    ],
+    "project": [
+        "**/*.{ts,tsx,js,jsx}",
+        "!**/*.test.{ts,tsx}",
+        "!**/*.spec.{ts,tsx}"
+    ],
+    "ignore": [
+        "**/*.test.{ts,tsx}",
+        "**/*.spec.{ts,tsx}",
+        "**/test/**",
+        "**/__tests__/**",
+        "src/app/**/public/**",
+        "src/data/**/*.json",
+        "src/db/migrations/**/*.sql",
+        "src/types/db.ts"
+    ],
+    "ignoreDependencies": ["eslint-config-next", "eslint-config-prettier"],
+    "ignoreExportsUsedInFile": true,
+    "next": {
+        "entry": [
+            "src/app/**/{page,layout,loading,error,not-found,route,middleware}.{ts,tsx}",
+            "src/middleware.ts"
+        ]
+    }
+}
