@@ -47,7 +47,7 @@ export const chalkboardStyles = {
     boardSelector: {
         arrowOffset: 530, // Distance from center to arrows
         arrowSize: '72px',
-        labelSize: '18px',
+        labelSize: '0px',
         adjacentLabelSize: '20px',
     },
 
