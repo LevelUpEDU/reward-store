@@ -304,6 +304,7 @@ export function createQuestList(opts: QuestListOptions): QuestListControls {
             arrow.on('pointerdown', () => {
                 if (scrollWindow.canScrollUp()) {
                     scrollWindow.scrollUp()
+                    updateVisuals(0)
                 }
             })
 
@@ -329,7 +330,9 @@ export function createQuestList(opts: QuestListOptions): QuestListControls {
 
             arrow.on('pointerdown', () => {
                 if (scrollWindow.canScrollDown()) {
+                    const count = scrollWindow.getVisibleItems().length
                     scrollWindow.scrollDown()
+                    updateVisuals(count - 1)
                 }
             })
 
