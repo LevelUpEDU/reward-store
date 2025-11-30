@@ -144,16 +144,11 @@ export class Scene extends Phaser.Scene implements GameScene {
             }
 
             return sprite
-        } else {
-            console.warn(
-                `Sprite '${obj.name}' not available for ${this.sceneName} scene`
-            )
-            return null
         }
+        return null
     }
 
     protected createMap(): void {
-        // this.map = this.add.tilemap('map')
         this.map = this.add.tilemap(this.sceneName)
 
         // Populate all tilesets into an array
@@ -175,8 +170,7 @@ export class Scene extends Phaser.Scene implements GameScene {
             }
         })
 
-        // 2. SET PHYSICS WORLD BOUNDS TO MATCH MAP
-        // This stops the player from walking "outside the frame"
+        // stop player from walking out of bounds
         this.physics.world.setBounds(
             0,
             0,
