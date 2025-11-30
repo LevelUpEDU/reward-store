@@ -9,7 +9,7 @@ import type {Quest} from './types'
 import {createConfirmDialog} from './confirmDialog'
 import {persistToggle} from './api'
 
-const VISIBLE_QUEST_COUNT = 5
+const VISIBLE_QUEST_COUNT = 7
 
 export interface QuestListOptions {
     scene: Phaser.Scene
