@@ -70,12 +70,6 @@ const DEFAULT_LABEL_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
     fontFamily: 'Arial, sans-serif',
 }
 
-const DEFAULT_ADJACENT_LABEL_STYLE: Phaser.Types.GameObjects.Text.TextStyle = {
-    fontSize: '14px',
-    color: '#aaaaaa',
-    fontFamily: 'Arial, sans-serif',
-}
-
 /**
  * Creates a horizontal selector with left/right arrows
  * @param config Configuration object
@@ -94,14 +88,13 @@ export function createHorizontalSelector(
         onIndexChange,
         arrowStyle = DEFAULT_ARROW_STYLE,
         labelStyle = DEFAULT_LABEL_STYLE,
-        adjacentLabelStyle = DEFAULT_ADJACENT_LABEL_STYLE,
+        adjacentLabelStyle,
         depth = 0,
     } = config
 
     let currentIndex = Math.max(0, Math.min(initialIndex, items.length - 1))
     let itemList = [...items]
 
-    // Create container to hold all elements
     const container = scene.add.container(0, 0)
     container.setDepth(depth)
 
@@ -117,39 +110,53 @@ export function createHorizontalSelector(
         .setOrigin(0.5)
         .setInteractive({cursor: 'pointer'})
 
-    // Center label (current item)
     const centerLabel = scene.add
         .text(centerX, centerY, items[currentIndex] || '', labelStyle)
         .setOrigin(0.5)
 
-    // Optional: Small labels under arrows showing adjacent items
-    const leftLabel = scene.add
-        .text(centerX - arrowOffset, centerY + 34, '', adjacentLabelStyle)
-        .setOrigin(0.5, 0)
+    // only create if adjacentLabelStyle is provided
+    let leftLabel: Phaser.GameObjects.Text | null = null
+    let rightLabel: Phaser.GameObjects.Text | null = null
 
-    const rightLabel = scene.add
-        .text(centerX + arrowOffset, centerY + 34, '', adjacentLabelStyle)
-        .setOrigin(0.5, 0)
+    if (adjacentLabelStyle) {
+        leftLabel = scene.add
+            .text(centerX - arrowOffset, centerY + 34, '', adjacentLabelStyle)
+            .setOrigin(0.5, 0)
 
-    container.add([leftArrow, rightArrow, centerLabel, leftLabel, rightLabel])
+        rightLabel = scene.add
+            .text(centerX + arrowOffset, centerY + 34, '', adjacentLabelStyle)
+            .setOrigin(0.5, 0)
 
-    // Update all labels based on current index
+        container.add([
+            leftArrow,
+            rightArrow,
+            centerLabel,
+            leftLabel,
+            rightLabel,
+        ])
+    } else {
+        container.add([leftArrow, rightArrow, centerLabel])
+    }
+
     const updateLabels = () => {
         if (itemList.length === 0) {
             centerLabel.setText('')
-            leftLabel.setText('')
-            rightLabel.setText('')
+            leftLabel?.setText('')
+            rightLabel?.setText('')
             return
         }
 
         centerLabel.setText(itemList[currentIndex])
 
-        // Show adjacent items in small labels
-        const leftIndex = (currentIndex - 1 + itemList.length) % itemList.length
-        const rightIndex = (currentIndex + 1) % itemList.length
+        // Show adjacent items in small labels (if they exist)
+        if (leftLabel && rightLabel) {
+            const leftIndex =
+                (currentIndex - 1 + itemList.length) % itemList.length
+            const rightIndex = (currentIndex + 1) % itemList.length
 
-        leftLabel.setText(itemList[leftIndex])
-        rightLabel.setText(itemList[rightIndex])
+            leftLabel.setText(itemList[leftIndex])
+            rightLabel.setText(itemList[rightIndex])
+        }
     }
 
     // Hover effects
@@ -163,7 +170,7 @@ export function createHorizontalSelector(
         rightArrow.setColor(arrowStyle.color as string)
     )
 
-    // Click handlers
+    // click handlers
     const navigateLeft = () => {
         if (itemList.length === 0) return
         currentIndex = (currentIndex - 1 + itemList.length) % itemList.length
@@ -181,7 +188,7 @@ export function createHorizontalSelector(
     leftArrow.on('pointerdown', navigateLeft)
     rightArrow.on('pointerdown', navigateRight)
 
-    // Visual highlight effect (for keyboard navigation feedback)
+    // highlight effect
     const highlightArrow = (direction: 'left' | 'right') => {
         const arrow = direction === 'left' ? leftArrow : rightArrow
         scene.tweens.add({
@@ -193,7 +200,6 @@ export function createHorizontalSelector(
         })
     }
 
-    // Initialize labels
     updateLabels()
 
     return {
