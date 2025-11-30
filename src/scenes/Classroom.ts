@@ -1,4 +1,5 @@
 import {Scene} from './Scene'
+import {CLASSROOM_SPAWN} from './constants'
 import type {MapConfig} from '@/types'
 
 export class Classroom extends Scene {
@@ -45,13 +46,16 @@ export class Classroom extends Scene {
     }
 
     protected createPlayer(): void {
-        super.createPlayer(670, 120, 2)
+        super.createPlayer(
+            CLASSROOM_SPAWN.x,
+            CLASSROOM_SPAWN.y,
+            CLASSROOM_SPAWN.scale
+        )
     }
 
     protected setCamera(): void {
         const cam = this.cameras.main
-        cam.setViewport(0, 0, 1920, 1080)
-        cam.setZoom(1.8)
+        cam.setZoom(CLASSROOM_SPAWN.cameraZoom)
         cam.centerOn(this.map.widthInPixels / 2, this.map.heightInPixels / 2)
         cam.roundPixels = true
     }

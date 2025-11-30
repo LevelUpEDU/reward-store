@@ -1,4 +1,5 @@
 import {Scene} from './Scene'
+import {LOBBY_SPAWN} from './constants'
 import type {MapConfig} from '@/types'
 
 export class Lobby extends Scene {
@@ -40,12 +41,13 @@ export class Lobby extends Scene {
         this.setCamera()
         this.interactionHandler.updateScale()
     }
+
     protected createPlayer(): void {
-        super.createPlayer(200, 1150, 7)
+        super.createPlayer(LOBBY_SPAWN.x, LOBBY_SPAWN.y, LOBBY_SPAWN.scale)
     }
 
     protected setCamera(): void {
-        super.setCamera(0.75)
+        super.setCamera(LOBBY_SPAWN.cameraZoom)
     }
 
     private welcomeText(): void {
@@ -65,6 +67,6 @@ export class Lobby extends Scene {
     }
 
     protected getMovementSpeed(): number {
-        return 300
+        return LOBBY_SPAWN.speed
     }
 }

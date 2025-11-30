@@ -9,6 +9,7 @@ import {createCollisionBox} from '@/utils/physics'
 import {addPulseEffect} from '@/utils/sprites'
 import {InputHandler} from '@/utils/inputHandler'
 import {InteractionHandler} from '@/interactions/interactionHandler'
+import {SCENE_DEFAULTS} from './constants'
 import '@/interactions'
 
 interface SpriteManifest {
@@ -72,20 +73,9 @@ export class Scene extends Phaser.Scene implements GameScene {
             }
         })
 
-        // UPDATED TILESET LOADING LOOP
+        // tileset
         this.mapConfig.tilesets.forEach((tileset) => {
-            // Check if frame dimensions are provided in the config
-            // We cast to 'any' here to avoid TypeScript errors if MapConfig interface isn't updated yet
-            const ts = tileset as any
-
-            if (ts.frameWidth && ts.frameHeight) {
-                this.load.spritesheet(tileset.key, tileset.imagePath, {
-                    frameWidth: ts.frameWidth,
-                    frameHeight: ts.frameHeight,
-                })
-            } else {
-                this.load.image(tileset.key, tileset.imagePath)
-            }
+            this.load.image(tileset.key, tileset.imagePath)
         })
 
         // tilemap
@@ -111,7 +101,7 @@ export class Scene extends Phaser.Scene implements GameScene {
         if (!this.scene.isActive('UIScene')) {
             this.scene.launch('UIScene', {worldScene: this})
         } else {
-            // if UI is already running, just update the reference
+            // If UI is already running, just update the reference
             this.scene
                 .get('UIScene')
                 .events.emit('update-world-reference', this)
@@ -163,6 +153,7 @@ export class Scene extends Phaser.Scene implements GameScene {
     }
 
     protected createMap(): void {
+        // this.map = this.add.tilemap('map')
         this.map = this.add.tilemap(this.sceneName)
 
         // Populate all tilesets into an array
@@ -184,7 +175,8 @@ export class Scene extends Phaser.Scene implements GameScene {
             }
         })
 
-        // set bounds to stop player from walking outside of map
+        // 2. SET PHYSICS WORLD BOUNDS TO MATCH MAP
+        // This stops the player from walking "outside the frame"
         this.physics.world.setBounds(
             0,
             0,
@@ -194,9 +186,9 @@ export class Scene extends Phaser.Scene implements GameScene {
     }
 
     protected createPlayer(
-        x: number = 400,
-        y: number = 300,
-        scale: number = 2
+        x: number = SCENE_DEFAULTS.player.x,
+        y: number = SCENE_DEFAULTS.player.y,
+        scale: number = SCENE_DEFAULTS.player.scale
     ): void {
         this.player = this.physics.add.sprite(x, y, 'bob')
         this.player.setScale(scale)
@@ -321,9 +313,14 @@ export class Scene extends Phaser.Scene implements GameScene {
         })
     }
 
-    protected setCamera(scale: number = 1): void {
+    protected setCamera(scale: number = SCENE_DEFAULTS.camera.zoom): void {
         const camera = this.cameras.main
-        camera.startFollow(this.player, true, 0.1, 0.1) // smooth follow
+        camera.startFollow(
+            this.player,
+            true,
+            SCENE_DEFAULTS.camera.smoothing,
+            SCENE_DEFAULTS.camera.smoothing
+        ) // smooth follow
         camera.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
         camera.setZoom(scale) // adjust zoom for how close/far you want it
         camera.roundPixels = true // keeps pixel art crisp
@@ -367,6 +364,6 @@ export class Scene extends Phaser.Scene implements GameScene {
     }
 
     protected getMovementSpeed(): number {
-        return 100
+        return SCENE_DEFAULTS.player.speed
     }
 }
