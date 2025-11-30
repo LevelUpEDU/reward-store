@@ -49,8 +49,8 @@ body {
     font-family: 'Micro 5', sans-serif;
     width: 100%;
     max-width: 400px;
-    background-color: #44316fff;
-    border: 0.5em ridge #ffff00;
+    background-color: #003c71ff;
+    border: 0.5em ridge #fff200;
     padding: 2rem;
     z-index: 1;
 }
