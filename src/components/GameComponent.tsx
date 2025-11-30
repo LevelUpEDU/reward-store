@@ -86,6 +86,7 @@ export default function GameComponent() {
 
             // let phaser know upfront about the existing scenes
             // Add any additional scenes here !
+            const {Preload} = await import('@/scenes/Preload')
             const {Lobby} = await import('@/scenes/Lobby')
             const {Classroom} = await import('@/scenes/Classroom')
             const {UIScene} = await import('@/scenes/UIScene')
@@ -113,7 +114,7 @@ export default function GameComponent() {
                         debug: false,
                     },
                 },
-                scene: [Lobby, Classroom, UIScene],
+                scene: [Preload, Lobby, Classroom, UIScene],
                 callbacks: {
                     preBoot: (game: Phaser.Game) => {
                         // store email in game registry so all scenes can access it

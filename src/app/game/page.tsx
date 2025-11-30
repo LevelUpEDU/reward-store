@@ -111,19 +111,6 @@ function InstallPrompt() {
         return () => window.removeEventListener('beforeinstallprompt', handler)
     }, [])
 
-    // const handleInstallClick = async () => {
-    //     if (!deferredPrompt) {
-    //         return
-    //     }
-
-    //     deferredPrompt.prompt()
-    //     const {outcome} = await deferredPrompt.userChoice
-
-    //     if (outcome === 'accepted') {
-    //         setDeferredPrompt(null)
-    //     }
-    // }
-
     if (isStandalone || (!deferredPrompt && !isIOS) || !showPrompt) {
         return null
     }
